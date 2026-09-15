@@ -32,7 +32,7 @@ class RekrutteringstreffSvarOgStatusLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", eventName)
-                it.forbid("aktørId")
+                it.requireKey("aktørId")
             }
             validate {
                 it.requireKey("fnr", "rekrutteringstreffId", "endretAv", "endretAvPersonbruker")
