@@ -3,12 +3,16 @@ package no.nav.toi.rekrutteringstreff.no.nav.toi.jobbsoker
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.mockk
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -37,6 +41,7 @@ class JobbsokerControllerAutorisasjonsTest {
     private val database = TestDatabase()
     private val erEier = true
     private val erIkkeEier = false
+    private val kandidatsøkKlient = mockk<KandidatsøkKlient>()
 
     private lateinit var infra: TestInfrastructureContext
     private lateinit var ctx: ApplicationContext
@@ -44,13 +49,20 @@ class JobbsokerControllerAutorisasjonsTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
+        every { kandidatsøkKlient.erKonfigurert() } returns true
+        every { kandidatsøkKlient.hentJobbsokerInfo(any(), any()) } returns emptyMap()
+        infra = TestInfrastructureContext(
+            dataSource = database.dataSource,
+            modiaKlientUrl = wmInfo.httpBaseUrl,
+            kandidatsøkKlient = kandidatsøkKlient,
+        ).also { it.start() }
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
     fun setupStubs() {
+        clearMocks(kandidatsøkKlient, answers = false)
         stubFor(
             get(urlPathEqualTo("/api/context/v2/aktivenhet"))
                 .willReturn(
@@ -227,6 +239,50 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.svarForJobbsøker, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
 
         ).stream()
+
+    private fun leggTilCaserPerKategori() = RekrutteringstreffKategori.entries.flatMap { kategori ->
+        Gruppe.entries.flatMap { gruppe ->
+            listOf(false, true).map { eier ->
+                val tillatt = gruppe != Gruppe.ModiaGenerell &&
+                    (kategori != RekrutteringstreffKategori.WORKOP || eier || gruppe == Gruppe.Utvikler)
+                Arguments.of(kategori, gruppe, eier, if (tillatt) HTTP_CREATED else HTTP_FORBIDDEN)
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("leggTilCaserPerKategori")
+    fun `WorkOp krever eier eller utvikler ved tillegg og forslag mens vanlige treff beholder rollekrav`(
+        kategori: RekrutteringstreffKategori,
+        gruppe: Gruppe,
+        eier: Boolean,
+        forventetStatus: Int,
+    ) {
+        val ident = "SYNTETISK-MEDARBEIDER"
+        val treffId = ctx.rekrutteringstreffService.opprett(
+            OpprettRekrutteringstreffInternalDto(
+                "Syntetisk tilgangstest", kategori, "SYNTETISK-OPPRETTER", "SYNTETISK-KONTOR", ZonedDateTime.now()
+            )
+        )
+        if (eier) ctx.eierRepository.leggTil(treffId, ident, "SYNTETISK-KONTOR")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = ident, groups = gruppe.somStringListe).serialize()
+        val request = HttpRequest.newBuilder(URI("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker"))
+            .header("Authorization", "Bearer $token")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(
+                """[{"fødselsnummer":"00000000000","fornavn":"Syntetisk","etternavn":"Testjobbsøker"}]"""
+            ))
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertEquals(forventetStatus, response.statusCode(), response.body())
+        io.mockk.verify(exactly = if (forventetStatus == HTTP_CREATED) 1 else 0) {
+            kandidatsøkKlient.hentJobbsokerInfo(any(), any())
+        }
+        val jobbsøkere = ctx.jobbsøkerRepository.hentJobbsøkere(treffId)
+        assertEquals(if (forventetStatus == HTTP_CREATED) 1 else 0, jobbsøkere.size)
+    }
 
 
     @ParameterizedTest

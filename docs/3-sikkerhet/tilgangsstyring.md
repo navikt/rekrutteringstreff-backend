@@ -129,6 +129,8 @@ Hvert rekrutteringstreff har én eller flere **eiere** (Nav-identer lagret i `ei
 
 **Lesetilgang er global:** Alle med gyldig rolle kan lese alle treff, uavhengig av eierskap eller kontor.
 
+**WorkOp via direkte lenke:** Treffoppslaget er tilgjengelig for arbeidsgiverrettet, jobbsøkerrettet og utvikler uten eierskap, slik at frontend kan vise vanlig forhåndsvisning. Borgers lesetilgang er uendret. Dette åpner ikke søket; eksisterende søkefiltre gjelder fortsatt. Arbeidsgiverrettet og utvikler kan legge seg selv til som medeier via `/eiere/meg`, med krav om kontortilknytning og uten å fjerne eksisterende eiere. Gjennomføring og eierredigering beholder sine rolle- og eierkrav.
+
 **Kontorer:** Hvert treff kan ha flere kontorer (`kontorer text[]`). Dette styrer ikke tilgang, men brukes i frontend for filtrering.
 
 ## 3. System

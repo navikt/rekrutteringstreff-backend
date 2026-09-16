@@ -163,17 +163,98 @@ class RekrutteringstreffTest {
         assertThat(response.statusCode()).isEqualTo(200)
     }
 
-    @Test
-    fun `veileder uten eierskap skal ikke se andres workop`() {
+    private fun workOpLesetilgangCases() = listOf(
+        Arguments.of(AzureAdRoller.arbeidsgiverrettet, 200),
+        Arguments.of(AzureAdRoller.jobbsøkerrettet, 200),
+        Arguments.of(AzureAdRoller.utvikler, 200),
+        Arguments.of(AzureAdRoller.modiaGenerell, 403),
+        Arguments.of(AzureAdRoller.modiaOppfølging, 403),
+    )
+
+    @ParameterizedTest
+    @MethodSource("workOpLesetilgangCases")
+    fun `direkte oppslag paa WorkOp krever rolle men ikke eierskap`(rolle: UUID, forventetStatus: Int) {
         val treffId = db.opprettRekrutteringstreffMedEierOgKontor(
-            navIdent = "A123456",
+            navIdent = "SYNTETISK-EIER",
+            tittel = "Syntetisk WorkOp",
             kategori = RekrutteringstreffKategori.WORKOP,
         )
-        val token = infra.authServer.lagToken(infra.authPort, navIdent = "B654321")
+        val token = infra.authServer.lagToken(
+            infra.authPort, navIdent = "SYNTETISK-IKKE-EIER", groups = listOf(rolle),
+        )
 
         val response = httpGet("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somString}", token.serialize())
 
-        assertThat(response.statusCode()).isEqualTo(404)
+        assertThat(response.statusCode()).isEqualTo(forventetStatus)
+        if (forventetStatus == 200) {
+            val treff = mapper.readValue(response.body(), RekrutteringstreffDto::class.java)
+            assertThat(treff.id).isEqualTo(treffId.somUuid)
+            assertThat(treff.tittel).isEqualTo("Syntetisk WorkOp")
+            assertThat(treff.eiere).containsExactly("SYNTETISK-EIER")
+        }
+    }
+
+    @Test
+    fun `WorkOp via direkte lenke gir eiertilgang foerst etter selvinnmelding`() {
+        val eier = "SYNTETISK-EIER"
+        val medeier = "SYNTETISK-MEDEIER"
+        val treffId = db.opprettRekrutteringstreffMedEierOgKontor(
+            navIdent = eier, tittel = "Syntetisk WorkOp", kategori = RekrutteringstreffKategori.WORKOP,
+        )
+        val token = infra.authServer.lagToken(
+            infra.authPort, navIdent = medeier, groups = listOf(AzureAdRoller.arbeidsgiverrettet),
+        ).serialize()
+        val url = "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somString}"
+        val sokUrl = "http://localhost:$appPort$endepunktRekrutteringstreff/sok?visning=alle&kategorier=WORKOP"
+        val gjennomforingUrl = "$url/treffgjennomforing-og-oppfolging"
+        val stegUrl = "$url/treffgjennomforing/steg"
+        val stegBody = """{"steg":"OPPSUMMERING"}"""
+
+        val oppslag = httpGet(url, token)
+        assertThat(oppslag.statusCode()).isEqualTo(200)
+        val treff = mapper.readValue(oppslag.body(), RekrutteringstreffDto::class.java)
+        val oppdatering = mapper.writeValueAsString(
+            OppdaterRekrutteringstreffDto.opprettFra(treff).copy(beskrivelse = "Syntetisk oppdatert beskrivelse")
+        )
+        val sokFor = httpGet(sokUrl, token)
+        assertThat(sokFor.statusCode()).isEqualTo(200)
+        assertThat(mapper.readTree(sokFor.body())["treff"].size()).isZero()
+        assertThat(httpGet(gjennomforingUrl, token).statusCode()).isEqualTo(403)
+        assertThat(httpPut(stegUrl, stegBody, token).statusCode()).isEqualTo(403)
+        assertThat(httpPut(url, oppdatering, token).statusCode()).isEqualTo(403)
+
+        assertThat(httpPut("$url/eiere/meg", """{"eierNavn":"Syntetisk Testmedarbeider"}""", token).statusCode())
+            .isEqualTo(200)
+        val etterInnmelding = httpGet(url, token)
+        assertThat(etterInnmelding.statusCode()).isEqualTo(200)
+        val oppdatertTreff = mapper.readValue(etterInnmelding.body(), RekrutteringstreffDto::class.java)
+        assertThat(oppdatertTreff.eiere).containsExactlyInAnyOrder(eier, medeier)
+        assertThat(httpGet(gjennomforingUrl, token).statusCode()).isEqualTo(200)
+        assertThat(httpPut(stegUrl, stegBody, token).statusCode()).isEqualTo(200)
+        assertThat(httpPut(url, oppdatering, token).statusCode()).isEqualTo(200)
+        val sokEtter = httpGet(sokUrl, token)
+        assertThat(sokEtter.statusCode()).isEqualTo(200)
+        assertThat(mapper.readTree(sokEtter.body())["treff"].map { it["id"].asText() })
+            .containsExactly(treffId.somString)
+        val lagret = httpGet(url, token)
+        assertThat(lagret.statusCode()).isEqualTo(200)
+        assertThat(mapper.readTree(lagret.body())["beskrivelse"].asText()).isEqualTo("Syntetisk oppdatert beskrivelse")
+    }
+
+    @Test
+    fun `jobbsokerrettet kan lese WorkOp men ikke melde seg inn som eier`() {
+        val treffId = db.opprettRekrutteringstreffMedEierOgKontor(
+            navIdent = "SYNTETISK-EIER", tittel = "Syntetisk WorkOp", kategori = RekrutteringstreffKategori.WORKOP,
+        )
+        val token = infra.authServer.lagToken(
+            infra.authPort, navIdent = "SYNTETISK-IKKE-EIER", groups = listOf(AzureAdRoller.jobbsøkerrettet),
+        ).serialize()
+        val url = "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somString}"
+
+        assertThat(httpGet(url, token).statusCode()).isEqualTo(200)
+        assertThat(httpPut("$url/eiere/meg", "{}", token).statusCode()).isEqualTo(403)
+        assertThat(db.hentEierrader(treffId).map { it.navIdent }).containsExactly("SYNTETISK-EIER")
+        assertThat(httpGet("$url/treffgjennomforing-og-oppfolging", token).statusCode()).isEqualTo(403)
     }
 
     @Test
