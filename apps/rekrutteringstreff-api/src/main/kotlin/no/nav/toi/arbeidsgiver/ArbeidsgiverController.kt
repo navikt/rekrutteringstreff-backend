@@ -12,6 +12,7 @@ import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.arbeidsgiver.dto.*
 import no.nav.toi.authenticatedUser
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.*
@@ -19,6 +20,7 @@ import java.util.*
 class ArbeidsgiverController(
     private val arbeidsgiverService: ArbeidsgiverService,
     private val eierService: EierService,
+    private val rekrutteringstreffService: RekrutteringstreffService,
 ) : RuteRegistrerer {
 
     companion object {
@@ -86,6 +88,7 @@ class ArbeidsgiverController(
 
     @OpenApi(
         summary = "Hent alle arbeidsgivere for et rekrutteringstreff",
+        description = "Borgere får en tom liste for WorkOp, uavhengig av invitasjon og påmelding. Ansattes tilgang er uendret.",
         operationId = "hentArbeidsgivere",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(
@@ -118,9 +121,15 @@ class ArbeidsgiverController(
         methods = [HttpMethod.GET]
     )
     private fun hentArbeidsgivereHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET, Rolle.BORGER)
+        val bruker = ctx.authenticatedUser()
+        bruker.verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET, Rolle.BORGER)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val arbeidsgivere = arbeidsgiverService.hentArbeidsgivere(treff)
+        val skjermArbeidsgivere = bruker.erBorger && bruker.skalSkjermeArbeidsgivere(
+            requireNotNull(rekrutteringstreffService.hentRekrutteringstreff(treff)) {
+                "Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke."
+            }.kategori
+        )
+        val arbeidsgivere = if (skjermArbeidsgivere) emptyList() else arbeidsgiverService.hentArbeidsgivere(treff)
         ctx.status(200).json(arbeidsgivere.toOutboundDto())
     }
 

@@ -68,6 +68,17 @@ Personbrukere autentiseres via ID-porten. Tilgangen gir mulighet til å:
 3. Frontend bruker TokenX for å veksle til token som minside-api aksepterer
 4. minside-api verifiserer at bruker kun ser treff de er invitert til
 
+### Arbeidsgivere på WorkOp
+
+Alle borgere får skjermet strukturerte arbeidsgiveropplysninger på WorkOp, uavhengig av invitasjon og påmelding. Regelen håndheves også i rekrutteringstreff-api:
+
+- `GET /api/rekrutteringstreff/{id}/arbeidsgiver` returnerer `200 []`.
+- `GET /api/rekrutteringstreff/{id}` returnerer `antallArbeidsgivere: null`, også når treffet ikke har arbeidsgivere. `null` betyr skjermet antall, ikke null arbeidsgivere.
+
+Autoriserte Nav-ansatte beholder arbeidsgiverlisten og det faktiske antallet. Ordinære rekrutteringstreff påvirkes ikke. Fritekst, som tittel og beskrivelse, maskeres ikke.
+
+rekrutteringstreff-bruker henter via minside-api, som fortsatt skjuler arbeidsgiverlisten både i treffresponsen og i det separate arbeidsgiverendepunktet. Minside-responsen inneholder ikke arbeidsgiverantall.
+
 ## 2. NAV-ansatt
 
 NAV-ansatte autentiseres via Azure AD og får roller basert på AD-gruppemedlemskap. Rollene er:

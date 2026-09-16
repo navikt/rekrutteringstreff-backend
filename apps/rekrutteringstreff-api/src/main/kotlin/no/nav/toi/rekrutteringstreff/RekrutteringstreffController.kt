@@ -10,6 +10,7 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
+import no.nav.toi.arbeidsgiver.skalSkjermeArbeidsgivere
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.*
 import no.nav.toi.rekrutteringstreff.eier.EierService
@@ -104,7 +105,7 @@ class RekrutteringstreffController(
 
     @OpenApi(
         summary = "Hent et rekrutteringstreff",
-        description = "Autoriserte brukere kan hente treffet uten eierskap, også WorkOp via direkte lenke. Dette gir ikke tilgang til gjennomføring eller eierredigering. Søk har egne tilgangsfiltre. eierOgKontor kobler Nav-ident, valgfritt eiernavn og kontorets enhetId. Eiere og kontorer beholdes som separate lister for bakoverkompatibilitet.",
+        description = "Autoriserte brukere kan hente treffet uten eierskap, også WorkOp via direkte lenke. Borgere får antallArbeidsgivere satt til null for WorkOp, uavhengig av invitasjon og påmelding. Dette gir ikke tilgang til gjennomføring eller eierredigering. Søk har egne tilgangsfiltre. eierOgKontor kobler Nav-ident, valgfritt eiernavn og kontorets enhetId. Eiere og kontorer beholdes som separate lister for bakoverkompatibilitet.",
         operationId = "hentRekrutteringstreff",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
@@ -141,7 +142,8 @@ class RekrutteringstreffController(
         methods = [HttpMethod.GET]
     )
     private fun hentRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER, Rolle.JOBBSØKER_RETTET)
+        val bruker = ctx.authenticatedUser()
+        bruker.verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER, Rolle.JOBBSØKER_RETTET)
         val uuidSomStreng = ctx.pathParam(pathParamTreffId)
         if (!TreffId.erGyldigId(uuidSomStreng)) {
             log.info("Ugyldig rekrutteringstreff-id: $uuidSomStreng")
@@ -154,7 +156,12 @@ class RekrutteringstreffController(
                 ctx.status(404)
             } else {
                 log.info("Hentet rekrutteringstreff med id $treffId")
-                ctx.status(200).json(rekrutteringstreff)
+                val respons = if (bruker.skalSkjermeArbeidsgivere(rekrutteringstreff.kategori)) {
+                    rekrutteringstreff.copy(antallArbeidsgivere = null)
+                } else {
+                    rekrutteringstreff
+                }
+                ctx.status(200).json(respons)
             }
         }
     }
