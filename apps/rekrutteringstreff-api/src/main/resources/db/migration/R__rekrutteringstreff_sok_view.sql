@@ -36,6 +36,7 @@ SELECT
                   'kontorEnhetId', e.kontor_enhetid
               ) ORDER BY e.rekrutteringstreff_eier_id)
               FROM rekrutteringstreff_eier e
-              WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '[]'::jsonb) AS eier_og_kontor
+              WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '[]'::jsonb) AS eier_og_kontor,
+    rt.rekrutteringstreff_id
 FROM rekrutteringstreff rt
 WHERE rt.status != 'SLETTET';
