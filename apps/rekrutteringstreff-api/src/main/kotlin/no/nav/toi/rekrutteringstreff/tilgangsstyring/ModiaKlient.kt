@@ -51,13 +51,16 @@ class ModiaKlient(
             return if (respons.statusCode() in 200..299) {
                 objectMapper.readValue(respons.body(), AktivEnhet::class.java).aktivEnhet
             } else {
-                log.error("Det skjedde en feil ved henting av aktiv enhet fra Modia. Status: ${respons.statusCode()}, body: ${respons.body()}")
-                null
+                log.error("Det skjedde en feil ved henting av aktiv enhet fra Modia. Status: ${respons.statusCode()}")
+                throw ModiaOppslagFeiletException("Klarte ikke å hente aktiv enhet fra Modia. Prøv igjen senere.")
             }
 
         } catch (e: Exception) {
+            if (e is ModiaOppslagFeiletException) {
+                throw e
+            }
             log.error("Det skjedde en feil ved henting av aktiv enhet fra Modia: ${e.message}", e)
-            throw RuntimeException("Noe feil skjedde ved henting av aktiv enhet fra Modia: ", e)
+            throw ModiaOppslagFeiletException("Klarte ikke å hente aktiv enhet fra Modia. Prøv igjen senere.", e)
         }
     }
 
@@ -104,7 +107,7 @@ class ModiaKlient(
 }
 
 data class AktivEnhet(
-    val aktivEnhet: String
+    val aktivEnhet: String? = null
 )
 
 internal data class ModiaPerson(

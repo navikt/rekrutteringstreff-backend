@@ -22,6 +22,19 @@ import org.junit.jupiter.api.Test
 class ModiaKlientTest {
 
     @Test
+    fun `ugyldig JSON for aktiv enhet er en teknisk feil`(wireMock: WireMockRuntimeInfo) {
+        stubAccessToken()
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(aResponse().withStatus(200).withBody("ikke JSON"))
+        )
+
+        assertThatThrownBy { modiaKlient(wireMock).hentVeiledersAktivEnhet("innkommende-token") }
+            .isInstanceOf(ModiaOppslagFeiletException::class.java)
+            .hasMessage("Klarte ikke å hente aktiv enhet fra Modia. Prøv igjen senere.")
+    }
+
+    @Test
     fun `hentMineEnheter henter enheter fra Modia decorator med OBO-token`(wireMock: WireMockRuntimeInfo) {
         stubAccessToken()
         stubFor(
