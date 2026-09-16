@@ -389,6 +389,39 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `interesse registrert etter at fordeling er etablert oppretter intervjufordeling for arbeidsgiver uten eksisterende fordeling`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        val arbeidsgivere = ctx.arbeidsgiverService.hentArbeidsgivere(treff).map { it.arbeidsgiverTreffId }
+        val ag1 = arbeidsgivere[0]
+        val ag2 = arbeidsgivere[1]
+
+        listOf(p1, p2).forEach { oppmøte(treff, it, møtt = true) }
+        interesse(treff, p1, ag1, interessert = true)
+
+        assertThat(post(treff, "/treffgjennomforing/intervjufordeling/fordel").statusCode()).isEqualTo(200)
+
+        val fordelingerFør = aggregat(treff)["intervjufordelinger"]
+        assertThat(fordelingerFør).hasSize(1)
+        assertThat(fordelingerFør[0]["arbeidsgiverTreffId"].asText()).isEqualTo(ag1.somString)
+
+        assertThat(interesse(treff, p2, ag2, interessert = true).statusCode()).isEqualTo(200)
+
+        val fordelingerEtter = aggregat(treff)["intervjufordelinger"]
+        val ag2Fordeling = fordelingerEtter.firstOrNull { it["arbeidsgiverTreffId"].asText() == ag2.somString }
+        assertThat(ag2Fordeling).isNotNull
+        assertThat(ag2Fordeling!!["inkludertePersonTreffIder"].map { it.asText() })
+            .containsExactly(p2.somString)
+
+        assertThat(interesse(treff, p2, ag2, interessert = false).statusCode()).isEqualTo(200)
+
+        val fordelingerEtterFjernet = aggregat(treff)["intervjufordelinger"]
+        val ag2FordelingEtterFjernet = fordelingerEtterFjernet.firstOrNull { it["arbeidsgiverTreffId"].asText() == ag2.somString }
+        assertThat(ag2FordelingEtterFjernet?.get("inkludertePersonTreffIder")).isNullOrEmpty()
+    }
+
+    @Test
     fun `vurdering lagres, og en tom rad slettes`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)

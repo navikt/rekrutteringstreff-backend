@@ -160,7 +160,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         miljø = infra.miljø,
     )
 
-    val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService)
+    val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService, rekrutteringstreffService)
     val rekrutteringstreffController = RekrutteringstreffController(rekrutteringstreffService, eierService, kiLoggService)
     val eierController = EierController(eierService)
     val jobbsøkerController = JobbsøkerController(jobbsøkerService, eierService, infra.modiaKlient, rekrutteringstreffService)

@@ -47,7 +47,7 @@ class MatchingService(
 
             if (!repository.settInteresse(connection, jobbsøkerId, arbeidsgiverId, dto.interessert)) return@skriv
 
-            speilInteresseIFordeling(connection, kontekst, person, arbeidsgiver, dto.interessert)
+            speilInteresseIFordeling(connection, kontekst, person, arbeidsgiver, dto.interessert, rad.gjeldendeSteg)
             stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, rad.gjeldendeSteg, TreffgjennomføringSteg.INTERESSE)
         }
 
@@ -57,14 +57,21 @@ class MatchingService(
         person: PersonTreffId,
         arbeidsgiver: ArbeidsgiverTreffId,
         interessert: Boolean,
+        gjeldendeSteg: TreffgjennomføringSteg,
     ) {
-        val eksisterende = repository.hentFor(connection, kontekst).intervjufordelinger
-            .firstOrNull { it.arbeidsgiverTreffId == arbeidsgiver } ?: return
+        val eksisterendeFordelinger = repository.hentFor(connection, kontekst).intervjufordelinger
+        val harFordelt = eksisterendeFordelinger.isNotEmpty() || gjeldendeSteg.ordinal >= TreffgjennomføringSteg.FORDELING.ordinal
+        if (!harFordelt) return
+
+        val eksisterende = eksisterendeFordelinger
+            .firstOrNull { it.arbeidsgiverTreffId == arbeidsgiver }
+            ?: ArbeidsgiverIntervjufordeling(arbeidsgiver, emptyList(), emptyList())
 
         val oppdatert = if (interessert) {
             if (person in eksisterende.inkludertePersonTreffIder || person in eksisterende.ekskludertePersonTreffIder) return
             eksisterende.copy(inkludertePersonTreffIder = eksisterende.inkludertePersonTreffIder + person)
         } else {
+            if (person !in eksisterende.inkludertePersonTreffIder && person !in eksisterende.ekskludertePersonTreffIder) return
             eksisterende.copy(
                 inkludertePersonTreffIder = eksisterende.inkludertePersonTreffIder - person,
                 ekskludertePersonTreffIder = eksisterende.ekskludertePersonTreffIder - person,
