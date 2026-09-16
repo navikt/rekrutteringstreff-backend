@@ -372,11 +372,13 @@ class RekrutteringstreffSokKomponenttest {
         (1..25).forEach { i ->
             settTidspunkter(opprettTreffMedEier(tittel = "Treff $i"), identisk, identisk)
         }
-
         val alleIder = (1..3).flatMap { side ->
             sokGet("?side=$side&antallPerSide=10").tilRespons().treff.map { it.id }
         }
+        val side1 = sokGet("?side=1&antallPerSide=10").tilRespons().treff.map { it.id }
+        val side1Igjen = sokGet("?side=1&antallPerSide=10").tilRespons().treff.map { it.id }
 
+        assertThat(side1Igjen).containsExactlyElementsOf(side1)
         assertThat(alleIder).doesNotHaveDuplicates()
         assertThat(alleIder).hasSize(25)
     }

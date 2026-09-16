@@ -72,9 +72,9 @@ enum class Visning(@JsonValue val jsonVerdi: String) {
 }
 
 enum class Sortering(val sql: String, val jsonVerdi: String) {
-    SIST_OPPDATERTE("sist_endret DESC", "sist_oppdaterte"),
-    NYESTE("opprettet_av_tidspunkt DESC", "nyeste"),
-    ELDSTE("opprettet_av_tidspunkt ASC", "eldste"),
+    SIST_OPPDATERTE("sist_endret DESC, rekrutteringstreff_id DESC", "sist_oppdaterte"),
+    NYESTE("opprettet_av_tidspunkt DESC, rekrutteringstreff_id DESC", "nyeste"),
+    ELDSTE("opprettet_av_tidspunkt ASC, rekrutteringstreff_id ASC", "eldste"),
     ;
 
     companion object {
