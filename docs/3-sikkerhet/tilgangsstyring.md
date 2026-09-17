@@ -68,6 +68,17 @@ Personbrukere autentiseres via ID-porten. Tilgangen gir mulighet til å:
 3. Frontend bruker TokenX for å veksle til token som minside-api aksepterer
 4. minside-api verifiserer at bruker kun ser treff de er invitert til
 
+### Arbeidsgivere på WorkOp
+
+Alle borgere får skjermet strukturerte arbeidsgiveropplysninger på WorkOp, uavhengig av invitasjon og påmelding. Regelen håndheves også i rekrutteringstreff-api:
+
+- `GET /api/rekrutteringstreff/{id}/arbeidsgiver` returnerer `200 []`.
+- `GET /api/rekrutteringstreff/{id}` returnerer `antallArbeidsgivere: null`, også når treffet ikke har arbeidsgivere. `null` betyr skjermet antall, ikke null arbeidsgivere.
+
+Autoriserte Nav-ansatte beholder arbeidsgiverlisten og det faktiske antallet. Ordinære rekrutteringstreff påvirkes ikke. Fritekst, som tittel og beskrivelse, maskeres ikke.
+
+rekrutteringstreff-bruker henter via minside-api, som fortsatt skjuler arbeidsgiverlisten både i treffresponsen og i det separate arbeidsgiverendepunktet. Minside-responsen inneholder ikke arbeidsgiverantall.
+
 ## 2. NAV-ansatt
 
 NAV-ansatte autentiseres via Azure AD og får roller basert på AD-gruppemedlemskap. Rollene er:
@@ -128,6 +139,8 @@ Hvert rekrutteringstreff har én eller flere **eiere** (Nav-identer lagret i `ei
 | `DELETE /api/rekrutteringstreff/{id}/eiere/{navIdent}` | Fjern en eier              | Eier / utvikler               |
 
 **Lesetilgang er global:** Alle med gyldig rolle kan lese alle treff, uavhengig av eierskap eller kontor.
+
+**WorkOp via direkte lenke:** Treffoppslaget er tilgjengelig for arbeidsgiverrettet, jobbsøkerrettet og utvikler uten eierskap, slik at frontend kan vise vanlig forhåndsvisning. Borgers lesetilgang er uendret. Dette åpner ikke søket; eksisterende søkefiltre gjelder fortsatt. Arbeidsgiverrettet og utvikler kan legge seg selv til som medeier via `/eiere/meg`, med krav om kontortilknytning og uten å fjerne eksisterende eiere. Gjennomføring og eierredigering beholder sine rolle- og eierkrav.
 
 **Kontorer:** Hvert treff kan ha flere kontorer (`kontorer text[]`). Dette styrer ikke tilgang, men brukes i frontend for filtrering.
 

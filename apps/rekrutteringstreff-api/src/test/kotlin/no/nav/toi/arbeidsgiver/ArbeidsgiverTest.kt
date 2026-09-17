@@ -6,13 +6,18 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
+import no.nav.toi.jobbsoker.*
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.HttpURLConnection.*
 import java.util.*
 
@@ -219,6 +224,131 @@ class ArbeidsgiverTest {
         assertThat(arbeidsgiverOrg2).isNotNull
         val arbeidsgiverOrg3 = actualArbeidsgivere.find { it.organisasjonsnummer == orgnr3.asString }
         assertThat(arbeidsgiverOrg3).isNotNull
+    }
+
+    private fun arbeidsgiverskjermingCases() = RekrutteringstreffKategori.entries.flatMap { kategori ->
+        listOf(Rolle.BORGER, Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET, Rolle.UTVIKLER).flatMap { rolle ->
+            listOf(0, 2).map { antall -> Arguments.of(kategori, rolle, antall) }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("arbeidsgiverskjermingCases")
+    fun `bare borgere paa WorkOp faar skjermet arbeidsgivere og antall`(
+        kategori: RekrutteringstreffKategori,
+        rolle: Rolle,
+        antall: Int,
+    ) {
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(
+            navIdent = "SYNTETISK-EIER",
+            tittel = "Treff hos Syntetisk Testbedrift",
+            beskrivelse = "Syntetisk Testbedrift deltar",
+            gateadresse = "Syntetisk treffadresse",
+            kategori = kategori,
+        )
+        val arbeidsgivere = (1..antall).map { indeks ->
+            Arbeidsgiver(
+                ArbeidsgiverTreffId(UUID.randomUUID()), treffId,
+                Orgnr("00000000$indeks"), Orgnavn("Syntetisk Testbedrift $indeks"),
+                ArbeidsgiverStatus.AKTIV, "Syntetisk arbeidsgiveradresse $indeks", "0000", "Syntetisk poststed",
+            )
+        }
+        db.leggTilArbeidsgivere(arbeidsgivere)
+        val token = if (rolle == Rolle.BORGER) {
+            infra.authServer.lagTokenBorger(infra.authPort, pid = "00000000000")
+        } else {
+            val grupper = mapOf(
+                Rolle.ARBEIDSGIVER_RETTET to AzureAdRoller.arbeidsgiverrettet,
+                Rolle.JOBBSØKER_RETTET to AzureAdRoller.jobbsøkerrettet,
+                Rolle.UTVIKLER to AzureAdRoller.utvikler,
+            )
+            infra.authServer.lagToken(
+                infra.authPort, navIdent = "SYNTETISK-IKKE-EIER", groups = listOf(grupper.getValue(rolle)),
+            )
+        }.serialize()
+        val url = "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somString}"
+
+        val arbeidsgiverResponse = httpGet("$url/arbeidsgiver", token)
+        val treffResponse = httpGet(url, token)
+
+        assertThat(arbeidsgiverResponse.statusCode()).isEqualTo(HTTP_OK)
+        assertThat(treffResponse.statusCode()).isEqualTo(HTTP_OK)
+        val mapper = JacksonConfig.mapper
+        val treffJson = mapper.readTree(treffResponse.body())
+        val type = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverOutboundDto::class.java)
+        val returnerteArbeidsgivere: List<ArbeidsgiverOutboundDto> = mapper.readValue(arbeidsgiverResponse.body(), type)
+        if (rolle == Rolle.BORGER && kategori == RekrutteringstreffKategori.WORKOP) {
+            assertThat(arbeidsgiverResponse.body()).isEqualTo("[]")
+            assertThat(treffJson.has("antallArbeidsgivere")).isTrue()
+            assertThat(treffJson["antallArbeidsgivere"].isNull).isTrue()
+        } else {
+            assertThat(returnerteArbeidsgivere).containsExactlyElementsOf(db.hentAlleArbeidsgivere().map {
+                ArbeidsgiverOutboundDto(
+                    arbeidsgiverTreffId = it.arbeidsgiverTreffId.somString,
+                    organisasjonsnummer = it.orgnr.asString,
+                    navn = it.orgnavn.asString,
+                    status = it.status.name,
+                    gateadresse = it.gateadresse,
+                    postnummer = it.postnummer,
+                    poststed = it.poststed,
+                )
+            })
+            assertThat(treffJson["antallArbeidsgivere"].isInt).isTrue()
+            assertThat(treffJson["antallArbeidsgivere"].asInt()).isEqualTo(antall)
+        }
+        assertThat(treffJson["tittel"].asText()).isEqualTo("Treff hos Syntetisk Testbedrift")
+        assertThat(treffJson["beskrivelse"].asText()).isEqualTo("Syntetisk Testbedrift deltar")
+        assertThat(treffJson["gateadresse"].asText()).isEqualTo("Syntetisk treffadresse")
+        assertThat(db.hentAlleArbeidsgivere()).hasSize(antall)
+    }
+
+    @ParameterizedTest
+    @EnumSource(JobbsøkerStatus::class, names = ["INVITERT", "SVART_JA"])
+    fun `invitasjon og paamelding gir ikke borger tilgang til WorkOp-arbeidsgivere`(status: JobbsøkerStatus) {
+        val treffId = db.opprettRekrutteringstreffIDatabase(kategori = RekrutteringstreffKategori.WORKOP)
+        db.leggTilArbeidsgivere(listOf(
+            Arbeidsgiver(
+                ArbeidsgiverTreffId(UUID.randomUUID()), treffId, Orgnr("000000001"),
+                Orgnavn("Syntetisk Testbedrift"), ArbeidsgiverStatus.AKTIV,
+                "Syntetisk arbeidsgiveradresse", "0000", "Syntetisk poststed",
+            )
+        ))
+        val fnr = Fødselsnummer("00000000000")
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(fnr, Fornavn("Syntetisk"), Etternavn("Testborger"))), treffId,
+        )
+        db.inviterJobbsøkere(personTreffIder, treffId)
+        if (status == JobbsøkerStatus.SVART_JA) {
+            db.svarJaTilInvitasjon(fnr, treffId, fnr.asString)
+        }
+        val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString).serialize()
+        val url = "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somString}"
+
+        val arbeidsgiverResponse = httpGet("$url/arbeidsgiver", token)
+        val treffResponse = httpGet(url, token)
+
+        assertThat(arbeidsgiverResponse.statusCode()).isEqualTo(HTTP_OK)
+        assertThat(arbeidsgiverResponse.body()).isEqualTo("[]")
+        assertThat(treffResponse.statusCode()).isEqualTo(HTTP_OK)
+        val treffJson = JacksonConfig.mapper.readTree(treffResponse.body())
+        assertThat(treffJson.has("antallArbeidsgivere")).isTrue()
+        assertThat(treffJson["antallArbeidsgivere"].isNull).isTrue()
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun `manglende og ugyldig treff gir fortsatt feil ved arbeidsgiveroppslag`(erBorger: Boolean) {
+        val token = if (erBorger) {
+            infra.authServer.lagTokenBorger(infra.authPort, pid = "00000000000")
+        } else {
+            infra.authServer.lagToken(infra.authPort, navIdent = "SYNTETISK-ANSATT")
+        }.serialize()
+
+        listOf(UUID.randomUUID().toString(), "ugyldig-treff-id").forEach { id ->
+            val url = "http://localhost:$appPort/api/rekrutteringstreff/$id"
+            assertThat(httpGet("$url/arbeidsgiver", token).statusCode()).isEqualTo(HTTP_BAD_REQUEST)
+            assertThat(httpGet(url, token).statusCode()).isEqualTo(HTTP_NOT_FOUND)
+        }
     }
 
     @Test

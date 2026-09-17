@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker
 
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
+import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
@@ -16,6 +17,8 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.slf4j.Logger
@@ -26,6 +29,7 @@ class JobbsøkerController(
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
     private val modiaKlient: ModiaKlient,
+    private val rekrutteringstreffService: RekrutteringstreffService,
 ) : RuteRegistrerer {
     companion object {
         private const val pathParamTreffId = "id"
@@ -80,15 +84,22 @@ class JobbsøkerController(
             ]"""
             )]
         ),
-        responses = [OpenApiResponse("201")],
+        responses = [OpenApiResponse("201"), OpenApiResponse("403", description = "WorkOp krever eierskap eller utviklerrolle")],
         path = jobbsøkerPath,
         methods = [HttpMethod.POST]
     )
     private fun leggTilJobbsøkereHandler(): (Context) -> Unit = { ctx ->
         val innloggetBruker = ctx.authenticatedUser()
         innloggetBruker.verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
-        val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treff)
+            ?: throw NotFoundResponse("Rekrutteringstreffet finnes ikke")
+        if (rekrutteringstreff.kategori == RekrutteringstreffKategori.WORKOP &&
+            !eierService.erEierEllerUtvikler(treff, innloggetBruker.extractNavIdent(), ctx)
+        ) {
+            throw ForbiddenResponse("Bare eiere og utviklere kan legge til eller foreslå jobbsøkere til WorkOp")
+        }
+        val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val lagtTilAvNavn = dtoer
             .mapNotNull { it.lagtTilAvNavn?.trim()?.takeIf(String::isNotEmpty) }
             .distinct()
