@@ -291,6 +291,25 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
+    fun `utløpt svarfrist skal flytte aktivitetskort til avbrutt`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId)
+
+        rapid.sendTestMessage(samtykkeSvarfristUtløptMelding(fnr, stillingId))
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(2)
+        hendelser.last().also { hendelse ->
+            assertThat(hendelse.aktivitetsStatus).isEqualTo(AktivitetsStatus.AVBRUTT.name)
+            assertThat(hendelse.opprettetAv).isEqualTo(EndretAvType.SYSTEM.name)
+            assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.SYSTEM.name)
+            assertThat(hendelse.stillingId).isEqualTo(stillingId)
+            assertThat(hendelse.fnr).isEqualTo(fnr)
+        }
+    }
+
+    @Test
     fun `registrert fått jobben skal flytte aktivitetskort til fullført når kandidat har svart ja`() {
         val fnr = "01010012345"
         val stillingId = UUID.randomUUID()
@@ -577,6 +596,18 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "stillingsId": "$stillingId",
             "stillingsTittel": "Test Stilling",
             "samtykkeGittTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+        }
+    """.trimIndent()
+
+    private fun samtykkeSvarfristUtløptMelding(
+        fnr: String,
+        stillingId: UUID,
+    ) = """
+        {
+            "@event_name": "samtykke-forespørsel-deling-av-cv-svarfrist-utløpt",
+            "stillingsId": "$stillingId",
+            "fnr": "$fnr",
+            "svarfrist": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
         }
     """.trimIndent()
 

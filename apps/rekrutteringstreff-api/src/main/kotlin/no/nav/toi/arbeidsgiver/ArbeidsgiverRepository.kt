@@ -338,7 +338,7 @@ class ArbeidsgiverRepository(
                 COUNT(1) AS antall_arbeidsgivere
             FROM arbeidsgiver ag
             JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
-            WHERE rt.id = ? 
+            WHERE rt.id = ? AND ag.status <> 'SLETTET'
         """.trimIndent()
             connection.prepareStatement(sql).use { preparedStatement ->
                 preparedStatement.setObject(1, treff.somUuid)

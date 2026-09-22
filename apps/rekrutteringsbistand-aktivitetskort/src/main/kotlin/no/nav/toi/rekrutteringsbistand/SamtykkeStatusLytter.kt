@@ -35,7 +35,7 @@ class SamtykkeStatusLytter private constructor(
                 it.requireValue("@event_name", hendelse.eventName)
             }
             validate {
-                it.requireKey("fnr", "stillingsId", "stillingsTittel")
+                it.requireKey("fnr", "stillingsId")
                 it.require("stillingsId") { node -> node.asText().toUUID() }
             }
             hendelse.registrerValidering(this)
@@ -78,7 +78,12 @@ class SamtykkeStatusLytter private constructor(
 
     companion object {
         fun registrer(rapidsConnection: RapidsConnection, repository: Repository) {
-            listOf(SamtykkeBesvartHendelse, SelvbetjentSamtykkeGittHendelse, SamtykkeTrukketHendelse,)
+            listOf(
+                SamtykkeBesvartHendelse,
+                SelvbetjentSamtykkeGittHendelse,
+                SamtykkeTrukketHendelse,
+                SamtykkeSvarfristUtløptHendelse,
+            )
                 .forEach { hendelse ->
                     SamtykkeStatusLytter(rapidsConnection, repository, hendelse)
                 }
@@ -92,6 +97,7 @@ private object SamtykkeBesvartHendelse : SamtykkeStatusHendelse {
     override fun registrerValidering(river: River) {
         river.validate {
             it.requireKey(
+                "stillingsTittel",
                 "samtykkeGitt",
                 "besvartAvIdent",
                 "besvartAvIdentType",
@@ -99,7 +105,7 @@ private object SamtykkeBesvartHendelse : SamtykkeStatusHendelse {
             )
             it.require("samtykkeGitt") { node -> node.asText().toBooleanStrict() }
             it.require("besvartAvIdentType") { node -> IdentType.valueOf(node.asText()) }
-            it.require("besvartTidspunkt") { node -> ZonedDateTime.parse(node.asText()) }
+            it.requireZonedDateTime("besvartTidspunkt")
         }
     }
 
@@ -121,8 +127,8 @@ private object SelvbetjentSamtykkeGittHendelse : SamtykkeStatusHendelse {
 
     override fun registrerValidering(river: River) {
         river.validate {
-            it.requireKey("samtykkeGittTidspunkt")
-            it.require("samtykkeGittTidspunkt") { node -> ZonedDateTime.parse(node.asText()) }
+            it.requireKey("stillingsTittel", "samtykkeGittTidspunkt")
+            it.requireZonedDateTime("samtykkeGittTidspunkt")
         }
     }
 
@@ -138,9 +144,9 @@ private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
 
     override fun registrerValidering(river: River) {
         river.validate {
-            it.requireKey("trukketAvIdent", "trukketAvIdentType", "trukketTidspunkt")
+            it.requireKey("stillingsTittel", "trukketAvIdent", "trukketAvIdentType", "trukketTidspunkt")
             it.require("trukketAvIdentType") { node -> IdentType.valueOf(node.asText()) }
-            it.require("trukketTidspunkt") { node -> ZonedDateTime.parse(node.asText()) }
+            it.requireZonedDateTime("trukketTidspunkt")
         }
     }
 
@@ -150,4 +156,24 @@ private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
 
     override fun endretAvType(packet: JsonMessage) =
         IdentType.valueOf(packet["trukketAvIdentType"].asText()).tilEndretAvType()
+}
+
+private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {
+    override val eventName = "samtykke-forespørsel-deling-av-cv-svarfrist-utløpt"
+
+    override fun registrerValidering(river: River) {
+        river.validate {
+            it.requireZonedDateTime("svarfrist")
+        }
+    }
+
+    override fun aktivitetsStatus(packet: JsonMessage) = AktivitetsStatus.AVBRUTT
+
+    override fun endretAv(packet: JsonMessage, fnr: String) = EndretAvType.SYSTEM.name
+
+    override fun endretAvType(packet: JsonMessage) = EndretAvType.SYSTEM
+}
+
+private fun JsonMessage.requireZonedDateTime(key: String) {
+    require(key) { node -> ZonedDateTime.parse(node.asText()) }
 }
