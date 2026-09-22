@@ -30,6 +30,7 @@ enum class JobbsøkerSorteringsfelt {
     NAVN,
     LAGT_TIL,
     STATUS,
+    KONTOR,
     ;
 
     @JsonValue
@@ -37,6 +38,7 @@ enum class JobbsøkerSorteringsfelt {
         NAVN -> "navn"
         LAGT_TIL -> "lagt-til"
         STATUS -> "status"
+        KONTOR -> "kontor"
     }
 
     val standardRetning: JobbsøkerSorteringsretning
@@ -44,6 +46,7 @@ enum class JobbsøkerSorteringsfelt {
             LAGT_TIL -> JobbsøkerSorteringsretning.DESC
             NAVN -> JobbsøkerSorteringsretning.ASC
             STATUS -> JobbsøkerSorteringsretning.ASC
+            KONTOR -> JobbsøkerSorteringsretning.ASC
         }
 
     private fun statusSorteringSql(retning: JobbsøkerSorteringsretning): String {
@@ -68,6 +71,7 @@ enum class JobbsøkerSorteringsfelt {
             NAVN -> "LOWER(v.etternavn) ${retning.sql}, LOWER(v.fornavn) ${retning.sql}, v.lagt_til_dato DESC NULLS LAST, v.jobbsoker_id DESC"
             LAGT_TIL -> "v.lagt_til_dato ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
             STATUS -> statusSorteringSql(retning)
+            KONTOR -> "v.kontornummer ${retning.sql} NULLS LAST, LOWER(v.etternavn) ASC, LOWER(v.fornavn) ASC, v.jobbsoker_id DESC"
         }
 
     companion object {
@@ -78,6 +82,7 @@ enum class JobbsøkerSorteringsfelt {
                 "navn" -> NAVN
                 "lagt-til" -> LAGT_TIL
                 "status" -> STATUS
+                "kontor" -> KONTOR
                 else -> throw IllegalArgumentException("Ugyldig sortering: $verdi")
             }
     }
@@ -107,6 +112,7 @@ data class JobbsøkerSøkRequest(
     val fritekst: String? = null,
     val status: List<JobbsøkerStatus>? = null,
     val aldersgruppe: List<Aldersgruppe>? = null,
+    val kontornummer: List<String>? = null,
     @JsonProperty("sortering")
     val sorteringsfelt: JobbsøkerSorteringsfelt = JobbsøkerSorteringsfelt.NAVN,
     @JsonProperty("retning")
@@ -123,6 +129,7 @@ data class JobbsøkerSøkRespons(
     val jobbsøkere: List<JobbsøkerSøkTreff>,
     val antallPerStatus: Map<JobbsøkerStatus, Int> = emptyMap(),
     val antallPerAldersgruppe: Map<Aldersgruppe, Int> = emptyMap(),
+    val antallPerKontor: Map<String, Int> = emptyMap(),
 )
 
 data class JobbsøkerSøkTreff(
@@ -136,6 +143,7 @@ data class JobbsøkerSøkTreff(
     val lagtTilAvNavn: String?,
     val alder: Int?,
     val minsideHendelser: List<MinsideHendelseSøkDto> = emptyList(),
+    val kontornummer: String?,
 )
 
 data class MinsideHendelseSøkDto(

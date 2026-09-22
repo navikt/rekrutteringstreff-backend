@@ -780,4 +780,236 @@ class JobbsøkerSokKomponentTest {
         assertThat(dto.jobbsøkere.single().lagtTilAv).isEqualTo("Z123456")
         assertThat(dto.jobbsøkere.single().lagtTilAvNavn).isNull()
     }
+
+    @Test
+    fun `kontorfilter returnerer kun jobbsøkere fra valgt kontor`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+        )
+
+        val dto = søk(treffId, "kontornummer" to listOf("1000"))
+
+        assertThat(dto.totalt).isEqualTo(2)
+        assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Ola", "Per")
+    }
+
+    @Test
+    fun `kontorfilter med flere kontornummer returnerer unionen`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
+        )
+
+        val dto = søk(treffId, "kontornummer" to listOf("1000", "3000"))
+
+        assertThat(dto.totalt).isEqualTo(2)
+        assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Ola", "Per")
+    }
+
+    @Test
+    fun `kontorfilter ekskluderer jobbsøkere uten kontor`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Kari", "Hansen"),
+        )
+
+        val ufiltrert = søk(treffId)
+        val filtrert = søk(treffId, "kontornummer" to listOf("1000"))
+
+        assertThat(ufiltrert.totalt).isEqualTo(2)
+        assertThat(filtrert.totalt).isEqualTo(1)
+        assertThat(filtrert.jobbsøkere.single().fornavn).isEqualTo("Ola")
+    }
+
+    @Test
+    fun `ukjent kontornummer gir 400`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+        )
+
+        val response = httpPost(søkPath(treffId), søkBody("kontornummer" to listOf("9999")))
+
+        assertThat(response.statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `kontornummer som tilhører eier er gyldig selv uten jobbsøkere`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+        )
+
+        val dto = søk(treffId, "kontornummer" to listOf("0315"))
+
+        assertThat(dto.totalt).isEqualTo(0)
+        assertThat(dto.jobbsøkere).isEmpty()
+    }
+
+    @Test
+    fun `antallPerKontor inkluderer eierkontor uten jobbsøkere med null`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+        )
+
+        val dto = søk(treffId)
+
+        assertThat(dto.antallPerKontor["0315"]).isEqualTo(0)
+        assertThat(dto.antallPerKontor["1000"]).isEqualTo(1)
+    }
+
+    @Test
+    fun `antallPerKontor inkluderer kontor som ingen eier tilhører`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "9999", kontornavn = "Ukjent kontor")),
+        )
+
+        val dto = søk(treffId)
+
+        assertThat(dto.antallPerKontor).containsOnlyKeys("0315", "9999")
+        assertThat(dto.antallPerKontor["9999"]).isEqualTo(1)
+    }
+
+    @Test
+    fun `antallPerKontor inkluderer kontor fra alle eiere`() {
+        val treffId = opprettTreffMedEier()
+        ctx.eierRepository.leggTil(treffId, "B222222", "0403")
+        ctx.eierRepository.leggTil(treffId, "C333333", "1124")
+
+        val dto = søk(treffId)
+
+        assertThat(dto.antallPerKontor).containsOnlyKeys("0315", "0403", "1124")
+        assertThat(dto.antallPerKontor.values).allMatch { it == 0 }
+    }
+
+    @Test
+    fun `antallPerKontor teller ikke jobbsøkere uten kontor`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Kari", "Hansen"),
+        )
+
+        val dto = søk(treffId)
+
+        assertThat(dto.totalt).isEqualTo(2)
+        assertThat(dto.antallPerKontor).containsOnlyKeys("0315", "1000")
+        assertThat(dto.antallPerKontor["1000"]).isEqualTo(1)
+    }
+
+    @Test
+    fun `antallPerKontor er ufiltrert selv med kontorfilter aktivt`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+        )
+
+        val dto = søk(treffId, "kontornummer" to listOf("1000"))
+
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.antallPerKontor["1000"]).isEqualTo(1)
+        assertThat(dto.antallPerKontor["2000"]).isEqualTo(2)
+    }
+
+    @Test
+    fun `antallPerKontor filtreres av fritekst men beholder alle nøkler`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+        )
+
+        val dto = søk(treffId, "fritekst" to "ola")
+
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.antallPerKontor).containsOnlyKeys("0315", "1000", "2000")
+        assertThat(dto.antallPerKontor["1000"]).isEqualTo(1)
+        assertThat(dto.antallPerKontor["2000"]).isEqualTo(0)
+    }
+
+    @Test
+    fun `antallPerKontor ekskluderer skjulte og slettede jobbsøkere`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Synlig", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Skjult", "B", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("33333333333", "Slettet", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
+        )
+        db.settSynlighet(personTreffIder[1], false)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
+
+        val dto = søk(treffId)
+
+        assertThat(dto.antallPerKontor).containsOnlyKeys("0315", "1000")
+        assertThat(dto.antallPerKontor["1000"]).isEqualTo(1)
+    }
+
+    @Test
+    fun `sortering på kontor støtter stigende og synkende rekkefølge`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Charlie", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
+            jobbsøker("22222222222", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("33333333333", "Bob", "B", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+        )
+
+        val stigende = søk(treffId, "sortering" to "kontor", "retning" to "asc")
+        val synkende = søk(treffId, "sortering" to "kontor", "retning" to "desc")
+
+        assertThat(stigende.jobbsøkere.map { it.kontornummer }).containsExactly("1000", "2000", "3000")
+        assertThat(synkende.jobbsøkere.map { it.kontornummer }).containsExactly("3000", "2000", "1000")
+    }
+
+    @Test
+    fun `sortering på kontor plasserer jobbsøkere uten kontor sist i begge retninger`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Bob", "B"),
+            jobbsøker("33333333333", "Charlie", "C", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+        )
+
+        val stigende = søk(treffId, "sortering" to "kontor", "retning" to "asc")
+        val synkende = søk(treffId, "sortering" to "kontor", "retning" to "desc")
+
+        assertThat(stigende.jobbsøkere.map { it.kontornummer }).containsExactly("1000", "2000", null)
+        assertThat(synkende.jobbsøkere.map { it.kontornummer }).containsExactly("2000", "1000", null)
+    }
+
+    @Test
+    fun `sortering på kontor bruker navn som sekundærsortering`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Zakariassen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Kari", "Andersen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+        )
+
+        val dto = søk(treffId, "sortering" to "kontor", "retning" to "asc")
+
+        assertThat(dto.jobbsøkere.map { it.etternavn }).containsExactly("Andersen", "Olsen", "Zakariassen")
+    }
+
+    @Test
+    fun `sortering på kontor bruker stigende som standardretning`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Charlie", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
+            jobbsøker("22222222222", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+        )
+
+        val dto = søk(treffId, "sortering" to "kontor")
+
+        assertThat(dto.jobbsøkere.map { it.kontornummer }).containsExactly("1000", "3000")
+    }
 }
