@@ -63,7 +63,7 @@ class EierService(
         }
     }
 
-    fun slettEier(treffId: TreffId, eierNavIdent: String, utførtAv: String) {
+    fun slettEier(treffId: TreffId, eierNavIdent: String, utførtAv: String, kontorNavn: String? = null) {
         dataSource.executeInTransaction { connection ->
             val eiere = eierRepository.hent(connection, treffId, forUpdate = true)
                 ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
@@ -80,11 +80,17 @@ class EierService(
                 connection, treffId, RekrutteringstreffHendelsestype.EIER_FJERNET, utførtAv,
                 subjektId = eierNavIdent, subjektNavn = eierNavIdent,
             )
-            oppdaterKontorerOgHendelser(connection, treffId, eiere, utførtAv)
+            oppdaterKontorerOgHendelser(connection, treffId, eiere, utførtAv, kontorNavn)
         }
     }
 
-    private fun oppdaterKontorerOgHendelser(connection: Connection, treffId: TreffId, eiereFør: List<Eier>, utførtAv: String) {
+    private fun oppdaterKontorerOgHendelser(
+        connection: Connection,
+        treffId: TreffId,
+        eiereFør: List<Eier>,
+        utførtAv: String,
+        kontorNavn: String? = null,
+    ) {
         val eiereEtter = eierRepository.hent(connection, treffId)
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
         val kontorerFør = eiereFør.map { it.kontorEnhetId }.toSet()
@@ -99,7 +105,7 @@ class EierService(
         (kontorerFør - kontorerEtter).forEach { kontor ->
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.KONTOR_FJERNET, utførtAv,
-                subjektId = kontor, subjektNavn = kontor,
+                subjektId = kontor, subjektNavn = kontorNavn ?: kontor,
             )
         }
     }

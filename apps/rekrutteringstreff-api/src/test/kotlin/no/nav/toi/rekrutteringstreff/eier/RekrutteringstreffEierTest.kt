@@ -16,6 +16,9 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.NullAndEmptySource
 import org.junit.jupiter.params.provider.ValueSource
+import java.net.URI
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.util.*
 
 
@@ -431,6 +434,50 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
+    fun `slettEier lagrer trimmet kontornavn på KONTOR_FJERNET`() {
+        val navIdent = "A123456"
+        val skalSlettes = "B654321"
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = database.hentAlleRekrutteringstreff().single()
+        ctx.eierRepository.leggTil(treff.id, skalSlettes, "0315")
+
+        val response = httpDeleteMedBody(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/$skalSlettes",
+            """{"kontorNavn":"  Nav Grünerløkka  "}""",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val hendelse = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+            .single { it.hendelsestype == "KONTOR_FJERNET" }
+        assertThat(hendelse.subjektId).isEqualTo("0315")
+        assertThat(hendelse.subjektNavn).isEqualTo("Nav Grünerløkka")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", """{"kontorNavn":" "}"""])
+    fun `slettEier uten kontornavn bruker kontornummer på KONTOR_FJERNET`(body: String) {
+        val navIdent = "A123456"
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = database.hentAlleRekrutteringstreff().single()
+        ctx.eierRepository.leggTil(treff.id, "B654321", "0315")
+
+        val response = httpDeleteMedBody(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/B654321",
+            body,
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val hendelse = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+            .single { it.hendelsestype == "KONTOR_FJERNET" }
+        assertThat(hendelse.subjektId).isEqualTo("0315")
+        assertThat(hendelse.subjektNavn).isEqualTo("0315")
+    }
+
+    @Test
     fun `DELETE eier gir 403 når bruker ikke er eier`() {
         val oppretter = "A123456"
         val ikkeEier = "X000000"
@@ -464,6 +511,16 @@ class RekrutteringstreffEierTest {
 
         assertThat(response.statusCode()).isEqualTo(403)
         assertThat(database.hentEiere(treff.id)).doesNotContain(jobbsøkerRettetBruker)
+    }
+
+    private fun httpDeleteMedBody(url: String, body: String, token: String): HttpResponse<String> {
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer $token")
+            .header("Content-Type", "application/json")
+            .method("DELETE", HttpRequest.BodyPublishers.ofString(body))
+            .build()
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
     private fun opprettRekrutteringstreffIDatabase(
