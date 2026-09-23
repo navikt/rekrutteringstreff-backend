@@ -14,19 +14,19 @@ import no.nav.toi.AuditLog
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.oppmøte.OppmøteService
-import no.nav.toi.treffgjennomføring.matching.MatchingService
-import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.eier.krevEierEllerUtvikler
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.FlyttJobbsøkerRomRequestDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
-import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
+import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomføring.dto.StegRequestDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
+import no.nav.toi.treffgjennomføring.matching.MatchingService
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
 import java.util.*
 
 class TreffgjennomføringController(
@@ -97,6 +97,15 @@ class TreffgjennomføringController(
 
     private fun Context.treffId() = TreffId(pathParam("id"))
 
+    /** Alle skriveendepunktene krever eier eller utvikler og svarer med hele det oppdaterte aggregatet. */
+    private fun skrivHandler(
+        operasjon: (ctx: Context, treffId: TreffId, navIdent: String) -> TreffgjennomføringDto,
+    ): (Context) -> Unit = { ctx ->
+        val treffId = ctx.treffId()
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
+        ctx.status(200).json(operasjon(ctx, treffId, navIdent))
+    }
+
     @OpenApi(
         summary = "Hent hele treffgjennomføringen og oppfølgingen for et rekrutteringstreff",
         description = "Rent lesende. Finnes ingen lagret treffgjennomføring returneres et tomt aggregat med 200.",
@@ -125,7 +134,7 @@ class TreffgjennomføringController(
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
         requestBody = OpenApiRequestBody(content = [OpenApiContent(
             from = OppmøteRequestDto::class,
-            example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "møtt": true}""",
+            example = """{"personTreffId": "$PERSON_ID", "møtt": true}""",
         )]),
         responses = [
             OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)]),
@@ -141,11 +150,8 @@ class TreffgjennomføringController(
         path = OPPMØTE,
         methods = [HttpMethod.PUT],
     )
-    private fun oppmøteHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
-        val dto = ctx.bodyAsClass<OppmøteRequestDto>()
-        ctx.status(200).json(oppmøteService.oppdaterOppmøte(treffId, dto, navIdent))
+    private fun oppmøteHandler() = skrivHandler { ctx, treffId, navIdent ->
+        oppmøteService.oppdaterOppmøte(treffId, ctx.bodyAsClass<OppmøteRequestDto>(), navIdent)
     }
 
     @OpenApi(
@@ -158,11 +164,8 @@ class TreffgjennomføringController(
         path = MØTEOPPSETT,
         methods = [HttpMethod.PUT],
     )
-    private fun møteoppsettHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
-        val dto = ctx.bodyAsClass<MøteoppsettRequestDto>()
-        ctx.status(200).json(møteplanService.lagreMøteoppsett(treffId, dto, navIdent))
+    private fun møteoppsettHandler() = skrivHandler { ctx, treffId, navIdent ->
+        møteplanService.lagreMøteoppsett(treffId, ctx.bodyAsClass<MøteoppsettRequestDto>(), navIdent)
     }
 
     @OpenApi(
@@ -186,12 +189,10 @@ class TreffgjennomføringController(
         path = FLYTT_JOBBSØKER_ROM,
         methods = [HttpMethod.PUT],
     )
-    private fun flyttJobbsøkerRomHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        ctx.krevEierEllerUtvikler(eierService, treffId)
+    private fun flyttJobbsøkerRomHandler() = skrivHandler { ctx, treffId, _ ->
         val personTreffId = PersonTreffId(ctx.pathParam("personTreffId"))
         val dto = ctx.bodyAsClass<FlyttJobbsøkerRomRequestDto>()
-        ctx.status(200).json(møteplanService.flyttJobbsøkerTilRom(treffId, personTreffId, dto.romnummer))
+        møteplanService.flyttJobbsøkerTilRom(treffId, personTreffId, dto.romnummer)
     }
 
     @OpenApi(
@@ -200,14 +201,15 @@ class TreffgjennomføringController(
         operationId = "fordelRomPåNytt",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
+        responses = [
+            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)]),
+            OpenApiResponse(status = "400", description = "Møteoppsettet mangler, eller treffet er ikke WorkOp."),
+        ],
         path = FORDEL_ROM,
         methods = [HttpMethod.POST],
     )
-    private fun fordelRomHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        ctx.krevEierEllerUtvikler(eierService, treffId)
-        ctx.status(200).json(møteplanService.fordelRomPåNytt(treffId))
+    private fun fordelRomHandler() = skrivHandler { _, treffId, _ ->
+        møteplanService.fordelRomPåNytt(treffId)
     }
 
     @OpenApi(
@@ -215,11 +217,15 @@ class TreffgjennomføringController(
         operationId = "settInteresse",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = InteresseRequestDto::class, example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "arbeidsgiverTreffId": "22222222-2222-2222-2222-222222222222", "interessert": true}""")]),
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = InteresseRequestDto::class, example = """{"personTreffId": "$PERSON_ID", "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID", "interessert": true}""")]),
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = INTERESSE,
         methods = [HttpMethod.PUT],
     )
+    private fun interesseHandler() = skrivHandler { ctx, treffId, _ ->
+        matchingService.settInteresse(treffId, ctx.bodyAsClass<InteresseRequestDto>())
+    }
+
     @OpenApi(
         summary = "Flytt gjeldende steg framover. Brukes når arrangøren går videre til et steg som ikke skriver data",
         operationId = "settGjeldendeSteg",
@@ -230,18 +236,8 @@ class TreffgjennomføringController(
         path = STEG,
         methods = [HttpMethod.PUT],
     )
-    private fun stegHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        ctx.krevEierEllerUtvikler(eierService, treffId)
-        val dto = ctx.bodyAsClass<StegRequestDto>()
-        ctx.status(200).json(treffgjennomføringService.settGjeldendeSteg(treffId, dto.steg))
-    }
-
-    private fun interesseHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        ctx.krevEierEllerUtvikler(eierService, treffId)
-        val dto = ctx.bodyAsClass<InteresseRequestDto>()
-        ctx.status(200).json(matchingService.settInteresse(treffId, dto))
+    private fun stegHandler() = skrivHandler { ctx, treffId, _ ->
+        treffgjennomføringService.settGjeldendeSteg(treffId, ctx.bodyAsClass<StegRequestDto>().steg)
     }
 
     @OpenApi(
@@ -251,17 +247,14 @@ class TreffgjennomføringController(
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
         requestBody = OpenApiRequestBody(content = [OpenApiContent(
             from = ArbeidsgiverIntervjufordelingDto::class,
-            example = """{"arbeidsgiverTreffId": "22222222-2222-2222-2222-222222222222", "inkludertePersonTreffIder": ["11111111-1111-1111-1111-111111111111"], "ekskludertePersonTreffIder": []}""",
+            example = """{"arbeidsgiverTreffId": "$ARBEIDSGIVER_ID", "inkludertePersonTreffIder": ["$PERSON_ID"], "ekskludertePersonTreffIder": []}""",
         )]),
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = INTERVJUFORDELING,
         methods = [HttpMethod.PUT],
     )
-    private fun intervjufordelingHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        ctx.krevEierEllerUtvikler(eierService, treffId)
-        val dto = ctx.bodyAsClass<ArbeidsgiverIntervjufordelingDto>()
-        ctx.status(200).json(matchingService.lagreIntervjufordeling(treffId, dto))
+    private fun intervjufordelingHandler() = skrivHandler { ctx, treffId, _ ->
+        matchingService.lagreIntervjufordeling(treffId, ctx.bodyAsClass<ArbeidsgiverIntervjufordelingDto>())
     }
 
     @OpenApi(
@@ -274,10 +267,7 @@ class TreffgjennomføringController(
         path = FORDEL_INTERVJUER,
         methods = [HttpMethod.POST],
     )
-    private fun fordelIntervjuerHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
-        ctx.status(200).json(matchingService.fordelIntervjuer(treffId, navIdent))
+    private fun fordelIntervjuerHandler() = skrivHandler { _, treffId, navIdent ->
+        matchingService.fordelIntervjuer(treffId, navIdent)
     }
-
 }

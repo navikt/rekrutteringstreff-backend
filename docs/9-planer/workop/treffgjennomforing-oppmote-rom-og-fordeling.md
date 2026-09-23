@@ -881,9 +881,9 @@ Alle returnerer hele aggregatet:
 | Metode | Sti                                            | Funksjon                                                                                                                                                          |
 | ------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PUT    | `/treffgjennomforing/oppmote`                  | Registrer eller angre oppmøte for én jobbsøker. Fjerning blokkeres med `409` hvis personen har interesser eller vurdering.                                                  |
-| PUT    | `/treffgjennomforing/moteoppsett`              | Sett tider. Første gang: opprett full round-robin-fordeling + rotasjon, fase = ROM. Senere: oppdater tidene uten å regenerere. Kun WorkOp.                        |
+| PUT    | `/treffgjennomforing/moteoppsett`              | Sett tider. Første gang: opprett full round-robin-fordeling + rotasjon, fase = ROM. Senere: oppdater tidene uten å regenerere. Uendrede tider gir ingen hendelse. Kun WorkOp. |
 | PUT    | `/treffgjennomforing/romfordeling/{personTreffId}` | Flytt én fremmøtt atomisk til målrommet. Gjentatt kommando er idempotent. Kun WorkOp. |
-| POST   | `/treffgjennomforing/romfordeling/fordel` | Fordel alle fremmøtte på nytt etter bekreftelse. Kun WorkOp. |
+| POST   | `/treffgjennomforing/romfordeling/fordel` | Fordel alle fremmøtte på nytt etter bekreftelse. Krever møteoppsett. Kun WorkOp. |
 | PUT    | `/treffgjennomforing/interesse`                | Sett eller fjern ett interessepar, idempotent. Ny interesse legges bakerst blant de inkluderte i intervjufordelingen; trukket interesse fjernes fra begge lister. Fjerning blokkeres med `409` hvis paret har en registrert status. |
 | PUT    | `/treffgjennomforing/intervjufordeling`        | Lagre rekkefølge over og under sperrelinjen for én arbeidsgiver. Brukes ved manuell dra-og-slipp. Kun WorkOp.                                                     |
 | POST   | `/treffgjennomforing/intervjufordeling/fordel` | Fordel intervjuene på nytt. Tom body — alt som trengs er lagret. Erstatter hele fordelingen i én transaksjon. Kun WorkOp.                                         |

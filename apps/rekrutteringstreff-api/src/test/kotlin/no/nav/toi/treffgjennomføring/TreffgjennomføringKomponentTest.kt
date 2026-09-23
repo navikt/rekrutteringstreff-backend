@@ -256,6 +256,18 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `uendret møteoppsett skriver ingen ny hendelse`() {
+        val treff = workOpTreff()
+        oppmøte(treff, jobbsøker(treff), møtt = true)
+        møteoppsett(treff)
+
+        assertThat(møteoppsett(treff).statusCode()).isEqualTo(200)
+
+        assertThat(antallTreffHendelser(treff, "TREFFGJENNOMFØRING_OPPRETTET")).isEqualTo(1)
+        assertThat(antallTreffHendelser(treff, "TREFFGJENNOMFØRING_OPPSETT_ENDRET")).isEqualTo(0)
+    }
+
+    @Test
     fun `møteoppsett avvises på et vanlig treff`() {
         val treff = vanligTreff()
         val person = jobbsøker(treff)
@@ -564,6 +576,15 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `fordeling av rom på nytt krever møteoppsett`() {
+        val treff = workOpTreff()
+        oppmøte(treff, jobbsøker(treff), møtt = true)
+
+        assertThat(post(treff, "/treffgjennomforing/romfordeling/fordel").statusCode()).isEqualTo(400)
+        assertThat(lagredeRom(treff)).isEmpty()
+    }
+
+    @Test
     fun `flytting avvises med ugyldig romnummer`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff)
@@ -639,6 +660,16 @@ class TreffgjennomføringKomponentTest {
         assertThat(r1).hasSize(2)
         assertThat(r2).hasSize(1)
         assertThat(r1 + r2).containsExactlyInAnyOrder(p1.somString, p2.somString, p3.somString)
+    }
+
+    @Test
+    fun `intervjufordeling avviser jobbsøker som ikke er fremmøtt`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+
+        assertThat(intervjufordeling(treff, ag, ekskluderte = listOf(person)).statusCode()).isEqualTo(400)
+        assertThat(aggregat(treff)["intervjufordelinger"]).isEmpty()
     }
 
     @Test

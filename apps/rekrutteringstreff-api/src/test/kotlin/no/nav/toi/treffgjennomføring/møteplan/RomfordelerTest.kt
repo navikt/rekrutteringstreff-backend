@@ -2,6 +2,7 @@ package no.nav.toi.treffgjennomføring.møteplan
 
 import no.nav.toi.jobbsoker.PersonTreffId
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -72,5 +73,34 @@ class RomfordelerTest {
     fun `tom fordeling gir tom liste`() {
         assertThat(Romfordeler.oppdaterEtterOppmøte(emptyList(), listOf(person()))).isEmpty()
         assertThat(Romfordeler.fordelJevnt(listOf(person()), 0)).isEmpty()
+    }
+
+    @Test
+    fun `flytt legger personen sist i målrommet og lar de andre stå`() {
+        val flyttes = person()
+        val blir1 = person()
+        val blir2 = person()
+        val rom = listOf(Rom(1, listOf(blir1, flyttes)), Rom(2, listOf(blir2)))
+
+        val resultat = Romfordeler.flytt(rom, flyttes, 2)
+
+        assertThat(resultat).containsExactly(Rom(1, listOf(blir1)), Rom(2, listOf(blir2, flyttes)))
+    }
+
+    @Test
+    fun `flytt til samme rom flytter personen sist i rommet`() {
+        val flyttes = person()
+        val annen = person()
+        val rom = listOf(Rom(1, listOf(flyttes, annen)))
+
+        assertThat(Romfordeler.flytt(rom, flyttes, 1)).containsExactly(Rom(1, listOf(annen, flyttes)))
+    }
+
+    @Test
+    fun `flytt til rom som ikke finnes avvises`() {
+        val rom = listOf(Rom(1, listOf(person())))
+
+        assertThatThrownBy { Romfordeler.flytt(rom, person(), 2) }
+            .isInstanceOf(IllegalArgumentException::class.java)
     }
 }
