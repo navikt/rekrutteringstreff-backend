@@ -97,7 +97,6 @@ class TreffgjennomføringController(
 
     private fun Context.treffId() = TreffId(pathParam("id"))
 
-    /** Alle skriveendepunktene krever eier eller utvikler og svarer med hele det oppdaterte aggregatet. */
     private fun skrivHandler(
         operasjon: (ctx: Context, treffId: TreffId, navIdent: String) -> TreffgjennomføringDto,
     ): (Context) -> Unit = { ctx ->

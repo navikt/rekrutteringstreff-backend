@@ -11,8 +11,7 @@ import java.time.LocalTime
 class MøteplanRepository {
 
     /**
-     * Sann når treffet har møteoppsett eller lagrede romplasseringer. Eldre treff kan ha romplasseringer uten
-     * møteoppsett, og disse må også holdes stabile når oppmøte eller arbeidsgivere endres.
+     * Sann når treffet har møteoppsett eller lagrede romplasseringer.
      */
     fun harMøteplan(connection: Connection, treffId: TreffId): Boolean {
         val sql = """

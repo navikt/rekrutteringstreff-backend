@@ -34,9 +34,6 @@ data class Treffkontekst(
         if (!erWorkOp) throw BadRequestResponse("Steget finnes bare på treff av kategorien WORKOP")
     }
 
-    /**
-     * Stenger steg som er under utvikling: av i prod, bare WorkOp i dev, og åpent for alle treff lokalt.
-     */
     fun krevWorkOpEllerLokalUtvikling(miljø: Miljø) {
         when (miljø) {
             Miljø.PROD_GCP -> throw BadRequestResponse("Steget er ikke tilgjengelig i produksjon")
@@ -73,7 +70,6 @@ class TreffkontekstRepository {
         }
     }
 
-    /** Leser `(ekstern id, intern id)`-rader til et kart som beholder rekkefølgen fra spørringen. */
     private fun <K> hentIdKart(
         connection: Connection,
         sql: String,
