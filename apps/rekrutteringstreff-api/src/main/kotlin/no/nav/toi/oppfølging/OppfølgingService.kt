@@ -19,17 +19,15 @@ class OppfølgingService(
     private val oppmøteRepository: OppmøteRepository,
     private val stegRepository: StegRepository,
     private val hendelser: HendelseWriter,
-    private val miljø: Miljø = Miljø.LOKALT,
+    private val miljø: Miljø,
 ) {
 
     fun lagreVurdering(treffId: TreffId, dto: VurderingDto, navIdent: String): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
             kontekst.krevWorkOpEllerLokalUtvikling(miljø)
             val ny = OppfølgingValidering.vurdering(dto)
-            val jobbsøkerId = kontekst.jobbsøkerId(ny.personTreffId)
-                ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
-            val arbeidsgiverId = kontekst.arbeidsgiverId(ny.arbeidsgiverTreffId)
-                ?: throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
+            val jobbsøkerId = kontekst.krevJobbsøkerId(ny.personTreffId)
+            val arbeidsgiverId = kontekst.krevArbeidsgiverId(ny.arbeidsgiverTreffId)
 
             val før = repository.hentForTreff(connection, kontekst.treffDbId).firstOrNull {
                 it.personTreffId == ny.personTreffId && it.arbeidsgiverTreffId == ny.arbeidsgiverTreffId
@@ -45,7 +43,7 @@ class OppfølgingService(
             }
 
             skrivHendelser(connection, før, ny, navIdent)
-            stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, rad.gjeldendeSteg, TreffgjennomføringSteg.VURDERING)
+            stegRepository.flyttFramTil(connection, rad, TreffgjennomføringSteg.VURDERING)
         }
 
     private fun skrivHendelser(connection: Connection, før: Vurdering?, etter: Vurdering, navIdent: String) {

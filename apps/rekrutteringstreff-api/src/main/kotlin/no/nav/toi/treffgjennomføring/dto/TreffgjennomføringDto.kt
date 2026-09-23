@@ -1,14 +1,14 @@
 package no.nav.toi.treffgjennomføring.dto
 
 import no.nav.toi.jobbsoker.oppmøte.Deltakernummer
-import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
-import no.nav.toi.treffgjennomføring.møteplan.ArbeidsgiverRotasjon
-import no.nav.toi.treffgjennomføring.matching.Interesse
-import no.nav.toi.treffgjennomføring.møteplan.Rom
-import no.nav.toi.treffgjennomføring.Treffgjennomføring
-import no.nav.toi.treffgjennomføring.TreffgjennomføringSteg
 import no.nav.toi.oppfølging.Vurdering
 import no.nav.toi.oppfølging.Vurderingsvalg
+import no.nav.toi.treffgjennomføring.Treffgjennomføring
+import no.nav.toi.treffgjennomføring.TreffgjennomføringSteg
+import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
+import no.nav.toi.treffgjennomføring.matching.Interesse
+import no.nav.toi.treffgjennomføring.møteplan.ArbeidsgiverRotasjon
+import no.nav.toi.treffgjennomføring.møteplan.Rom
 import java.time.format.DateTimeFormatter
 
 private val KLOKKESLETT = DateTimeFormatter.ofPattern("HH:mm")
@@ -95,7 +95,7 @@ fun Treffgjennomføring.tilDto(rekrutteringstreffId: String, vurderinger: List<V
     interesser = matching.interesser.map { it.tilDto() },
     intervjufordelinger = matching.intervjufordelinger.map { it.tilDto() },
     vurderinger = vurderinger.map { it.tilDto() },
-) 
+)
 
 private fun Deltakernummer.tilDto() = DeltakernummerDto(personTreffId.somString, deltakernummer)
 
