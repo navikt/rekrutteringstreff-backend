@@ -1,6 +1,7 @@
 package no.nav.toi.treffgjennomføring.matching
 
 import io.javalin.http.BadRequestResponse
+import io.javalin.http.ConflictResponse
 import no.nav.toi.HendelseWriter
 import no.nav.toi.Miljø
 import no.nav.toi.RekrutteringstreffHendelsestype
@@ -86,13 +87,30 @@ class MatchingService(
             inkludertePersonTreffIder = kontekst.krevJobbsøkere(dto.inkludertePersonTreffIder),
             ekskludertePersonTreffIder = kontekst.krevJobbsøkere(dto.ekskludertePersonTreffIder),
         )
-        val fremmøtte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId).toSet()
-        if ((ny.inkludertePersonTreffIder + ny.ekskludertePersonTreffIder).any { it !in fremmøtte }) {
-            throw BadRequestResponse("Bare fremmøtte jobbsøkere kan være med i intervjufordelingen")
-        }
+        krevSammePersonerSomInteressene(connection, kontekst, ny)
 
         repository.erstattIntervjufordelinger(connection, listOf(ny), kontekst)
         stegRepository.flyttFramTil(connection, rad, TreffgjennomføringSteg.FORDELING)
+    }
+
+    /**
+     * Fordelingen skal inneholde nøyaktig de som har interesse for arbeidsgiveren. Et avvik betyr at klienten
+     * bygger på utdatert tilstand, for eksempel en interesse som ble lagt til eller fjernet i mellomtiden.
+     * Siden interesse krever oppmøte, sikrer dette også at bare fremmøtte blir fordelt.
+     */
+    private fun krevSammePersonerSomInteressene(
+        connection: Connection,
+        kontekst: Treffkontekst,
+        fordeling: ArbeidsgiverIntervjufordeling,
+    ) {
+        val interesserte = repository.hentFor(connection, kontekst).interesser
+            .filter { it.arbeidsgiverTreffId == fordeling.arbeidsgiverTreffId }
+            .map { it.personTreffId }
+            .toSet()
+        val fordelte = (fordeling.inkludertePersonTreffIder + fordeling.ekskludertePersonTreffIder).toSet()
+        if (fordelte != interesserte) {
+            throw ConflictResponse("Fordelingen må inneholde de samme jobbsøkerne som har registrert interesse for arbeidsgiveren")
+        }
     }
 
     private fun Treffkontekst.krevJobbsøkere(personTreffIder: List<String>): List<PersonTreffId> =
