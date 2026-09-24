@@ -41,7 +41,7 @@ class EierService(
         return treff.kontorer.any { it in tilknyttedeEnheterSet }
     }
 
-    fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
+    fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null, kontorNavn: String? = null) {
         require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
         val eiere = eierRepository.hent(connection, treffId, forUpdate = true)
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
@@ -54,12 +54,12 @@ class EierService(
             )
         }
 
-        oppdaterKontorerOgHendelser(connection, treffId, eiere, navIdent)
+        oppdaterKontorerOgHendelser(connection, treffId, eiere, navIdent, kontorNavn = kontorNavn)
     }
 
-    fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
+    fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null, kontorNavn: String? = null) {
         dataSource.executeInTransaction { connection ->
-            leggTilEierMedKontor(connection, treffId, navIdent, kontorEnhetId, eierNavn)
+            leggTilEierMedKontor(connection, treffId, navIdent, kontorEnhetId, eierNavn, kontorNavn)
         }
     }
 
@@ -80,7 +80,7 @@ class EierService(
                 connection, treffId, RekrutteringstreffHendelsestype.EIER_FJERNET, utførtAv,
                 subjektId = eierNavIdent, subjektNavn = eierNavIdent,
             )
-            oppdaterKontorerOgHendelser(connection, treffId, eiere, utførtAv, kontorNavn)
+            oppdaterKontorerOgHendelser(connection, treffId, eiere, utførtAv, kontorNavn = kontorNavn)
         }
     }
 
@@ -99,7 +99,7 @@ class EierService(
         (kontorerEtter - kontorerFør).forEach { kontor ->
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, utførtAv,
-                subjektId = kontor, subjektNavn = kontor,
+                subjektId = kontor, subjektNavn = kontorNavn ?: kontor,
             )
         }
         (kontorerFør - kontorerEtter).forEach { kontor ->
