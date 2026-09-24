@@ -18,12 +18,19 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
 
     fun sok(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons {
         return dataSource.executeInTransaction { conn ->
+            val tilgjengeligeKontornumre = hentTilgjengeligeKontornumre(conn, treffId)
+            request.kontornummer
+                ?.filterNot { it in tilgjengeligeKontornumre }
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { throw IllegalArgumentException("Ugyldige kontornummer: ${it.joinToString()}") }
+
             val (where, params) = byggWhere(treffId, request)
             val totalt = hentTotalt(conn, where, params)
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val tellinger = hentTellinger(conn, treffId)
             val antallPerStatus = hentAntallPerStatus(conn, treffId, request)
             val antallPerAldersgruppe = hentAntallPerAldersgruppe(conn, treffId, request)
+            val antallPerKontor = hentAntallPerKontor(conn, treffId, request, tilgjengeligeKontornumre)
             val treff = if (totalt == 0L) {
                 emptyList()
             } else {
@@ -49,6 +56,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 jobbsøkere = jobbsøkereMedHendelser,
                 antallPerStatus = antallPerStatus,
                 antallPerAldersgruppe = antallPerAldersgruppe,
+                antallPerKontor = antallPerKontor,
             )
         }
     }
@@ -125,6 +133,57 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         }
     }
 
+    private fun hentTilgjengeligeKontornumre(conn: Connection, treffId: TreffId): List<String> {
+        val sql = """
+            SELECT e.kontor_enhetid AS kontornummer
+            FROM rekrutteringstreff_eier e
+            JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = e.rekrutteringstreff_id
+            WHERE rt.id = ?
+              AND e.kontor_enhetid IS NOT NULL
+            UNION
+            SELECT v.kontornummer
+            FROM jobbsoker_sok_view v
+            WHERE v.treff_id = ?
+              AND v.kontornummer IS NOT NULL
+            ORDER BY 1
+        """.trimIndent()
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            stmt.setObject(1, treffId.somUuid)
+            stmt.setObject(2, treffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+            }
+        }
+    }
+
+    private fun hentAntallPerKontor(
+        conn: Connection,
+        treffId: TreffId,
+        request: JobbsøkerSøkRequest,
+        tilgjengeligeKontornumre: List<String>,
+    ): Map<String, Int> {
+        if (tilgjengeligeKontornumre.isEmpty()) return emptyMap()
+        val (where, params) = byggWhere(treffId, request.copy(kontornummer = null))
+        val sql = """
+            SELECT v.kontornummer, COUNT(*) AS antall
+            FROM jobbsoker_sok_view v
+            $where
+              AND v.kontornummer IS NOT NULL
+            GROUP BY v.kontornummer
+        """.trimIndent()
+        val antallPerKontor = conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            params.forEachIndexed { index, param -> settParam(stmt, index + 1, param) }
+            stmt.executeQuery().use { rs ->
+                buildMap {
+                    while (rs.next()) put(rs.getString("kontornummer"), rs.getInt("antall"))
+                }
+            }
+        }
+        return tilgjengeligeKontornumre.associateWith { antallPerKontor[it] ?: 0 }
+    }
+
     private fun hentTotalt(conn: Connection, where: String, params: List<Any>): Long {
         val sql = "SELECT count(*) FROM jobbsoker_sok_view v $where"
         return conn.prepareStatement(sql).use { stmt ->
@@ -149,7 +208,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         val sql = """
             SELECT v.person_treff_id::text, v.fodselsnummer,
                    v.fornavn, v.etternavn,
-                   v.status, v.lagt_til_dato, v.lagt_til_av, v.lagt_til_av_navn, v.alder
+                   v.status, v.lagt_til_dato, v.lagt_til_av, v.lagt_til_av_navn, v.alder,
+                   v.kontornummer
             FROM jobbsoker_sok_view v
             $where
             ORDER BY ${sorteringsfelt.sql(sorteringsretning)}
@@ -198,6 +258,12 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             conditions.add("($orClause)")
         }
 
+        request.kontornummer?.takeIf { it.isNotEmpty() }?.let { kontornumre ->
+            val placeholders = kontornumre.indices.joinToString(",") { "?" }
+            conditions.add("v.kontornummer IN ($placeholders)")
+            kontornumre.forEach { params.add(it) }
+        }
+
         val whereClause = "WHERE " + conditions.joinToString(" AND ")
         return Pair(whereClause, params)
     }
@@ -223,6 +289,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         lagtTilAv = getString("lagt_til_av"),
         lagtTilAvNavn = getString("lagt_til_av_navn"),
         alder = getInt("alder"),
+        kontornummer = getString("kontornummer"),
     )
 
     private fun hentMinsideHendelser(

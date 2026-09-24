@@ -138,6 +138,7 @@ class JobbsøkerController(
                   "fritekst": "Ola",
                   "status": ["LAGT_TIL"],
                   "aldersgruppe": ["OVER_30"],
+                  "kontornummer": ["0403", "1000"],
                   "sortering": "navn",
                   "retning": "asc",
                   "side": 1,
@@ -171,7 +172,12 @@ class JobbsøkerController(
                   },
                   "antallPerAldersgruppe": {
                     "UNDER_30": 1,
-                    "OVER_30": 1,
+                    "OVER_30": 1
+                  },
+                  "antallPerKontor": {
+                    "0403": 1,
+                    "1000": 3,
+                    "1124": 0
                   }
                 }"""
             )]
