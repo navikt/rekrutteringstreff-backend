@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/kontornavn
+      deploy_dev_branch: refs/heads/kontornavn-til-hendelse
     permissions:
       contents: read
       id-token: write

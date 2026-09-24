@@ -13,6 +13,7 @@ import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.NullAndEmptySource
 import org.junit.jupiter.params.provider.ValueSource
@@ -368,8 +369,13 @@ class RekrutteringstreffEierTest {
         assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_LAGT_TIL" && it.aktørIdentifikasjon == navIdent }
     }
 
-    @Test
-    fun `leggTilEierMedKontor legger til kontor fra Modia og logger KONTOR_LAGT_TIL-hendelse`() {
+    @ParameterizedTest
+    @CsvSource(
+        "'', 1234",
+        """'{"kontorNavn":" "}', 1234""",
+        """'{"kontorNavn":"  Nav Gamle Oslo  "}', Nav Gamle Oslo""",
+    )
+    fun `leggTilEierMedKontor legger til kontor fra Modia og logger KONTOR_LAGT_TIL-hendelse`(body: String, forventetKontorNavn: String) {
         val navIdent = "Z999003"
         val oppretter = "A123456"
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
@@ -377,19 +383,21 @@ class RekrutteringstreffEierTest {
         val treff = database.hentAlleRekrutteringstreff().first()
         assertThat(treff.kontorer).doesNotContain("1234")
 
-        httpPut(
+        val response = httpPut(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
-            "",
+            body,
             token.serialize()
         )
 
+        assertThat(response.statusCode()).isEqualTo(200)
         val oppdatertTreff = database.hentAlleRekrutteringstreff().first()
         assertThat(oppdatertTreff.kontorer).contains("1234")
 
-        val hendelser = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
-        assertThat(hendelser).anyMatch {
-            it.hendelsestype == "KONTOR_LAGT_TIL" && it.subjektId == "1234" && it.aktørIdentifikasjon == navIdent
-        }
+        val hendelse = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+            .single { it.hendelsestype == "KONTOR_LAGT_TIL" }
+        assertThat(hendelse.subjektId).isEqualTo("1234")
+        assertThat(hendelse.subjektNavn).isEqualTo(forventetKontorNavn)
+        assertThat(hendelse.aktørIdentifikasjon).isEqualTo(navIdent)
     }
 
     @Test

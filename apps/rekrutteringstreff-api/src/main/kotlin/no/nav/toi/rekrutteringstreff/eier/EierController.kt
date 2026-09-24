@@ -32,7 +32,7 @@ class EierController(
 
     @OpenApi(
         summary = "Legg til deg selv som eier av et rekrutteringstreff",
-        description = "Bruker trenger ikke være eksisterende eier. Krever kontortilknytning. Oppdaterer kontor og valgfritt eiernavn. Manglende eller blankt navn beholder lagret navn. Utføres atomisk med FOR UPDATE-lås.",
+        description = "Bruker trenger ikke være eksisterende eier. Krever kontortilknytning. Oppdaterer kontor og valgfritt eiernavn. Manglende eller blankt eiernavn beholder lagret navn. Valgfritt kontorNavn brukes som subjektNavn i KONTOR_LAGT_TIL. Manglende eller blankt kontornavn bruker kontornummeret. Utføres atomisk med FOR UPDATE-lås.",
         operationId = "leggTilMegSomEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
@@ -40,7 +40,7 @@ class EierController(
             required = false,
             content = [OpenApiContent(
                 from = LeggTilMegSomEierDto::class,
-                example = """{"eierNavn":"Kari Testesen"}"""
+                example = """{"eierNavn":"Kari Testesen","kontorNavn":"Nav Grünerløkka"}"""
             )]
         ),
         responses = [
@@ -61,7 +61,8 @@ class EierController(
 
         val input = if (ctx.body().isBlank()) LeggTilMegSomEierDto() else ctx.bodyAsClass<LeggTilMegSomEierDto>()
         val eierNavn = input.eierNavn?.trim()?.takeIf { it.isNotEmpty() }
-        eierService.leggTilEierMedKontor(id, navIdent, kontorId, eierNavn)
+        val kontorNavn = input.kontorNavn?.trim()?.takeIf { it.isNotEmpty() }
+        eierService.leggTilEierMedKontor(id, navIdent, kontorId, eierNavn, kontorNavn)
         ctx.status(200)
     }
 
