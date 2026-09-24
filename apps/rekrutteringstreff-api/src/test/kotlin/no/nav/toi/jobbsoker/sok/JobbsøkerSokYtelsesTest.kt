@@ -10,8 +10,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.LoggerFactory
-import java.sql.Timestamp
-import java.time.Instant
 import java.util.*
 import kotlin.system.measureTimeMillis
 
@@ -36,8 +34,8 @@ class JobbsøkerSokYtelsesTest {
                 .load()
                 .migrate()
             repository = JobbsøkerSokRepository(db.dataSource)
-            treffId = opprettTreffOgSeed()
-            logger.info("Genererte {} jobbsøkere for ytelsestest av jobbsøker-søk", ANTALL_JOBBSØKERE)
+            val seedingVarighetMs = measureTimeMillis { treffId = opprettTreffOgSeed() }
+            logger.info("Genererte {} jobbsøkere for ytelsestest av jobbsøker-søk på {} ms", ANTALL_JOBBSØKERE, seedingVarighetMs)
         }
 
         @AfterAll
@@ -67,55 +65,53 @@ class JobbsøkerSokYtelsesTest {
                     .apply { setObject(1, treffUuid) }
                     .executeQuery().let { it.next(); it.getLong(1) }
 
-                val kontornavnListe = listOf("Nav Oslo", "Nav Bergen", "Nav Trondheim", "Nav Stavanger", "Nav Tromsø")
-                val statuser = listOf("LAGT_TIL", "INVITERT", "SVART_JA", "SVART_NEI")
-                val baseTime = Instant.parse("2025-01-01T00:00:00Z")
-
                 conn.prepareStatement(
                     """
-                    INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, fornavn, etternavn, kontornavn, veileder_navident, veileder_navn, id, status, er_synlig)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true)
-                    RETURNING jobbsoker_id
+                    INSERT INTO jobbsoker (
+                        rekrutteringstreff_id, fodselsnummer, fornavn, etternavn, kontornavn,
+                        veileder_navident, veileder_navn, id, status, er_synlig
+                    )
+                    SELECT
+                        ?,
+                        lpad((i + 1)::text, 11, '0'),
+                        'Fornavn' || i,
+                        'Etternavn' || (i % 100),
+                        (ARRAY['Nav Oslo', 'Nav Bergen', 'Nav Trondheim', 'Nav Stavanger', 'Nav Tromsø'])[i % 5 + 1],
+                        'NAV' || lpad((i % 50)::text, 3, '0'),
+                        'Veileder ' || (i % 50),
+                        gen_random_uuid(),
+                        (ARRAY['LAGT_TIL', 'INVITERT', 'SVART_JA', 'SVART_NEI'])[i % 4 + 1],
+                        true
+                    FROM generate_series(0, ? - 1) AS i
                     """.trimIndent()
-                ).use { jobbsokerStmt ->
-                    conn.prepareStatement(
-                        """
-                        INSERT INTO jobbsoker_hendelse (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
-                        VALUES (?, ?, ?, 'OPPRETTET', 'ARRANGØR', 'A123456')
-                        """.trimIndent()
-                    ).use { hendelseStmt ->
-                        repeat(ANTALL_JOBBSØKERE) { i ->
-                            val status = statuser[i % statuser.size]
-                            val fnr = String.format("%011d", i + 1)
-                            val fornavn = "Fornavn$i"
-                            val etternavn = "Etternavn${i % 100}"
-                            val kontornavn = kontornavnListe[i % kontornavnListe.size]
-                            val veilederIdent = "NAV${String.format("%03d", i % 50)}"
-                            val veilederNavn = "Veileder ${i % 50}"
-                            val lagtTilDato = Timestamp.from(baseTime.plusSeconds(i.toLong()))
-                            val uuid = UUID.randomUUID()
+                ).use { stmt ->
+                    stmt.setLong(1, treffDbId)
+                    stmt.setInt(2, ANTALL_JOBBSØKERE)
+                    stmt.executeUpdate()
+                }
 
-                            jobbsokerStmt.setLong(1, treffDbId)
-                            jobbsokerStmt.setString(2, fnr)
-                            jobbsokerStmt.setString(3, fornavn)
-                            jobbsokerStmt.setString(4, etternavn)
-                            jobbsokerStmt.setString(5, kontornavn)
-                            jobbsokerStmt.setString(6, veilederIdent)
-                            jobbsokerStmt.setString(7, veilederNavn)
-                            jobbsokerStmt.setObject(8, uuid)
-                            jobbsokerStmt.setString(9, status)
-                            val rs = jobbsokerStmt.executeQuery()
-                            rs.next()
-                            val jobbsokerId = rs.getLong(1)
-
-                            hendelseStmt.setObject(1, UUID.randomUUID())
-                            hendelseStmt.setLong(2, jobbsokerId)
-                            hendelseStmt.setTimestamp(3, lagtTilDato)
-                            hendelseStmt.executeUpdate()
-                        }
-                    }
+                // Fødselsnummeret er løpenummeret i + 1, så lagt til-tidspunktet følger samme rekkefølge som før.
+                conn.prepareStatement(
+                    """
+                    INSERT INTO jobbsoker_hendelse (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+                    SELECT
+                        gen_random_uuid(),
+                        j.jobbsoker_id,
+                        timestamptz '2025-01-01 00:00:00+00' + (j.fodselsnummer::int - 1) * interval '1 second',
+                        'OPPRETTET',
+                        'ARRANGØR',
+                        'A123456'
+                    FROM jobbsoker j
+                    WHERE j.rekrutteringstreff_id = ?
+                    """.trimIndent()
+                ).use { stmt ->
+                    stmt.setLong(1, treffDbId)
+                    stmt.executeUpdate()
                 }
                 conn.commit()
+            }
+            db.dataSource.connection.use { conn ->
+                conn.createStatement().use { it.execute("ANALYZE rekrutteringstreff, jobbsoker, jobbsoker_hendelse") }
             }
             return TreffId(treffUuid.toString())
         }
