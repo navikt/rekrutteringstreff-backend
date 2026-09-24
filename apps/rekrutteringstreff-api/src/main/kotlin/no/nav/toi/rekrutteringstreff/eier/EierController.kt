@@ -96,16 +96,23 @@ class EierController(
 
     @OpenApi(
         summary = "Slett eier av et rekrutteringstreff",
-        description = "Fjerner en eier. Kan ikke slette siste eier — treffet må alltid ha minst én.",
+        description = "Fjerner en eier. Kan ikke slette siste eier — treffet må alltid ha minst én. Valgfritt kontorNavn brukes som subjektNavn i KONTOR_FJERNET når kontorets siste eier fjernes. Manglende eller blankt navn bruker kontornummeret.",
         operationId = "slettEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [
             OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID"),
             OpenApiParam(name = "navIdent", type = String::class, description = "Nav-identen som skal fjernes som eier")
         ],
+        requestBody = OpenApiRequestBody(
+            required = false,
+            content = [OpenApiContent(
+                from = SlettEierDto::class,
+                example = """{"kontorNavn":"Nav Grünerløkka"}"""
+            )]
+        ),
         responses = [
             OpenApiResponse(status = "200", description = "Eier fjernet"),
-            OpenApiResponse(status = "400", description = "Kan ikke slette siste eier"),
+            OpenApiResponse(status = "400", description = "Ugyldig forespørsel eller kan ikke slette siste eier"),
             OpenApiResponse(status = "403", description = "Innlogget bruker er ikke eier eller utvikler"),
             OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
         ],
@@ -119,7 +126,9 @@ class EierController(
         val innloggetNavIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(id, innloggetNavIdent, ctx)) {
-            eierService.slettEier(id, navIdentSomSkalSlettes, innloggetNavIdent)
+            val input = if (ctx.body().isBlank()) SlettEierDto() else ctx.bodyAsClass<SlettEierDto>()
+            val kontorNavn = input.kontorNavn?.trim()?.takeIf { it.isNotEmpty() }
+            eierService.slettEier(id, navIdentSomSkalSlettes, innloggetNavIdent, kontorNavn)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Bruker har ikke tilgang til å slette eier på rekrutteringstreff ${id.somString}")
