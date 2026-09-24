@@ -256,6 +256,18 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `uendret møteoppsett skriver ingen ny hendelse`() {
+        val treff = workOpTreff()
+        oppmøte(treff, jobbsøker(treff), møtt = true)
+        møteoppsett(treff)
+
+        assertThat(møteoppsett(treff).statusCode()).isEqualTo(200)
+
+        assertThat(antallTreffHendelser(treff, "TREFFGJENNOMFØRING_OPPRETTET")).isEqualTo(1)
+        assertThat(antallTreffHendelser(treff, "TREFFGJENNOMFØRING_OPPSETT_ENDRET")).isEqualTo(0)
+    }
+
+    @Test
     fun `møteoppsett avvises på et vanlig treff`() {
         val treff = vanligTreff()
         val person = jobbsøker(treff)
@@ -564,6 +576,15 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `fordeling av rom på nytt krever møteoppsett`() {
+        val treff = workOpTreff()
+        oppmøte(treff, jobbsøker(treff), møtt = true)
+
+        assertThat(post(treff, "/treffgjennomforing/romfordeling/fordel").statusCode()).isEqualTo(400)
+        assertThat(lagredeRom(treff)).isEmpty()
+    }
+
+    @Test
     fun `flytting avvises med ugyldig romnummer`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff)
@@ -639,6 +660,26 @@ class TreffgjennomføringKomponentTest {
         assertThat(r1).hasSize(2)
         assertThat(r2).hasSize(1)
         assertThat(r1 + r2).containsExactlyInAnyOrder(p1.somString, p2.somString, p3.somString)
+    }
+
+    @Test
+    fun `intervjufordeling må inneholde nøyaktig de interesserte`() {
+        val treff = workOpTreff()
+        val interessert = jobbsøker(treff, "11111111111")
+        val utenInteresse = jobbsøker(treff, "22222222222")
+        val ikkeMøtt = jobbsøker(treff, "33333333333")
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, interessert, møtt = true)
+        oppmøte(treff, utenInteresse, møtt = true)
+        assertThat(interesse(treff, interessert, ag, true).statusCode()).isEqualTo(200)
+        val før = aggregat(treff)
+
+        assertThat(intervjufordeling(treff, ag).statusCode()).isEqualTo(409)
+        assertThat(intervjufordeling(treff, ag, inkluderte = listOf(interessert, utenInteresse)).statusCode()).isEqualTo(409)
+        assertThat(intervjufordeling(treff, ag, inkluderte = listOf(interessert, ikkeMøtt)).statusCode()).isEqualTo(409)
+        assertThat(aggregat(treff)).isEqualTo(før)
+
+        assertThat(intervjufordeling(treff, ag, ekskluderte = listOf(interessert)).statusCode()).isEqualTo(200)
     }
 
     @Test
@@ -1090,14 +1131,15 @@ class TreffgjennomføringKomponentTest {
         val person = jobbsøker(treff, "00000000000")
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
-        if (medInteresse) assertThat(interesse(treff, person, ag, true).statusCode()).isEqualTo(200)
-        assertThat(
-            intervjufordeling(
-                treff, ag,
-                inkluderte = if (inkludert) listOf(person) else emptyList(),
-                ekskluderte = if (inkludert) emptyList() else listOf(person),
-            ).statusCode()
-        ).isEqualTo(200)
+        val inkluderte = if (inkludert) listOf(person) else emptyList()
+        val ekskluderte = if (inkludert) emptyList() else listOf(person)
+        if (medInteresse) {
+            assertThat(interesse(treff, person, ag, true).statusCode()).isEqualTo(200)
+            assertThat(intervjufordeling(treff, ag, inkluderte, ekskluderte).statusCode()).isEqualTo(200)
+        } else {
+            // APIet krever interesse, men eldre data kan ha fordeling uten interesse.
+            lagreIntervjufordelingDirekte(treff, ArbeidsgiverIntervjufordeling(ag, inkluderte, ekskluderte))
+        }
         val før = aggregat(treff)
         val forventetHint = if (medInteresse) {
             "Fjern registrerte interesser og fjern registrerte intervjufordelinger først."
@@ -1118,8 +1160,10 @@ class TreffgjennomføringKomponentTest {
         assertThat(oppmøteFeil["hint"].asText()).isEqualTo(forventetHint)
         assertThat(aggregat(treff)).isEqualTo(før)
 
-        assertThat(intervjufordeling(treff, ag).statusCode()).isEqualTo(200)
+        // Når interessen fjernes, forsvinner personen også fra fordelingen.
         if (medInteresse) assertThat(interesse(treff, person, ag, false).statusCode()).isEqualTo(200)
+        else assertThat(intervjufordeling(treff, ag).statusCode()).isEqualTo(200)
+        assertThat(aggregat(treff)["intervjufordelinger"]).isEmpty()
         assertThat(oppmøte(treff, person, møtt = false).statusCode()).isEqualTo(200)
         assertThat(slettArbeidsgiver(treff, ag).statusCode()).isEqualTo(204)
     }
@@ -1131,12 +1175,13 @@ class TreffgjennomføringKomponentTest {
         val person = jobbsøker(treff, "00000000000")
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
-        val registrert = when (type) {
-            "interesse" -> interesse(treff, person, ag, true)
-            "intervjufordeling" -> intervjufordeling(treff, ag, inkluderte = listOf(person))
-            else -> vurderingFor(treff, person, ag, ""","vurderingsstatus":"AKTUELL"""")
+        when (type) {
+            "interesse" -> assertThat(interesse(treff, person, ag, true).statusCode()).isEqualTo(200)
+            "intervjufordeling" ->
+                lagreIntervjufordelingDirekte(treff, ArbeidsgiverIntervjufordeling(ag, listOf(person), emptyList()))
+            else -> assertThat(vurderingFor(treff, person, ag, ""","vurderingsstatus":"AKTUELL"""").statusCode())
+                .isEqualTo(200)
         }
-        assertThat(registrert.statusCode()).isEqualTo(200)
         db.dataSource.connection.use { ctx.jobbsøkerRepository.endreStatus(it, person, JobbsøkerStatus.LAGT_TIL) }
         val før = aggregat(treff)
         val hendelserFør = antallJobbsøkerhendelser(treff)
@@ -1232,6 +1277,13 @@ class TreffgjennomføringKomponentTest {
         eier,
         listOf(arbeidsgiverrettet),
     )
+
+    private fun lagreIntervjufordelingDirekte(treff: TreffId, fordeling: ArbeidsgiverIntervjufordeling) =
+        db.dataSource.connection.use { connection ->
+            ctx.matchingRepository.erstattIntervjufordelinger(
+                connection, listOf(fordeling), ctx.treffkontekstRepository.krevKontekst(connection, treff),
+            )
+        }
 
     private fun intervjufordeling(
         treff: TreffId,

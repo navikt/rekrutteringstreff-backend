@@ -1,6 +1,5 @@
 package no.nav.toi.jobbsoker.oppmøte
 
-import io.javalin.http.BadRequestResponse
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.JobbsøkerService
@@ -26,8 +25,7 @@ class OppmøteService(
     fun oppdaterOppmøte(treffId: TreffId, oppmøteRequestDto: OppmøteRequestDto, navIdent: String): TreffgjennomføringDto =
         treffgjennomføringWriter.skriv(treffId) { connection, kontekst, _ ->
             val personTreffId = PersonTreffId(oppmøteRequestDto.personTreffId)
-            val jobbsøkerId = kontekst.jobbsøkerId(personTreffId)
-                ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
+            val jobbsøkerId = kontekst.krevJobbsøkerId(personTreffId)
 
             val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             if (oppmøteRequestDto.møtt != harMøtt) {
