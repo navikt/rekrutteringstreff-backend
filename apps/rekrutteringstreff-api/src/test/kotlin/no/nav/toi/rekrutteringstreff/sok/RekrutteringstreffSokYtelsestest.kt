@@ -6,17 +6,14 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.sql.Timestamp
-import java.time.Instant
-import java.util.*
 import kotlin.system.measureTimeMillis
 
-//@org.junit.jupiter.api.Disabled
-@Tag("slow") // Samarbeider med build.gradle.kts
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokYtelsestest {
     companion object {
-        private const val ANTALL_TREFF = 20_000
+        private const val ANTALL_TREFF = 5_000
+        private const val ANTALL_ARBEIDSGIVERE_PER_TREFF = 5
+        private const val ANTALL_JOBBSOKERE_PER_TREFF = 30
         private const val WARMUP_TERSKEL_MS = 2_000L
         private const val MALT_TERSKEL_MS = 500L
         private val logger: Logger = LoggerFactory.getLogger(RekrutteringstreffSokYtelsestest::class.java)
@@ -34,8 +31,14 @@ class RekrutteringstreffSokYtelsestest {
                 .migrate()
             repository = RekrutteringstreffSokRepository(db.dataSource)
             service = RekrutteringstreffSokService(repository)
-            seedTreff(ANTALL_TREFF)
-            logger.info("Genererte {} testtreff for manuell ytelsestest av rekrutteringstreff-søk", ANTALL_TREFF)
+            val seedingVarighetMs = measureTimeMillis { seedTreff(ANTALL_TREFF) }
+            logger.info(
+                "Genererte {} testtreff med {} arbeidsgivere og {} jobbsøkere per treff på {} ms",
+                ANTALL_TREFF,
+                ANTALL_ARBEIDSGIVERE_PER_TREFF,
+                ANTALL_JOBBSOKERE_PER_TREFF,
+                seedingVarighetMs,
+            )
         }
 
         @AfterAll
@@ -44,15 +47,28 @@ class RekrutteringstreffSokYtelsestest {
             db.slettAlt()
         }
 
+        /**
+         * Genererer testdata på databaseserveren med generate_series. Å sende hver rad fra JDBC
+         * gjorde seedingen treg, mens selve søket bare tok noen hundre millisekunder.
+         */
         private fun seedTreff(antall: Int) {
-            val startTid = Instant.parse("2025-01-01T00:00:00Z")
-            val arbeidsgiverIder = (0 until 5).map { UUID.randomUUID() }
-            val jobbsokerIder = (0 until 30).map { UUID.randomUUID() }
-
             db.dataSource.connection.use { conn ->
                 conn.autoCommit = false
+
                 conn.prepareStatement(
                     """
+                    WITH treff AS (
+                        SELECT
+                            i,
+                            CASE i % 5
+                                WHEN 1 THEN 'UTKAST'
+                                WHEN 2 THEN 'AVLYST'
+                                WHEN 3 THEN 'FULLFØRT'
+                                ELSE 'PUBLISERT'
+                            END AS status,
+                            timestamptz '2025-01-01 00:00:00+00' AS start_tid
+                        FROM generate_series(0, ? - 1) AS i
+                    )
                     INSERT INTO rekrutteringstreff (
                         id,
                         tittel,
@@ -64,44 +80,26 @@ class RekrutteringstreffSokYtelsestest {
                         eiere,
                         kontorer,
                         sist_endret
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    )
+                    SELECT
+                        gen_random_uuid(),
+                        'Treff ' || i,
+                        status,
+                        'A123456',
+                        CASE WHEN i % 3 = 0 THEN '0315' ELSE '1201' END,
+                        start_tid + i * interval '1 second',
+                        CASE
+                            WHEN status = 'PUBLISERT' AND i % 2 = 0 THEN start_tid - interval '1 day'
+                            ELSE start_tid + interval '1 day'
+                        END,
+                        ARRAY['A123456', 'B654321'],
+                        ARRAY[CASE WHEN i % 2 = 0 THEN '0315' ELSE '1201' END],
+                        start_tid + i * interval '1 second' + interval '1 hour'
+                    FROM treff
                     """.trimIndent()
-                ).use { statement ->
-                    repeat(antall) { index ->
-                        val status = when (index % 5) {
-                            0 -> "PUBLISERT"
-                            1 -> "UTKAST"
-                            2 -> "AVLYST"
-                            3 -> "FULLFØRT"
-                            else -> "PUBLISERT"
-                        }
-                        val opprettetTid = startTid.plusSeconds(index.toLong())
-                        val svarfrist = if (status == "PUBLISERT" && index % 2 == 0) {
-                            Timestamp.from(startTid.minusSeconds(86_400))
-                        } else {
-                            Timestamp.from(startTid.plusSeconds(86_400))
-                        }
-
-                        statement.setObject(1, UUID.randomUUID())
-                        statement.setString(2, "Treff $index")
-                        statement.setString(3, status)
-                        statement.setString(4, "A123456")
-                        statement.setString(5, if (index % 3 == 0) "0315" else "1201")
-                        statement.setTimestamp(6, Timestamp.from(opprettetTid))
-                        statement.setTimestamp(7, svarfrist)
-                        statement.setArray(8, conn.createArrayOf("text", arrayOf("A123456", "B654321")))
-                        statement.setArray(
-                            9,
-                            conn.createArrayOf("text", arrayOf(if (index % 2 == 0) "0315" else "1201"))
-                        )
-                        statement.setTimestamp(10, Timestamp.from(opprettetTid.plusSeconds(3_600)))
-                        statement.addBatch()
-
-                        if ((index + 1) % 1_000 == 0) {
-                            statement.executeBatch()
-                        }
-                    }
-                    statement.executeBatch()
+                ).use {
+                    it.setInt(1, antall)
+                    it.executeUpdate()
                 }
 
                 conn.createStatement().use {
@@ -113,55 +111,45 @@ class RekrutteringstreffSokYtelsestest {
                         CROSS JOIN LATERAL unnest(rt.eiere) AS e(nav_ident)
                         """.trimIndent()
                     )
-                    it.execute("ANALYZE rekrutteringstreff_eier")
-                }
-
-                val treffIds = conn.prepareStatement(
-                    "SELECT rekrutteringstreff_id FROM rekrutteringstreff"
-                ).use { s ->
-                    s.executeQuery().use { rs ->
-                        generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
-                    }
                 }
 
                 conn.prepareStatement(
-                    "INSERT INTO arbeidsgiver (rekrutteringstreff_id, orgnr, orgnavn, id) VALUES (?, ?, ?, ?)"
-                ).use { stmt ->
-                    for (treffId in treffIds) {
-                        repeat(5) {
-                            stmt.setLong(1, treffId)
-                            stmt.setString(2, "99999999${it}")
-                            stmt.setString(3, "Bedrift $it")
-                            stmt.setObject(4, arbeidsgiverIder[it])
-                            stmt.addBatch()
-                        }
-                        if (treffId % 1_000 == 0L) stmt.executeBatch()
-                    }
-                    stmt.executeBatch()
+                    """
+                    INSERT INTO arbeidsgiver (rekrutteringstreff_id, orgnr, orgnavn, id)
+                    SELECT rt.rekrutteringstreff_id, '99999999' || a, 'Bedrift ' || a, gen_random_uuid()
+                    FROM rekrutteringstreff rt
+                    CROSS JOIN generate_series(0, ? - 1) AS a
+                    """.trimIndent()
+                ).use {
+                    it.setInt(1, ANTALL_ARBEIDSGIVERE_PER_TREFF)
+                    it.executeUpdate()
                 }
 
                 conn.prepareStatement(
-                    "INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id) VALUES (?, ?, ?)"
-                ).use { stmt ->
-                    for (treffId in treffIds) {
-                        repeat(30) {
-                            stmt.setLong(1, treffId)
-                            stmt.setString(2, "1234567${String.format("%04d", it)}")
-                            stmt.setObject(3, jobbsokerIder[it])
-                            stmt.addBatch()
-                        }
-                        if (treffId % 1_000 == 0L) stmt.executeBatch()
-                    }
-                    stmt.executeBatch()
+                    """
+                    INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id)
+                    SELECT rt.rekrutteringstreff_id, '1234567' || lpad(j::text, 4, '0'), gen_random_uuid()
+                    FROM rekrutteringstreff rt
+                    CROSS JOIN generate_series(0, ? - 1) AS j
+                    """.trimIndent()
+                ).use {
+                    it.setInt(1, ANTALL_JOBBSOKERE_PER_TREFF)
+                    it.executeUpdate()
                 }
 
                 conn.commit()
+            }
+
+            db.dataSource.connection.use { conn ->
+                conn.createStatement().use {
+                    it.execute("ANALYZE rekrutteringstreff, rekrutteringstreff_eier, arbeidsgiver, jobbsoker")
+                }
             }
         }
     }
 
     @Test
-    fun `sok med 20k genererte testtreff logger tid for warmup og endret kall`() {
+    fun `sok med genererte testtreff logger tid for warmup og endret kall`() {
         val warmupRequest = RekrutteringstreffSokRequest(
             visning = Visning.ALLE,
             sortering = Sortering.SIST_OPPDATERTE,

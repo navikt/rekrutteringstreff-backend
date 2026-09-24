@@ -343,7 +343,7 @@ Trefflåsen samordner også samtidige tillegg når treffet ennå ikke har eierra
 
 Regresjonstestene dekker avvikende arrays, tomme aggregater, søkefiltre og aggregeringer, kontorbytte,
 kontortilgang, rollback og samtidige endringer. `RekrutteringstreffSokYtelsestest` oppretter nå også
-40 000 eierrader for sine 20 000 treff og krever ikke-tomme søkeresultater. Tersklene er fortsatt
+10 000 eierrader for sine 5 000 treff og krever ikke-tomme søkeresultater. Tersklene er fortsatt
 2 000 ms for warmup og 500 ms for neste søk.
 
 Ved rullerende deploy kan gamle instanser fortsatt bruke den gamle kontorsemantikken. Kontroller derfor

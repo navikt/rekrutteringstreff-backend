@@ -57,11 +57,3 @@ dependencies {
     testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("io.kotest:kotest-assertions-json-jvm:$kotestVersion")
 }
-
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform {
-        if (project.hasProperty("skipSlowTests")) { // Brukes slik: ./gradlew clean build -PskipSlowTests
-            excludeTags("slow") // Innført pga no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokYtelsestest
-        }
-    }
-}
