@@ -126,9 +126,8 @@ class TreffgjennomføringPersisteringTest {
         db.dataSource.connection.use { conn ->
             val kontekst = kontekstRepository.hentTreffkontekst(conn, treff)!!
             møteplanRepository.erstattRomfordeling(
-                conn, kontekst.treffDbId,
+                conn, kontekst,
                 listOf(Rom(1, listOf(p2, p1)), Rom(2, emptyList())),
-                kontekst,
             )
         }
 

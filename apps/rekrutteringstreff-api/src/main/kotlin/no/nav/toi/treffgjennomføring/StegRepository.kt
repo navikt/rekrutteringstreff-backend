@@ -33,16 +33,12 @@ class StegRepository {
         }
     }
 
-    fun settGjeldendeSteg(
-        connection: Connection,
-        treffDbId: Long,
-        nåværendeSteg: TreffgjennomføringSteg,
-        nyttSteg: TreffgjennomføringSteg,
-    ) {
-        if (nyttSteg.ordinal <= nåværendeSteg.ordinal) return
-        connection.prepareStatement("UPDATE treffgjennomforing SET gjeldende_steg = ? WHERE rekrutteringstreff_id = ?").use { stmt ->
+    /** Gjeldende steg går bare framover. Et lavere eller likt steg ignoreres. */
+    fun flyttFramTil(connection: Connection, rad: Treffgjennomføringsrad, nyttSteg: TreffgjennomføringSteg) {
+        if (nyttSteg <= rad.gjeldendeSteg) return
+        connection.prepareStatement("UPDATE treffgjennomforing SET gjeldende_steg = ? WHERE treffgjennomforing_id = ?").use { stmt ->
             stmt.setString(1, nyttSteg.name)
-            stmt.setLong(2, treffDbId)
+            stmt.setLong(2, rad.id)
             stmt.executeUpdate()
         }
     }

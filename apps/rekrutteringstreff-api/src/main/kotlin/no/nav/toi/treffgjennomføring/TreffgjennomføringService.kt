@@ -18,7 +18,7 @@ class TreffgjennomføringService(
     }
 
     fun settGjeldendeSteg(treffId: TreffId, steg: TreffgjennomføringSteg): TreffgjennomføringDto =
-        writer.skriv(treffId) { connection, kontekst, rad ->
-            stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, rad.gjeldendeSteg, steg)
+        writer.skriv(treffId) { connection, _, rad ->
+            stegRepository.flyttFramTil(connection, rad, steg)
         }
 }

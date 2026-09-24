@@ -3,6 +3,7 @@ package no.nav.toi.treffgjennomføring
 import io.javalin.http.BadRequestResponse
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JacksonConfig
+import no.nav.toi.Miljø
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.treffgjennomføring.matching.MatchingRepository
@@ -74,7 +75,7 @@ class TreffgjennomføringKarakteriseringTest {
     private val service = TreffgjennomføringService(db.dataSource, kontekstRepository, reader, writer, stegRepository)
 
     private val møteplanService = MøteplanService(writer, møteplanRepository, oppmøteRepository, stegRepository, hendelser)
-    private val matchingService = MatchingService(writer, matchingRepository, oppmøteRepository, oppfølgingRepository, stegRepository, hendelser)
+    private val matchingService = MatchingService(writer, matchingRepository, oppmøteRepository, oppfølgingRepository, stegRepository, hendelser, Miljø.LOKALT)
 
     private val oppfølgingService = OppfølgingService(
         writer = writer,
@@ -82,6 +83,7 @@ class TreffgjennomføringKarakteriseringTest {
         oppmøteRepository = oppmøteRepository,
         stegRepository = stegRepository,
         hendelser = hendelser,
+        miljø = Miljø.LOKALT,
     )
 
     private val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)

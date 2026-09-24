@@ -10,6 +10,9 @@ import java.time.LocalTime
 
 class MøteplanRepository {
 
+    /**
+     * Sann når treffet har møteoppsett eller lagrede romplasseringer.
+     */
     fun harMøteplan(connection: Connection, treffId: TreffId): Boolean {
         val sql = """
             SELECT EXISTS (
@@ -43,7 +46,7 @@ class MøteplanRepository {
     private fun normaliserRom(rom: List<Rom>, oppmøte: List<PersonTreffId>, antallRom: Int): List<Rom> =
         Romfordeler.oppdaterEtterOppmøte(Romfordeler.normaliser(rom, antallRom), oppmøte)
 
-    private fun hentMøteoppsett(connection: Connection, treffDbId: Long): Møteoppsett? {
+    fun hentMøteoppsett(connection: Connection, treffDbId: Long): Møteoppsett? {
         val sql = """
             SELECT m.starttidspunkt, m.varighet_min
             FROM moteoppsett m
@@ -108,7 +111,7 @@ class MøteplanRepository {
 
     fun lagreMøteplan(connection: Connection, kontekst: Treffkontekst, møteplan: Møteplan) {
         if (møteplan.rom.isEmpty()) return
-        erstattRomfordeling(connection, kontekst.treffDbId, møteplan.rom, kontekst)
+        erstattRomfordeling(connection, kontekst, møteplan.rom)
         lagreArbeidsgiverRotasjon(connection, møteplan.arbeidsgiverRekkefølge, kontekst)
     }
 
@@ -164,7 +167,8 @@ class MøteplanRepository {
         }
     }
 
-    fun erstattRomfordeling(connection: Connection, treffDbId: Long, rom: List<Rom>, kontekst: Treffkontekst) {
+    fun erstattRomfordeling(connection: Connection, kontekst: Treffkontekst, rom: List<Rom>) {
+        val treffDbId = kontekst.treffDbId
         connection.prepareStatement("DELETE FROM jobbsoker_romtildeling WHERE rekrutteringstreff_id = ?").use { stmt ->
             stmt.setLong(1, treffDbId)
             stmt.executeUpdate()

@@ -10,6 +10,17 @@ object Romfordeler {
             Rom(romnummer, jobbsøkere.filterIndexed { indeks, _ -> indeks % antallRom == romnummer - 1 })
         }
 
+    /** Flytter én jobbsøker til slutten av målrommet. De andre plasseringene er uendret. */
+    fun flytt(rom: List<Rom>, jobbsøker: PersonTreffId, målromnummer: Int): List<Rom> {
+        require(rom.any { it.romnummer == målromnummer }) {
+            "Romfordelingen må opprettes før jobbsøkere kan flyttes"
+        }
+        return rom.map { r ->
+            val utenJobbsøker = r.jobbsøkere.filter { it != jobbsøker }
+            r.copy(jobbsøkere = if (r.romnummer == målromnummer) utenJobbsøker + jobbsøker else utenJobbsøker)
+        }
+    }
+
     fun oppdaterEtterOppmøte(rom: List<Rom>, oppmøte: List<PersonTreffId>): List<Rom> {
         if (rom.isEmpty()) return emptyList()
 
