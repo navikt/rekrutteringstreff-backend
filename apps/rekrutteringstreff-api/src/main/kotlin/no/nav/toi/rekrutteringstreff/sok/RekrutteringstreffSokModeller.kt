@@ -128,8 +128,6 @@ data class RekrutteringstreffSokTreff(
     val opprettetAv: String,
     val opprettetAvTidspunkt: Instant,
     val sistEndret: Instant,
-    val eiere: List<String>,
-    val kontorer: List<String>,
     val eierOgKontor: List<EierOgKontorDto>,
     val antallArbeidsgivere: Long,
     val antallJobbsøkere: Long,

@@ -201,8 +201,8 @@ class RekrutteringstreffSokYtelsestest {
             )
             assertThat(resultat.treff).hasSize(request.antallPerSide)
             assertThat(resultat.treff).allSatisfy {
-                assertThat(it.eiere).containsExactlyInAnyOrder("A123456", "B654321")
-                assertThat(it.kontorer).hasSize(1)
+                assertThat(it.eierOgKontor.map { eier -> eier.navIdent }).containsExactlyInAnyOrder("A123456", "B654321")
+                assertThat(it.eierOgKontor.map { eier -> eier.kontorEnhetId }.distinct()).hasSize(1)
             }
         }
 }

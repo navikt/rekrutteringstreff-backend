@@ -138,7 +138,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             SELECT id, tittel, beskrivelse, kategori, status, frist_utgatt, fra_tid, til_tid, svarfrist,
                    gateadresse, postnummer, poststed, kommunenummer, fylkesnummer,
                    opprettet_av_person_navident, opprettet_av_tidspunkt, sist_endret,
-                   eiere, kontorer, eier_og_kontor,
+                   eier_og_kontor,
                    antall_arbeidsgivere, antall_jobbsokere, antall_jobbsokere_svart_ja, antall_jobbsokere_fatt_jobb
             FROM rekrutteringstreff_sok_view
             $where
@@ -516,8 +516,6 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     }
 
     private fun tilTreff(rs: ResultSet): RekrutteringstreffSokTreff {
-        val eiereArr = rs.getArray("eiere")?.array as? Array<*>
-        val kontorerArr = rs.getArray("kontorer")?.array as? Array<*>
         val kategori = RekrutteringstreffKategori.valueOf(rs.getString("kategori"))
         val status = RekrutteringstreffStatus.valueOf(rs.getString("status"))
         return RekrutteringstreffSokTreff(
@@ -538,8 +536,6 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             opprettetAv = rs.getString("opprettet_av_person_navident"),
             opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant(),
             sistEndret = rs.getTimestamp("sist_endret").toInstant(),
-            eiere = eiereArr?.map { it.toString() } ?: emptyList(),
-            kontorer = kontorerArr?.map { it.toString() } ?: emptyList(),
             eierOgKontor = JacksonConfig.mapper.readValue(rs.getString("eier_og_kontor")),
             antallArbeidsgivere = rs.getLong("antall_arbeidsgivere"),
             antallJobbsøkere = rs.getLong("antall_jobbsokere"),

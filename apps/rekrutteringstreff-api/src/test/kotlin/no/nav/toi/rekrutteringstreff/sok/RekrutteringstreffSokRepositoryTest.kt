@@ -112,8 +112,6 @@ class RekrutteringstreffSokRepositoryTest {
         db.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
 
         val treff = sokEierskap(Visning.MINE, navIdent = "B654321").treff.single()
-        assertThat(treff.eiere).containsExactlyInAnyOrder("A123456", "B654321", "C987654")
-        assertThat(treff.kontorer).containsExactlyInAnyOrder("0315", "1201")
         assertThat(treff.eierOgKontor).containsExactly(
             EierOgKontorDto("A123456", null, "0315"),
             EierOgKontorDto("B654321", "Kari Testesen", "1201"),
@@ -171,8 +169,6 @@ class RekrutteringstreffSokRepositoryTest {
         }
         val treff = sokEierskap(Visning.ALLE).treff.single()
         assertThat(treff.id).isEqualTo(treffId.somString)
-        assertThat(treff.eiere).isEmpty()
-        assertThat(treff.kontorer).isEmpty()
         assertThat(treff.eierOgKontor).isEmpty()
         assertThat(sokEierskap(Visning.MINE).antallTotalt).isZero()
         assertThat(sokEierskap(Visning.MITT_KONTOR).antallTotalt).isZero()
@@ -664,8 +660,7 @@ class RekrutteringstreffSokRepositoryTest {
         assertThat(t.gateadresse).isEqualTo("Testgata 123")
         assertThat(t.postnummer).isEqualTo("0484")
         assertThat(t.poststed).isEqualTo("OSLO")
-        assertThat(t.eiere).contains("A123456")
-        assertThat(t.kontorer).contains("0315")
+        assertThat(t.eierOgKontor).contains(EierOgKontorDto("A123456", null, "0315"))
         assertThat(t.opprettetAv).isEqualTo("A123456")
         assertThat(t.opprettetAvTidspunkt).isNotNull()
         assertThat(t.sistEndret).isNotNull()
