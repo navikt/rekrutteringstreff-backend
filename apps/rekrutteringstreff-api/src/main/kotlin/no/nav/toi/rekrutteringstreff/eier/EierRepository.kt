@@ -12,7 +12,6 @@ class EierRepository(
 ) {
     companion object {
         private const val rekrutteringstreff = "rekrutteringstreff"
-        private const val eiere = "eiere"
         private const val id = "id"
     }
 
@@ -25,7 +24,7 @@ class EierRepository(
 
     fun hent(connection: Connection, treff: TreffId, forUpdate: Boolean = false): List<Eier>? {
         check(!forUpdate || !connection.autoCommit) { "FOR UPDATE krever en transaksjon" }
-        // Treffraden låses først, også uten eierrader, i samme rekkefølge som dual write.
+        // Treffraden låses først, også uten eierrader
         val sql = "SELECT rekrutteringstreff_id FROM $rekrutteringstreff WHERE $id = ?" +
             if (forUpdate) " FOR UPDATE" else ""
         val treffDbId = connection.prepareStatement(sql).use { stmt ->
@@ -64,26 +63,21 @@ class EierRepository(
         require(eierNavIdent.isNotBlank()) { "Eier må ha Nav-ident" }
         connection.prepareStatement(
                 """
-                    WITH oppdatert_treff AS (
-                        UPDATE $rekrutteringstreff
-                        SET $eiere = array(SELECT DISTINCT unnest(array_append($eiere, ?)))
-                        WHERE $id = ?
-                        RETURNING rekrutteringstreff_id
-                    )
                     INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_av, eier_navn)
                     SELECT rekrutteringstreff_id, ?, ?, ?, ?
-                    FROM oppdatert_treff
+                    FROM $rekrutteringstreff
+                    WHERE $id = ?
+                    FOR UPDATE
                     ON CONFLICT (rekrutteringstreff_id, nav_ident)
                     DO UPDATE SET kontor_enhetid = EXCLUDED.kontor_enhetid,
                                   eier_navn = coalesce(EXCLUDED.eier_navn, rekrutteringstreff_eier.eier_navn)
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setString(1, eierNavIdent)
-                stmt.setObject(2, treff.somUuid)
+                stmt.setString(2, kontorEnhetId)
                 stmt.setString(3, eierNavIdent)
-                stmt.setString(4, kontorEnhetId)
-                stmt.setString(5, eierNavIdent)
-                stmt.setString(6, eierNavn)
+                stmt.setString(4, eierNavn)
+                stmt.setObject(5, treff.somUuid)
                 if (stmt.executeUpdate() == 0) {
                     throw NotFoundResponse("Rekrutteringstreff med id ${treff.somString} finnes ikke")
                 }
@@ -101,26 +95,16 @@ class EierRepository(
         if (gjeldendeEiere.size <= 1 || eier !in gjeldendeEiere) return false
         connection.prepareStatement(
             """
-                    WITH oppdatert_treff AS (
-                        UPDATE $rekrutteringstreff
-                        SET $eiere = array_remove($eiere, ?)
-                        WHERE $id = ?
-                        RETURNING rekrutteringstreff_id
-                    ), slettet_eier AS (
-                        DELETE FROM rekrutteringstreff_eier
-                        WHERE rekrutteringstreff_id IN (SELECT rekrutteringstreff_id FROM oppdatert_treff)
-                          AND nav_ident = ?
-                    )
-                    SELECT EXISTS (SELECT 1 FROM oppdatert_treff)
+                    DELETE FROM rekrutteringstreff_eier e
+                    USING $rekrutteringstreff rt
+                    WHERE rt.rekrutteringstreff_id = e.rekrutteringstreff_id
+                      AND rt.$id = ?
+                      AND e.nav_ident = ?
                 """.trimIndent()
         ).use { stmt ->
-            stmt.setString(1, eier)
-            stmt.setObject(2, treff.somUuid)
-            stmt.setString(3, eier)
-            return stmt.executeQuery().use { rs ->
-                rs.next()
-                rs.getBoolean(1)
-            }
+            stmt.setObject(1, treff.somUuid)
+            stmt.setString(2, eier)
+            return stmt.executeUpdate() > 0
         }
     }
 }

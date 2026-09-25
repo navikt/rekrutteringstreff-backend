@@ -95,7 +95,6 @@ class EierService(
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
         val kontorerFør = eiereFør.map { it.kontorEnhetId }.toSet()
         val kontorerEtter = eiereEtter.map { it.kontorEnhetId }.toSet()
-        rekrutteringstreffRepository.oppdaterKontorer(connection, treffId)
         (kontorerEtter - kontorerFør).forEach { kontor ->
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, utførtAv,

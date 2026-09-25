@@ -121,7 +121,7 @@ Veiledere med oppfølgingstilgang i Modia. Gir per nå kun lesetilgang til stati
 
 ## Eierskap
 
-Hvert rekrutteringstreff har én eller flere **eiere** (Nav-identer lagret i `eiere text[]`). Eierskap styrer hvem som kan redigere treffet, invitere deltakere og administrere andre eiere.
+Hvert rekrutteringstreff har én eller flere **eiere** (Nav-identer lagret i `rekrutteringstreff_eier`). Eierskap styrer hvem som kan redigere treffet, invitere deltakere og administrere andre eiere.
 
 **Regler:**
 
@@ -142,7 +142,7 @@ Hvert rekrutteringstreff har én eller flere **eiere** (Nav-identer lagret i `ei
 
 **WorkOp via direkte lenke:** Treffoppslaget er tilgjengelig for arbeidsgiverrettet, jobbsøkerrettet og utvikler uten eierskap, slik at frontend kan vise vanlig forhåndsvisning. Borgers lesetilgang er uendret. Dette åpner ikke søket; eksisterende søkefiltre gjelder fortsatt. Arbeidsgiverrettet og utvikler kan legge seg selv til som medeier via `/eiere/meg`, med krav om kontortilknytning og uten å fjerne eksisterende eiere. Gjennomføring og eierredigering beholder sine rolle- og eierkrav.
 
-**Kontorer:** Hvert treff kan ha flere kontorer (`kontorer text[]`). Dette styrer ikke tilgang, men brukes i frontend for filtrering.
+**Kontorer:** Hvert treff kan ha flere kontorer, avledet av kontoret på hver eierrad i `rekrutteringstreff_eier`. Dette styrer ikke tilgang, men brukes i frontend for filtrering.
 
 ## 3. System
 

@@ -102,8 +102,8 @@ class RekrutteringstreffRepository(
             """
             WITH nytt_treff AS (
                 INSERT INTO $tabellnavn($id,$tittel,$kategori,$status,$opprettetAvPersonNavident,
-                                         $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere,$kontorer,$sistEndret,$sistEndretAv)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                                         $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$sistEndret,$sistEndretAv)
+                VALUES (?,?,?,?,?,?,?,?,?)
                 RETURNING rekrutteringstreff_id, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt
             )
             INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_tidspunkt, lagt_til_av, eier_navn)
@@ -120,8 +120,6 @@ class RekrutteringstreffRepository(
             setString(++i, dto.opprettetAvPersonNavident)
             setString(++i, dto.opprettetAvNavkontorEnhetId)
             setTimestamp(++i, Timestamp.from(Instant.now()))
-            setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
-            setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvNavkontorEnhetId)))
             setTimestamp(++i, Timestamp.from(Instant.now()))
             setString(++i, dto.opprettetAvPersonNavident)
             setString(++i, dto.opprettetAvPersonNavn)
@@ -412,24 +410,4 @@ class RekrutteringstreffRepository(
         sistEndret = getTimestamp(sistEndret).toInstant().atOslo(),
         sistEndretAv = getString(sistEndretAv) ?: "Ukjent",
     )
-
-    fun oppdaterKontorer(connection: Connection, treffId: TreffId) {
-        connection.prepareStatement(
-            """
-            UPDATE $tabellnavn rt
-            SET $kontorer = ARRAY(
-                SELECT DISTINCT e.kontor_enhetid
-                FROM rekrutteringstreff_eier e
-                WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                ORDER BY e.kontor_enhetid
-            )
-            WHERE $id = ?
-            """
-        ).use { s ->
-            s.setObject(1, treffId.somUuid)
-            if (s.executeUpdate() == 0) {
-                throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
-            }
-        }
-    }
 }

@@ -63,7 +63,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `opprett lagrer eier og kontor i begge lagringsformer med kun opprettet-hendelsen`() {
+    fun `opprett lagrer eier og kontor i eiertabellen med kun opprettet-hendelsen`() {
         val treffId = opprettTreff()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!

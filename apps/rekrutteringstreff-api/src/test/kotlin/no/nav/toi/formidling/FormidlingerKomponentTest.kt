@@ -125,7 +125,6 @@ class FormidlingerKomponentTest {
         assertThat(før.statusCode()).isEqualTo(200)
 
         ctx.eierService.slettEier(treffId, "B654321", "A123456")
-        db.oppdaterEierarrays(listOf("A123456", "B654321"), listOf("0315", "1201"), treffId)
 
         val etter = httpGet(formidlingListeAllePath(treffId), "C987654", listOf(AzureAdRoller.arbeidsgiverrettet))
         assertThat(etter.statusCode()).isEqualTo(403)

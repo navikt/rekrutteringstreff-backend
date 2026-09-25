@@ -5,7 +5,7 @@
 `V18` er opprettet og setter `kontor_enhetid NOT NULL`. Resultatet av `V17` må være kontrollert før deploy.
 Fase 5 er implementert: lesing, søk og tilgangskontroll bruker eiertabellen. Dual write beholdes.
 Fase 6a er implementert: API-responsene har ikke lenger `eiere` og `kontorer`, bare `eierOgKontor`.
-Dual write og arraykolonnene fjernes i fase 6b.
+Fase 6b er implementert: dual write er fjernet, og `V20` dropper arraykolonnene i samme deploy.
 Deploy av fase 5 forutsetter at fase 4 er fullført og kontrollert i prod.
 Modellvalg er besluttet (seksjon 6 og 7). API-et tar imot valgfritt `eierNavn` fra frontend (seksjon 8).
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
@@ -368,17 +368,24 @@ søkefiltrene bruker dem. Dual write til arraykolonnene beholdes i denne fasen.
 
 #### Fase 6b — Fjern dual write og dropp kolonnene (`V20__dropp_eiere_kontorer_arrays.sql`)
 
-- Fjern skrivingen til `rekrutteringstreff.eiere` og `rekrutteringstreff.kontorer` i
-  `RekrutteringstreffRepository.opprett`, `oppdaterKontorer` og `EierRepository`.
-- `ALTER TABLE rekrutteringstreff DROP COLUMN eiere, DROP COLUMN kontorer;`
-- Fjern dual write og dropp kolonnene i samme deploy. `eiere` er `NOT NULL` uten default, så INSERT
-  feiler hvis koden slutter å skrive kolonnen før den droppes.
-  Ved rullerende deploy kan gamle instanser fortsatt skrive til kolonnene. Vurder derfor å først fjerne
-  `NOT NULL` eller legge til en default, og deretter droppe kolonnene i en senere deploy.
-- Kjøres **etter** at fase 5 er verifisert i prod (egen deploy, ikke samme release).
-- Oppdater `federated-queries/rekrutteringstreff-per-kontor-aggregert.sql` — den bruker i dag
-  `rt.opprettet_av_kontor_enhetid`; med ny modell kan den gruppere per kontor via eiertabellen og
-  faktisk telle treff per *deltakende* kontor, ikke bare oppretterens.
+**Implementert.** Eiere og kontorer skrives og leses bare via `rekrutteringstreff_eier`.
+
+- `RekrutteringstreffRepository.opprett` skriver ikke lenger `eiere` og `kontorer`.
+  `oppdaterKontorer` er fjernet; `EierService` utleder kontorhendelsene fra eierradene som før.
+- `EierRepository.leggTil` låser treffraden med `SELECT ... FOR UPDATE` i stedet for å oppdatere
+  eierarrayet. Låserekkefølgen treffrad → eierrader er uendret. `slett` sletter bare eierraden.
+- `V20` kjører `ALTER TABLE rekrutteringstreff DROP COLUMN eiere, DROP COLUMN kontorer;`.
+  GIN-indeksene fra `V3` droppes sammen med kolonnene. Søkeviewet bruker ikke kolonnene i trefftabellen
+  og beholder sine aggregerte `eiere`/`kontorer`-kolonner, som søkefiltrene bruker.
+- **Én deploy, valgt bevisst.** Ved rullerende deploy vil gamle instanser feile ved opprettelse av treff
+  og ved eierendringer i tidsrommet mellom `V20` og at alle instanser er byttet ut. Lesing påvirkes ikke,
+  siden fase 5 allerede leser fra eiertabellen. Endringen er irreversibel: en rollback til eldre kode
+  krever at kolonnene gjenopprettes.
+- `federated-queries/rekrutteringstreff-per-kontor-aggregert.sql` grupperer nå per kontor via
+  eiertabellen. Et treff telles én gang for hvert kontor som har minst én eier på treffet, ikke bare for
+  oppretterens kontor. Summen over kontorer kan derfor overstige antall treff. Spørringen må oppdateres i
+  BigQuery separat.
+- Tester som simulerte avvikende arrays, er fjernet eller forenklet.
 
 ---
 
@@ -403,8 +410,11 @@ Eksisterende tester som må oppdateres: `EierRepositoryTest`, `Rekrutteringstref
 
 Nye tester:
 
-`EierBackfillTest` dekker migrering fra `V15`, kontorkilder, metadata, NULL og duplikater i eierarrayet,
+`EierBackfillTest` dekket migrering fra `V15`, kontorkilder, metadata, NULL og duplikater i eierarrayet,
 slettede treff, uendrede arrays og hendelser, gjentatt kjøring, rollback og låsing mot dual write.
+Den dekket også `V17` og `V18`. Testen er slettet etter fase 6b: migreringene har kjørt i alle miljøer,
+og testen kjørte dagens repository-kode mot gamle skjemaversjoner. Den finnes i git-historikken.
+Punktene for backfill og fase 4 under gjelder derfor bare historisk.
 
 - Backfill-migrering: treff der eier har `KONTOR_LAGT_TIL`-hendelse → kontor gjenskapt fra hendelsen
 - Backfill-migrering: eier uten hendelse som *er* oppretter → kontor fra `opprettet_av_kontor_enhetid`
