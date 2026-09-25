@@ -53,8 +53,8 @@ class JobbsøkerSokYtelsesTest {
                     """
                     INSERT INTO rekrutteringstreff (
                         id, tittel, status, opprettet_av_person_navident,
-                        opprettet_av_kontor_enhetid, opprettet_av_tidspunkt, eiere, kontorer, sist_endret
-                    ) VALUES (?, 'Ytelsestest-treff', 'PUBLISERT', 'A123456', '0315', now(), ARRAY['A123456'], ARRAY['0315'], now())
+                        opprettet_av_kontor_enhetid, opprettet_av_tidspunkt, sist_endret
+                    ) VALUES (?, 'Ytelsestest-treff', 'PUBLISERT', 'A123456', '0315', now(), now())
                     """.trimIndent()
                 ).use { stmt ->
                     stmt.setObject(1, treffUuid)

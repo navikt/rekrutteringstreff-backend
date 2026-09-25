@@ -11,7 +11,7 @@ FROM
                    SUM(fullfoert)                  AS antall_treff_med_status_fullfoert,
                    SUM(avlyst)                     AS antall_treff_med_status_avlyst,
                    SUM(slettet)                    AS antall_treff_med_status_slettet
-            FROM (SELECT rt.opprettet_av_kontor_enhetid                             AS kontor_enhetid,
+            FROM (SELECT e.kontor_enhetid                                           AS kontor_enhetid,
                          v.fra_tid,
                          CASE WHEN v.status = 'FULLFØRT' THEN fra_tid ELSE NULL END AS fullfoert_treff_dato,
                          CASE WHEN v.status = 'UTKAST' THEN 1 ELSE 0 END            AS utkast,
@@ -20,7 +20,9 @@ FROM
                          CASE WHEN v.status = 'AVLYST' THEN 1 ELSE 0 END            AS avlyst,
                          CASE WHEN v.status = 'SLETTET' THEN 1 ELSE 0 END           AS slettet
                   FROM rekrutteringstreff_sok_view AS v
-                           INNER JOIN rekrutteringstreff AS rt ON v.id = rt.id)
+                           INNER JOIN (SELECT DISTINCT rekrutteringstreff_id, kontor_enhetid
+                                       FROM rekrutteringstreff_eier) AS e
+                                      ON e.rekrutteringstreff_id = v.rekrutteringstreff_id)
             GROUP BY kontor_enhetid
          ''');
 

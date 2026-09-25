@@ -69,8 +69,7 @@ Hver eierrad har ett kontor. Kontorene på treffet er de unike kontorene til gje
 Når siste eier fra et kontor fjernes eller bytter kontor, faller kontortilgangen bort og
 `EierService` skriver `KONTOR_FJERNET` i samme transaksjon.
 
-Arraykolonnene `rekrutteringstreff.eiere` og `rekrutteringstreff.kontorer` vedlikeholdes fortsatt med
-dual write, men brukes ikke ved lesing. De fjernes først i en senere deploy.
+Arraykolonnene `rekrutteringstreff.eiere` og `rekrutteringstreff.kontorer` er fjernet i `V20`.
 Se [migreringsplanen](../9-planer/eiere-og-kontorer-egen-tabell.md).
 
 ## Entity Relationship Diagram
@@ -111,8 +110,6 @@ erDiagram
         text fylke "Fylke for treffstedet (V5)"
         text kommune "Kommune for treffstedet (V5)"
         timestamptz svarfrist "Frist for påmelding/svar"
-        text[] eiere "Dual write, ikke kilde for lesing"
-        text[] kontorer "Dual write, avledet fra eierrader"
         text beskrivelse "Beskrivelse av treffet"
         text sist_endret_av_person_navident "Nav-ident for sist endring (V6)"
         timestamptz sist_endret_av_tidspunkt "Tidspunkt for sist endring (V6)"

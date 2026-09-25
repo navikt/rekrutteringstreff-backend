@@ -160,7 +160,6 @@ class RekrutteringstreffSokKomponenttest {
         }
 
         service.slettEier(treffId, "A123456", "B654321")
-        db.oppdaterEierarrays(listOf("A123456", "B654321"), listOf("0315", "1201"), treffId)
 
         listOf("?visning=mine", "?visning=mitt_kontor", "?kontorer=0315").forEach { query ->
             val response = sokGet(query)
