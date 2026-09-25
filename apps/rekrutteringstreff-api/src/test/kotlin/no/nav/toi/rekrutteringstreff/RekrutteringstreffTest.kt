@@ -190,7 +190,7 @@ class RekrutteringstreffTest {
             val treff = mapper.readValue(response.body(), RekrutteringstreffDto::class.java)
             assertThat(treff.id).isEqualTo(treffId.somUuid)
             assertThat(treff.tittel).isEqualTo("Syntetisk WorkOp")
-            assertThat(treff.eiere).containsExactly("SYNTETISK-EIER")
+            assertThat(treff.eierOgKontor.map { it.navIdent }).containsExactly("SYNTETISK-EIER")
         }
     }
 
@@ -228,7 +228,7 @@ class RekrutteringstreffTest {
         val etterInnmelding = httpGet(url, token)
         assertThat(etterInnmelding.statusCode()).isEqualTo(200)
         val oppdatertTreff = mapper.readValue(etterInnmelding.body(), RekrutteringstreffDto::class.java)
-        assertThat(oppdatertTreff.eiere).containsExactlyInAnyOrder(eier, medeier)
+        assertThat(oppdatertTreff.eierOgKontor.map { it.navIdent }).containsExactlyInAnyOrder(eier, medeier)
         assertThat(httpGet(gjennomforingUrl, token).statusCode()).isEqualTo(200)
         assertThat(httpPut(stegUrl, stegBody, token).statusCode()).isEqualTo(200)
         assertThat(httpPut(url, oppdatering, token).statusCode()).isEqualTo(200)

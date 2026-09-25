@@ -138,10 +138,8 @@ class RekrutteringstreffEierTest {
             val treff = if (hentListe) json["treff"].single { it["id"].asText() == treffId.somString } else json
             val forventet = mapper.readTree(forventetJson)
             assertThat(treff["eierOgKontor"]).isEqualTo(forventet)
-            assertThat(treff["eiere"].map { it.asText() })
-                .containsExactlyInAnyOrderElementsOf(forventet.map { it["navIdent"].asText() })
-            assertThat(treff["kontorer"].map { it.asText() })
-                .containsExactlyInAnyOrderElementsOf(forventet.map { it["kontorEnhetId"].asText() }.distinct())
+            assertThat(treff.has("eiere")).isFalse()
+            assertThat(treff.has("kontorer")).isFalse()
         }
 
         verifiserEierOgKontor(

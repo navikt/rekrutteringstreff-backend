@@ -4,6 +4,8 @@
 `V17` inneholder nå UUID → kontor-koblinger for både dev (3) og prod (23).
 `V18` er opprettet og setter `kontor_enhetid NOT NULL`. Resultatet av `V17` må være kontrollert før deploy.
 Fase 5 er implementert: lesing, søk og tilgangskontroll bruker eiertabellen. Dual write beholdes.
+Fase 6a er implementert: API-responsene har ikke lenger `eiere` og `kontorer`, bare `eierOgKontor`.
+Dual write og arraykolonnene fjernes i fase 6b.
 Deploy av fase 5 forutsetter at fase 4 er fullført og kontrollert i prod.
 Modellvalg er besluttet (seksjon 6 og 7). API-et tar imot valgfritt `eierNavn` fra frontend (seksjon 8).
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
@@ -351,9 +353,28 @@ tilgangen etter at alle instanser er oppdatert. Rollback til eldre kode må ogs�
 `KONTOR_FJERNET` er en ny enum-verdi i hendelsesloggen. Ikke slett arraykolonnene før fase 5 er verifisert
 i prod.
 
-### Fase 6 — Contract (`V19__dropp_eiere_kontorer_arrays.sql`)
+### Fase 6 — Contract
 
+#### Fase 6a — Fjern listene fra API-et
+
+**Implementert.** `eiere` og `kontorer` er fjernet fra `RekrutteringstreffDto` og
+`RekrutteringstreffSokTreff`. `GET /api/rekrutteringstreff/{id}` og `GET /api/rekrutteringstreff/sok`
+returnerer bare `eierOgKontor`. Dette er en **breaking change** for klienter som leser de gamle listene.
+Frontend må bruke `eierOgKontor` før denne versjonen deployes.
+
+`GET /eiere` er uendret og returnerer fortsatt Nav-identer. Internt beholder domenemodellen `eiere` og
+`kontorer`, som aggregeres fra eiertabellen. Søkeviewet eksponerer fortsatt kolonnene, fordi
+søkefiltrene bruker dem. Dual write til arraykolonnene beholdes i denne fasen.
+
+#### Fase 6b — Fjern dual write og dropp kolonnene (`V20__dropp_eiere_kontorer_arrays.sql`)
+
+- Fjern skrivingen til `rekrutteringstreff.eiere` og `rekrutteringstreff.kontorer` i
+  `RekrutteringstreffRepository.opprett`, `oppdaterKontorer` og `EierRepository`.
 - `ALTER TABLE rekrutteringstreff DROP COLUMN eiere, DROP COLUMN kontorer;`
+- Fjern dual write og dropp kolonnene i samme deploy. `eiere` er `NOT NULL` uten default, så INSERT
+  feiler hvis koden slutter å skrive kolonnen før den droppes.
+  Ved rullerende deploy kan gamle instanser fortsatt skrive til kolonnene. Vurder derfor å først fjerne
+  `NOT NULL` eller legge til en default, og deretter droppe kolonnene i en senere deploy.
 - Kjøres **etter** at fase 5 er verifisert i prod (egen deploy, ikke samme release).
 - Oppdater `federated-queries/rekrutteringstreff-per-kontor-aggregert.sql` — den bruker i dag
   `rt.opprettet_av_kontor_enhetid`; med ny modell kan den gruppere per kontor via eiertabellen og
@@ -422,11 +443,12 @@ Backfill og kontoravklaring skilles for å kunne bruke varige eierrad-ID-er frem
 | Fase 4a (ID-mapping) | `V17` | Middels — resultatet må kontrolleres; gjenværende NULL tillates |
 | Fase 4b (`NOT NULL`, etter kontroll) | `V18` | Lav — constrainten avvises ved gjenværende NULL |
 | Fase 5 (bytt lesing + view) | — | 🔴 Høy — tilgangsstyring og søk |
-| Fase 6 (drop kolonner) | `V19` | Middels — irreversibelt |
+| Fase 6a (fjern listene fra API-et) | — | Middels — breaking for frontend |
+| Fase 6b (fjern dual write, drop kolonner) | `V20` | Middels — irreversibelt |
 
 **Releasegrenser:** `V16` legges til først etter at alle instanser kjører dual write. `V17` legges til
 etter fullført `V16`, når rad-ID-er og kontorer er avklart per miljø. `V18` deployes etter at resultatet
-av `V17` er kontrollert og ingen eierrader mangler kontor. `V19` legges til etter at lesingen er byttet og
+av `V17` er kontrollert og ingen eierrader mangler kontor. `V20` legges til etter at lesingen er byttet og
 verifisert i prod. Tidligere migreringsfiler beholdes urørt; det er hvilke migreringer som er
 ventende ved deploy som avgjør hva Flyway kjører.
 
@@ -590,7 +612,7 @@ treffet, ikke alle treff personen eier. Full historisk utfylling krever en egen 
 `subjektNavn` i eierhendelser er heller ikke endret.
 
 `GET /api/rekrutteringstreff/{id}` og hvert treff i `GET /api/rekrutteringstreff/sok`
-returnerer i tillegg `eierOgKontor` fra eiertabellen:
+returnerer `eierOgKontor` fra eiertabellen:
 
 ```json
 {
@@ -602,7 +624,8 @@ returnerer i tillegg `eierOgKontor` fra eiertabellen:
 
 `eierNavn` er `null` når navn ikke er lagret. `kontorEnhetId` er kontorets enhetId, ikke kontornavn.
 Uten eierrader returneres en tom liste. Eierne sorteres etter eierradens interne ID.
-De eksisterende feltene `eiere` og `kontorer` beholdes for bakoverkompatibilitet.
+De tidligere listene `eiere` og `kontorer` er fjernet fra begge responsene i fase 6a. Klienter må bruke
+`eierOgKontor`.
 Eierinformasjonen hentes i samme SQL-spørring som treffene, uten et ekstra databasekall per treff.
 For søk sammenstilles `eier_og_kontor` i `rekrutteringstreff_sok_view`; søkerepositoryet leser kolonnen
 direkte. Detaljoppslag beholder sin egen sammenstilling, siden søkeviewet filtrerer bort slettede treff.

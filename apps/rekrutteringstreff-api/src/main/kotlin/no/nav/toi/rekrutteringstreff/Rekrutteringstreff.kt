@@ -57,8 +57,6 @@ class Rekrutteringstreff(
         antallJobbsøkere = antallJobbsøkere,
         antallJobbsøkereSvartJa = antallJobbsøkereSvartJa,
         antallJobbsøkereFåttJobb = antallJobbsøkereFåttJobb,
-        eiere = eiere,
-        kontorer = kontorer,
         eierOgKontor = eierOgKontor,
         sistEndret = sistEndret,
         sistEndretAv = sistEndretAv
