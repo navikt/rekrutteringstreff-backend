@@ -7,7 +7,7 @@ application {
 }
 
 val flywayVersion = "11.3.0"
-val postgresVersion = "42.7.10"
+val postgresVersion = "42.7.13"
 val hikariVersion = "6.2.1"
 val testContainerVersion = "2.0.4"
 val javalinVersion = "7.2.0"
