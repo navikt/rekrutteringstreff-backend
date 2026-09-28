@@ -6,7 +6,7 @@ application {
     mainClass.set("no.nav.toi.AppKt")
 }
 
-val flywayVersion = "11.3.0"
+val flywayVersion = "11.20.3"
 val postgresVersion = "42.7.13"
 val hikariVersion = "6.2.1"
 val testContainerVersion = "2.0.4"
