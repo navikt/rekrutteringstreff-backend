@@ -32,7 +32,7 @@ dependencies {
     implementation("io.opentelemetry.instrumentation:opentelemetry-logback-mdc-1.0:${opentelemetryLogbackMdcVersion}")
     implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:${openTelemetryAnnotationsVersion}")
 
-    // Rapids and rivers uten Ktor. Flyttet fra tbd-libs til navikt/rapids-and-rivers, samme pakkenavn
+    // Rapids and rivers uten Ktor.
     implementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-impl:${rapidsAndRiversVersion}")
     implementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-api:${rapidsAndRiversVersion}")
     implementation("com.github.navikt.rapids-and-rivers:kafka:${rapidsAndRiversVersion}")
