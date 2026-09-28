@@ -12,7 +12,7 @@ val hikariVersion = "6.2.1"
 val testContainerVersion = "2.0.4"
 val javalinVersion = "7.2.0"
 val micrometerVersion = "1.15.2"
-val tbdLibsVersion = "2026.01.28-07.21-5436e475"
+val rapidsAndRiversVersion = "2026042913501777463400" // Må være lik versjonen i buildSrc/toi.rapids-and-rivers.gradle.kts
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.0"
 
@@ -32,11 +32,11 @@ dependencies {
     implementation("io.opentelemetry.instrumentation:opentelemetry-logback-mdc-1.0:${opentelemetryLogbackMdcVersion}")
     implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:${openTelemetryAnnotationsVersion}")
 
-    // Rapids and rivers fra tbd-libs (uten Ktor)
-    implementation("com.github.navikt.tbd-libs:rapids-and-rivers:${tbdLibsVersion}")
-    implementation("com.github.navikt.tbd-libs:rapids-and-rivers-api:${tbdLibsVersion}")
-    implementation("com.github.navikt.tbd-libs:kafka:${tbdLibsVersion}")
-    testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers-test:${tbdLibsVersion}")
+    // Rapids and rivers uten Ktor.
+    implementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-impl:${rapidsAndRiversVersion}")
+    implementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-api:${rapidsAndRiversVersion}")
+    implementation("com.github.navikt.rapids-and-rivers:kafka:${rapidsAndRiversVersion}")
+    testImplementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-test:${rapidsAndRiversVersion}")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:testcontainers-postgresql:$testContainerVersion")
