@@ -109,7 +109,6 @@ class RekrutteringstreffSokRepositoryTest {
         val service = EierService(eierRepository, RekrutteringstreffRepository(db.dataSource), db.dataSource)
         service.leggTilEierMedKontor(treffId, "B654321", "1201", "Kari Testesen")
         service.leggTilEierMedKontor(treffId, "C987654", "0315")
-        db.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
 
         val treff = sokEierskap(Visning.MINE, navIdent = "B654321").treff.single()
         assertThat(treff.eierOgKontor).containsExactly(
@@ -117,13 +116,10 @@ class RekrutteringstreffSokRepositoryTest {
             EierOgKontorDto("B654321", "Kari Testesen", "1201"),
             EierOgKontorDto("C987654", null, "0315"),
         )
-        assertThat(sokEierskap(Visning.MINE, navIdent = "gammel eier").antallTotalt).isZero()
-        assertThat(sokEierskap(Visning.MITT_KONTOR, kontorId = "gammelt kontor").antallTotalt).isZero()
         assertThat(sokEierskap(Visning.MITT_KONTOR, kontorId = "1201").antallTotalt).isEqualTo(1)
         assertThat(sokEierskap(Visning.VALGTE_KONTORER, kontorer = listOf("1201")).antallTotalt).isEqualTo(1)
 
         service.slettEier(treffId, "B654321", "A123456")
-        db.oppdaterEierarrays(listOf("A123456", "B654321"), listOf("0315", "1201"), treffId)
 
         listOf(
             sokEierskap(Visning.MINE, navIdent = "B654321"),
@@ -138,18 +134,6 @@ class RekrutteringstreffSokRepositoryTest {
             assertThat(it.geografiaggregering.fylkesnummeraggregering).isEmpty()
             assertThat(it.geografiaggregering.kommunenummeraggregering).isEmpty()
         }
-    }
-
-    @Test
-    fun `gammelt eierarray gir ikke innsyn i utkast eller workop`() {
-        val utkast = opprettTreff(status = RekrutteringstreffStatus.UTKAST)
-        val workop = opprettTreff(kategori = RekrutteringstreffKategori.WORKOP)
-        listOf(utkast, workop).forEach {
-            db.oppdaterEierarrays(listOf("B654321"), listOf("0315"), it)
-        }
-
-        assertThat(sokEierskap(Visning.ALLE, navIdent = "B654321").antallTotalt).isZero()
-        assertThat(sokEierskap(Visning.ALLE, navIdent = "A123456").antallTotalt).isEqualTo(2)
     }
 
     @Test

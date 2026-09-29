@@ -50,7 +50,6 @@ class RekrutteringstreffRepositoryTest {
         val eierRepository = EierRepository(db.dataSource)
         eierRepository.leggTil(treffId, "B654321", "0315", "Kari Testesen")
         eierRepository.leggTil(treffId, "C987654", "1201")
-        db.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
 
         listOf(
             repository.hent(treffId)!!,
