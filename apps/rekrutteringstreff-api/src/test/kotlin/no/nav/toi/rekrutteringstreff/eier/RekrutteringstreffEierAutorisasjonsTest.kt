@@ -84,7 +84,6 @@ class RekrutteringstreffEierAutorisasjonsTest {
         )
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
         ctx.eierRepository.leggTil(gyldigRekrutteringstreff, "A1234", "0315")
-        database.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), gyldigRekrutteringstreff)
 
     }
 

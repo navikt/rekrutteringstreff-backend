@@ -87,7 +87,6 @@ class RekrutteringstreffEierTest {
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         eiere.forEach { ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, it, "1234") }
         ctx.eierService.slettEier(opprettetRekrutteringstreff.id, navIdent, navIdent)
-        database.oppdaterEierarrays(listOf(navIdent), listOf("gammelt kontor"), opprettetRekrutteringstreff.id)
         val response = httpGet(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
             token.serialize()
@@ -125,7 +124,6 @@ class RekrutteringstreffEierTest {
         database.opprettRekrutteringstreffMedEierOgKontor(navIdent = "D111111", kontorId = "9999")
         ctx.eierRepository.leggTil(treffId, "B654321", "0315", "Kari Testesen")
         ctx.eierRepository.leggTil(treffId, "C987654", "1201", "Ola Testesen")
-        database.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
 
         fun verifiserEierOgKontor(forventetJson: String) {
             val path = if (hentListe) "sok?visning=alle" else treffId.somString

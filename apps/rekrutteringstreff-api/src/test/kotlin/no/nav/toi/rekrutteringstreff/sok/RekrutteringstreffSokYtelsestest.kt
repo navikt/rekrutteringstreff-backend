@@ -77,8 +77,6 @@ class RekrutteringstreffSokYtelsestest {
                         opprettet_av_kontor_enhetid,
                         opprettet_av_tidspunkt,
                         svarfrist,
-                        eiere,
-                        kontorer,
                         sist_endret
                     )
                     SELECT
@@ -92,8 +90,6 @@ class RekrutteringstreffSokYtelsestest {
                             WHEN status = 'PUBLISERT' AND i % 2 = 0 THEN start_tid - interval '1 day'
                             ELSE start_tid + interval '1 day'
                         END,
-                        ARRAY['A123456', 'B654321'],
-                        ARRAY[CASE WHEN i % 2 = 0 THEN '0315' ELSE '1201' END],
                         start_tid + i * interval '1 second' + interval '1 hour'
                     FROM treff
                     """.trimIndent()
@@ -106,9 +102,10 @@ class RekrutteringstreffSokYtelsestest {
                     it.executeUpdate(
                         """
                         INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid)
-                        SELECT rt.rekrutteringstreff_id, e.nav_ident, rt.kontorer[1]
+                        SELECT rt.rekrutteringstreff_id, e.nav_ident,
+                               CASE WHEN rt.rekrutteringstreff_id % 2 = 0 THEN '0315' ELSE '1201' END
                         FROM rekrutteringstreff rt
-                        CROSS JOIN LATERAL unnest(rt.eiere) AS e(nav_ident)
+                        CROSS JOIN unnest(ARRAY['A123456', 'B654321']) AS e(nav_ident)
                         """.trimIndent()
                     )
                 }

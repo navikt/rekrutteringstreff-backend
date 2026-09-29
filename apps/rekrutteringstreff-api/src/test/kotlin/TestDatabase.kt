@@ -12,7 +12,7 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.Connection
 import java.sql.ResultSet
@@ -431,14 +431,6 @@ class TestDatabase {
         }
     }
 
-    fun oppdaterEierarrays(eiere: List<String>, kontorer: List<String>, id: TreffId) = dataSource.connection.use {
-        it.prepareStatement("UPDATE rekrutteringstreff SET eiere = ?, kontorer = ? WHERE id = ?").apply {
-            setArray(1, connection.createArrayOf("text", eiere.toTypedArray()))
-            setArray(2, connection.createArrayOf("text", kontorer.toTypedArray()))
-            setObject(3, id.somUuid)
-        }.executeUpdate()
-    }
-
     fun oppdaterRekrutteringstreff(
         id: TreffId,
         tittel: String? = null,
@@ -736,8 +728,8 @@ class TestDatabase {
         }
 
     companion object {
-        private var lokalPostgres: PostgreSQLContainer<*>? = null
-        private fun getLokalPostgres(): PostgreSQLContainer<*> =
+        private var lokalPostgres: PostgreSQLContainer? = null
+        private fun getLokalPostgres(): PostgreSQLContainer =
             lokalPostgres ?: PostgreSQLContainer(DockerImageName.parse("postgres:17.2-alpine"))
                 .withDatabaseName("dbname")
                 .withUsername("username")
