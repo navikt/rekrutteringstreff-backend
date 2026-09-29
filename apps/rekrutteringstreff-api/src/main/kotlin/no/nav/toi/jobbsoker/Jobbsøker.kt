@@ -95,6 +95,13 @@ enum class JobbsøkerStatus {
     LAGT_TIL, INVITERT, SVART_JA, SVART_NEI, MØTT_OPP, FÅTT_JOBB, SLETTET
 }
 
+enum class AktuellForTreffStatus {
+    VURDERES,
+    KONTAKTET,
+    AKTUELL,
+    IKKE_AKTUELL,
+}
+
 data class Jobbsøker(
     val personTreffId: PersonTreffId,
     val treffId: TreffId,
@@ -105,6 +112,7 @@ data class Jobbsøker(
     val veilederNavn: VeilederNavn?,
     val veilederNavIdent: VeilederNavIdent?,
     val status: JobbsøkerStatus,
+    val aktuellForTreffStatus: AktuellForTreffStatus?,
     val hendelser: List<JobbsøkerHendelse> = emptyList(),
     val alder: Int? = null,
     val innsatsgruppe: Innsatsgruppe? = null,

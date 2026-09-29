@@ -45,6 +45,7 @@ class JobbsøkerController(
         private const val formidlingEgnePath = "$jobbsøkerPath/formidling/egne"
         private const val formidlingMittKontorPath = "$jobbsøkerPath/formidling/mittkontor"
         private const val formidlingAllePath = "$jobbsøkerPath/formidling/alle"
+        private const val aktuellForTreffStatusPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/aktuell-for-treff-status"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
@@ -58,6 +59,7 @@ class JobbsøkerController(
         routes.post(formidlingEgnePath, hentEgneJobbsøkereForFormidlingHandler())
         routes.post(formidlingMittKontorPath, hentJobbsøkereForMittKontorForFormidlingHandler())
         routes.post(formidlingAllePath, hentAlleJobbsøkereForFormidlingHandler())
+        routes.put(aktuellForTreffStatusPath, endreAktuellForTreffStatusHandler())
     }
 
     @OpenApi(
@@ -617,6 +619,44 @@ class JobbsøkerController(
         }
     }
 
+    @OpenApi(
+        summary = "Sett eller fjern aktuell-for-treff-status på en jobbsøker",
+        operationId = "endreAktuellForTreffStatus",
+        security = [OpenApiSecurity("BearerAuth")],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
+            OpenApiParam(name = pathParamJobbsøkerId, type = UUID::class, required = true),
+        ],
+        requestBody = OpenApiRequestBody(
+            content = [OpenApiContent(
+                from = AktuellForTreffStatusDto::class,
+                example = """{ "aktuellForTreffStatus": "AKTUELL" }"""
+            )]
+        ),
+        responses = [
+            OpenApiResponse("200", description = "Status oppdatert."),
+            OpenApiResponse("403", description = "Innlogget bruker er ikke eier av rekrutteringstreffet."),
+            OpenApiResponse("404", description = "Fant ikke jobbsøker på treffet."),
+        ],
+        path = aktuellForTreffStatusPath,
+        methods = [HttpMethod.PUT]
+    )
+    private fun endreAktuellForTreffStatusHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val dto = ctx.bodyAsClass<AktuellForTreffStatusDto>()
+        val treffId = TreffId(UUID.fromString(ctx.pathParam(pathParamTreffId)))
+        val personTreffId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        if (!eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke endre aktuell-for-treff-status")
+        }
+        when (jobbsøkerService.endreAktuellForTreffStatus(treffId, personTreffId, dto.aktuellForTreffStatus, navIdent)) {
+            EndreAktuellForTreffStatusResultat.OK -> ctx.status(200)
+            EndreAktuellForTreffStatusResultat.IKKE_FUNNET -> ctx.status(404)
+        }
+    }
+
     private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
         map {
             JobbsøkerOutboundDto(
@@ -625,6 +665,7 @@ class JobbsøkerController(
                 fornavn = it.fornavn.asString,
                 etternavn = it.etternavn.asString,
                 status = it.status,
+                aktuellForTreffStatus = it.aktuellForTreffStatus,
                 hendelser = it.hendelser.map { h ->
                     JobbsøkerHendelseOutboundDto(
                         id = h.id.toString(),

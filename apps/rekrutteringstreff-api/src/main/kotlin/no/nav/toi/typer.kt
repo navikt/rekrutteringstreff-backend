@@ -29,6 +29,7 @@ enum class JobbsøkerHendelsestype {
     AVTALT_INTERVJU_ANGRET,
     JOBBTILBUD_GITT,
     ANGRE_JOBBTILBUD_GITT,
+    AKTUELL_FOR_TREFF_STATUS_ENDRET,
 }
 
 enum class ArbeidsgiverHendelsestype {

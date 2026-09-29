@@ -124,6 +124,7 @@ class StatistikkRepositoryTest {
             status = JobbsøkerStatus.FÅTT_JOBB,
             alder = alder,
             innsatsgruppe = Innsatsgruppe(innsatsgruppe),
+            aktuellForTreffStatus = null
         )
 
     private fun opprettSendtFormidling(
