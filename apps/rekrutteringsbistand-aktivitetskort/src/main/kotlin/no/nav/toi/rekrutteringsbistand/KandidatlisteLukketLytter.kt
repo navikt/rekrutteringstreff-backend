@@ -24,6 +24,7 @@ class KandidatlisteLukketLytter(
             precondition {
                 it.requireValue("@event_name", "LukketKandidatliste")
                 it.forbidValue("@slutt_av_hendelseskjede", true)
+                it.requireKey("stillingsinfo.stillingsid")
             }
             validate {
                 it.requireKey(
