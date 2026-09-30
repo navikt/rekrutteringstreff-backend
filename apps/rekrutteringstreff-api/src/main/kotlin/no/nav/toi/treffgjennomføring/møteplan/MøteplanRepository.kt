@@ -115,6 +115,22 @@ class MøteplanRepository {
         lagreArbeidsgiverRotasjon(connection, møteplan.arbeidsgiverRekkefølge, kontekst)
     }
 
+    /** Personer i rommet arbeidsgiveren starter i. Rommet forsvinner når arbeidsgiveren slettes. */
+    fun tellPersonerIStartrom(connection: Connection, arbeidsgiverId: Long, treffDbId: Long): Int =
+        connection.prepareStatement(
+            """
+            SELECT COUNT(*)
+            FROM jobbsoker_romtildeling r
+            JOIN jobbsoker j ON j.jobbsoker_id = r.jobbsoker_id
+            JOIN arbeidsgiver_rotasjon a ON a.forste_romnummer = r.romnummer
+            WHERE r.rekrutteringstreff_id = ? AND a.arbeidsgiver_id = ? AND j.status != 'SLETTET'
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setLong(2, arbeidsgiverId)
+            stmt.executeQuery().use { it.next(); it.getInt(1) }
+        }
+
     fun fjernArbeidsgiverOgKompakter(connection: Connection, arbeidsgiverId: Long, treffDbId: Long) {
         val førsteRomnummer = connection.prepareStatement(
             "DELETE FROM arbeidsgiver_rotasjon WHERE arbeidsgiver_id = ? RETURNING forste_romnummer"

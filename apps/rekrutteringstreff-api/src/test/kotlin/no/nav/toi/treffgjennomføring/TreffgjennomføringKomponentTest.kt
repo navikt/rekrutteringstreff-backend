@@ -21,10 +21,13 @@ import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.jobbsoker.dto.AvtaltIntervjuHendelseDataDto
+import no.nav.toi.oppfølging.Vurderingsvalg
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
+import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
@@ -135,10 +138,57 @@ class TreffgjennomføringKomponentTest {
         assertThat(første["varighetPerMøteMinutter"].asInt()).isEqualTo(10)
         assertThat(første["oppmøte"]).isEmpty()
         assertThat(første["rom"]).isEmpty()
+        assertThat(første["interesser"]).isEmpty()
+        assertThat(første["intervjufordelinger"]).isEmpty()
+        assertThat(første["vurderinger"]).isEmpty()
         assertThat(antallTreffgjennomføringsrader()).isZero()
 
         hent(treff, eier)
         assertThat(antallTreffgjennomføringsrader()).isZero()
+    }
+
+    @Test
+    fun `aggregatet viser data fra alle tabellene`() {
+        val s = fulltScenario()
+
+        val aggregat = mapper.treeToValue(aggregat(s.treff), TreffgjennomføringDto::class.java)
+
+        assertThat(aggregat.rekrutteringstreffId).isEqualTo(s.treff.somString)
+        assertThat(aggregat.gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.VURDERING)
+        assertThat(aggregat.antallRom).isEqualTo(2)
+        assertThat(aggregat.starttidspunkt).isEqualTo("09:00")
+        assertThat(aggregat.varighetPerMøteMinutter).isEqualTo(15)
+        assertThat(aggregat.oppmøte).containsExactlyInAnyOrder(s.p1.somString, s.p2.somString)
+        assertThat(aggregat.deltakernummer.map { it.deltakernummer }).containsExactly(1, 2)
+        assertThat(aggregat.rom.map { it.romnummer }).containsExactly(1, 2)
+        assertThat(aggregat.rom.flatMap { it.jobbsøkere }).containsExactlyInAnyOrder(s.p1.somString, s.p2.somString)
+        assertThat(aggregat.arbeidsgiverRekkefølge.map { it.arbeidsgiverTreffId })
+            .containsExactly(s.ag1.somString, s.ag2.somString)
+        assertThat(aggregat.arbeidsgiverRekkefølge.map { it.førsteRomnummer }).containsExactly(1, 2)
+        assertThat(aggregat.interesser.map { it.arbeidsgiverTreffId }).containsExactly(s.ag1.somString, s.ag1.somString)
+
+        val fordeling = aggregat.intervjufordelinger.single()
+        assertThat(fordeling.arbeidsgiverTreffId).isEqualTo(s.ag1.somString)
+        assertThat(fordeling.inkludertePersonTreffIder).containsExactly(s.p1.somString)
+        assertThat(fordeling.ekskludertePersonTreffIder).containsExactly(s.p2.somString)
+
+        val vurdering = aggregat.vurderinger.single()
+        assertThat(vurdering.personTreffId).isEqualTo(s.p1.somString)
+        assertThat(vurdering.arbeidsgiverTreffId).isEqualTo(s.ag1.somString)
+        assertThat(vurdering.vurderingsstatus).isEqualTo(Vurderingsvalg.AKTUELL)
+        assertThat(vurdering.vurderingsnotat).containsExactlyInAnyOrder("AG_GODT_INNTRYKK", "JS_POSITIV")
+        assertThat(vurdering.avtaltIntervju).isTrue()
+        assertThat(vurdering.avtaltIntervjuDato).isEqualTo("2026-09-01")
+        assertThat(vurdering.jobbtilbud).isTrue()
+    }
+
+    @Test
+    fun `skriveoperasjon returnerer samme aggregat som en etterfølgende lesing`() {
+        val s = fulltScenario()
+
+        val fraSkriving = mapper.readTree(interesse(s.treff, s.p2, s.ag2, interessert = true).body())
+
+        assertThat(fraSkriving).isEqualTo(aggregat(s.treff))
     }
 
     @Test
@@ -321,9 +371,36 @@ class TreffgjennomføringKomponentTest {
 
         assertThat(respons.statusCode()).isEqualTo(409)
         val feil = mapper.readTree(respons.body())
-        assertThat(feil["registreringer"]["interesser"].asInt()).isEqualTo(1)
+        assertThat(feil["title"].asText()).isEqualTo("OppmøteKanIkkeFjernesException")
+        assertThat(feil["hint"].asText()).isEqualTo("Fjern registrerte interesser først.")
         assertThat(oppmøteliste(treff)).containsExactly(person.somString)
         assertThat(aggregat(treff)["interesser"]).hasSize(1)
+    }
+
+    @Test
+    fun `registreringene må ryddes nedenfra og opp før oppmøtet kan fjernes, og de andre beholder sine`() {
+        val s = fulltScenario()
+        assertThat(interesse(s.treff, s.p2, s.ag2, interessert = true).statusCode()).isEqualTo(200)
+
+        assertThat(oppmøte(s.treff, s.p1, møtt = false).statusCode()).isEqualTo(409)
+        assertThat(interesse(s.treff, s.p1, s.ag1, interessert = false).statusCode()).isEqualTo(409)
+
+        assertThat(nullstillVurdering(s.treff, s.p1, s.ag1).statusCode()).isEqualTo(200)
+        assertThat(interesse(s.treff, s.p1, s.ag1, interessert = false).statusCode()).isEqualTo(200)
+        assertThat(oppmøte(s.treff, s.p1, møtt = false).statusCode()).isEqualTo(200)
+
+        val etter = aggregat(s.treff)
+        val p1 = s.p1.somString
+        val p2 = s.p2.somString
+        val fordelte = etter["intervjufordelinger"].flatMap {
+            it["inkludertePersonTreffIder"] + it["ekskludertePersonTreffIder"]
+        }.map { it.asText() }
+        assertThat(etter["gjeldendeSteg"].asText()).isEqualTo("VURDERING")
+        assertThat(etter["oppmøte"].map { it.asText() }).containsExactly(p2)
+        assertThat(etter["interesser"].map { it["personTreffId"].asText() }).containsOnly(p2).hasSize(2)
+        assertThat(fordelte).containsOnly(p2).hasSize(2)
+        assertThat(etter["vurderinger"]).isEmpty()
+        assertThat(etter["rom"].flatMap { it["jobbsøkere"] }.map { it.asText() }).containsExactly(p2)
     }
 
     @Test
@@ -356,6 +433,12 @@ class TreffgjennomføringKomponentTest {
 
         assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("INTERESSE")
         assertThat(aggregat(treff)["interesser"]).hasSize(1)
+        assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(førJobbsøker)
+        assertThat(antallArbeidsgiverhendelser(treff)).isEqualTo(førArbeidsgiver)
+
+        assertThat(interesse(treff, person, ag, interessert = false).statusCode()).isEqualTo(200)
+
+        assertThat(aggregat(treff)["interesser"]).isEmpty()
         assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(førJobbsøker)
         assertThat(antallArbeidsgiverhendelser(treff)).isEqualTo(førArbeidsgiver)
     }
@@ -401,13 +484,11 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `interesse registrert etter at fordeling er etablert oppretter intervjufordeling for arbeidsgiver uten eksisterende fordeling`() {
+    fun `interesse registrert etter fordelingen speiles inn i eksisterende og ny fordeling`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val p1 = jobbsøker(treff, "11111111111")
         val p2 = jobbsøker(treff, "22222222222")
-        val arbeidsgivere = ctx.arbeidsgiverService.hentArbeidsgivere(treff).map { it.arbeidsgiverTreffId }
-        val ag1 = arbeidsgivere[0]
-        val ag2 = arbeidsgivere[1]
+        val (ag1, ag2) = aktiveArbeidsgivere(treff)
 
         listOf(p1, p2).forEach { oppmøte(treff, it, møtt = true) }
         interesse(treff, p1, ag1, interessert = true)
@@ -418,9 +499,13 @@ class TreffgjennomføringKomponentTest {
         assertThat(fordelingerFør).hasSize(1)
         assertThat(fordelingerFør[0]["arbeidsgiverTreffId"].asText()).isEqualTo(ag1.somString)
 
+        assertThat(interesse(treff, p2, ag1, interessert = true).statusCode()).isEqualTo(200)
         assertThat(interesse(treff, p2, ag2, interessert = true).statusCode()).isEqualTo(200)
 
         val fordelingerEtter = aggregat(treff)["intervjufordelinger"]
+        val ag1Fordeling = fordelingerEtter.single { it["arbeidsgiverTreffId"].asText() == ag1.somString }
+        assertThat(ag1Fordeling["inkludertePersonTreffIder"].map { it.asText() })
+            .containsExactly(p1.somString, p2.somString)
         val ag2Fordeling = fordelingerEtter.firstOrNull { it["arbeidsgiverTreffId"].asText() == ag2.somString }
         assertThat(ag2Fordeling).isNotNull
         assertThat(ag2Fordeling!!["inkludertePersonTreffIder"].map { it.asText() })
@@ -431,6 +516,24 @@ class TreffgjennomføringKomponentTest {
         val fordelingerEtterFjernet = aggregat(treff)["intervjufordelinger"]
         val ag2FordelingEtterFjernet = fordelingerEtterFjernet.firstOrNull { it["arbeidsgiverTreffId"].asText() == ag2.somString }
         assertThat(ag2FordelingEtterFjernet?.get("inkludertePersonTreffIder")).isNullOrEmpty()
+    }
+
+    @Test
+    fun `vanlig treff får ingen intervjufordeling når interesse registreres etter vurderingen`() {
+        val treff = vanligTreff()
+        val første = jobbsøker(treff, "11111111111")
+        val andre = jobbsøker(treff, "22222222222")
+        val ag = aktivArbeidsgiver(treff)
+        listOf(første, andre).forEach { oppmøte(treff, it, møtt = true) }
+        interesse(treff, første, ag, interessert = true)
+        assertThat(vurderingFor(treff, første, ag, ""","vurderingsstatus":"AKTUELL"""").statusCode()).isEqualTo(200)
+        assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("VURDERING")
+
+        assertThat(interesse(treff, andre, ag, interessert = true).statusCode()).isEqualTo(200)
+
+        val svar = aggregat(treff)
+        assertThat(svar["interesser"]).hasSize(2)
+        assertThat(svar["intervjufordelinger"]).isEmpty()
     }
 
     @Test
@@ -446,11 +549,62 @@ class TreffgjennomføringKomponentTest {
         val lagret = aggregat(treff)["vurderinger"]
         assertThat(lagret).hasSize(1)
         assertThat(lagret[0]["vurderingsstatus"].asText()).isEqualTo("AKTUELL")
-        assertThat(antallHendelser(treff, "VURDERT")).isEqualTo(1)
-        assertThat(antallHendelser(treff, "JOBBTILBUD_GITT")).isEqualTo(1)
 
         vurderingFor(treff, person, ag, ""","vurderingsstatus":null,"jobbtilbud":false""")
         assertThat(aggregat(treff)["vurderinger"]).isEmpty()
+    }
+
+    @Test
+    fun `vurdering skriver én hendelse per endret felt, også når datoen for 2 intervju endres`() {
+        val treff = vanligTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        val felles = ""","vurderingsstatus":"AKTUELL","vurderingsnotat":["AG_GODT_INNTRYKK"],"jobbtilbud":true"""
+
+        assertThat(vurderingFor(treff, person, ag, """$felles,"avtaltIntervju":true""").statusCode()).isEqualTo(200)
+        assertThat(oppfølgingshendelser(treff)).containsExactlyInAnyOrder(
+            "VURDERT", "NOTAT_LAGT_TIL", "AVTALT_INTERVJU", "JOBBTILBUD_GITT",
+        )
+
+        vurderingFor(treff, person, ag, """$felles,"avtaltIntervju":true,"avtaltIntervjuDato":"2026-09-01"""")
+        vurderingFor(treff, person, ag, """$felles,"avtaltIntervju":true,"avtaltIntervjuDato":"2026-09-02"""")
+        vurderingFor(treff, person, ag, """$felles,"avtaltIntervju":true,"avtaltIntervjuDato":"2026-09-02"""")
+        vurderingFor(treff, person, ag, """$felles,"avtaltIntervju":false""")
+
+        assertThat(oppfølgingshendelser(treff).drop(4)).containsExactly(
+            "AVTALT_INTERVJU_DATO_ENDRET", "AVTALT_INTERVJU_DATO_ENDRET", "AVTALT_INTERVJU_ANGRET",
+        )
+        val datoer = db.hentJobbsøkerHendelser(treff)
+            .filter { it.hendelsestype == JobbsøkerHendelsestype.AVTALT_INTERVJU_DATO_ENDRET }
+            .map { (it.hendelseData as AvtaltIntervjuHendelseDataDto).dato }
+        assertThat(datoer).containsExactly("2026-09-01", "2026-09-02")
+    }
+
+    @Test
+    fun `vurdering krever at jobbsøkeren har møtt opp`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+
+        assertThat(vurderingFor(treff, person, ag, ""","vurderingsstatus":"AKTUELL"""").statusCode()).isEqualTo(400)
+        assertThat(aggregat(treff)["vurderinger"]).isEmpty()
+    }
+
+    @Test
+    fun `vurderingen beholdes når jobbsøkeren tas ut av intervjufordelingen`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        interesse(treff, person, ag, interessert = true)
+        assertThat(post(treff, "/treffgjennomforing/intervjufordeling/fordel").statusCode()).isEqualTo(200)
+        assertThat(vurderingFor(treff, person, ag, ""","vurderingsnotat":["AG_VIL_MØTE_FLERE"]""").statusCode()).isEqualTo(200)
+
+        assertThat(intervjufordeling(treff, ag, ekskluderte = listOf(person)).statusCode()).isEqualTo(200)
+
+        val vurdering = aggregat(treff)["vurderinger"].single()
+        assertThat(vurdering["vurderingsnotat"].map { it.asText() }).containsExactly("AG_VIL_MØTE_FLERE")
     }
 
     @Test
@@ -1154,10 +1308,7 @@ class TreffgjennomføringKomponentTest {
 
         val oppmøteSvar = oppmøte(treff, person, møtt = false)
         assertThat(oppmøteSvar.statusCode()).isEqualTo(409)
-        val oppmøteFeil = mapper.readTree(oppmøteSvar.body())
-        assertThat(oppmøteFeil["registreringer"]["interesser"].asInt()).isEqualTo(if (medInteresse) 1 else 0)
-        assertThat(oppmøteFeil["registreringer"]["intervjufordelinger"].asInt()).isEqualTo(1)
-        assertThat(oppmøteFeil["hint"].asText()).isEqualTo(forventetHint)
+        assertThat(mapper.readTree(oppmøteSvar.body())["hint"].asText()).isEqualTo(forventetHint)
         assertThat(aggregat(treff)).isEqualTo(før)
 
         // Når interessen fjernes, forsvinner personen også fra fordelingen.
@@ -1388,23 +1539,62 @@ class TreffgjennomføringKomponentTest {
         }
     }
 
-    private fun aktivArbeidsgiver(treffId: TreffId): ArbeidsgiverTreffId = db.dataSource.connection.use { conn ->
+    private fun aktivArbeidsgiver(treffId: TreffId): ArbeidsgiverTreffId = aktiveArbeidsgivere(treffId).first()
+
+    /** I samme rekkefølge som treffgjennomføringen bruker, etter intern id. */
+    private fun aktiveArbeidsgivere(treffId: TreffId): List<ArbeidsgiverTreffId> = db.dataSource.connection.use { conn ->
         val sql = """
             SELECT a.id::text
             FROM arbeidsgiver a
             JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = a.rekrutteringstreff_id
             WHERE rt.id = ? AND a.status = 'AKTIV'
             ORDER BY a.arbeidsgiver_id
-            LIMIT 1
         """.trimIndent()
         conn.prepareStatement(sql).use { stmt ->
             stmt.setObject(1, treffId.somUuid)
             stmt.executeQuery().use { rs ->
-                rs.next()
-                ArbeidsgiverTreffId(rs.getString(1))
+                buildList { while (rs.next()) add(ArbeidsgiverTreffId(rs.getString(1))) }
             }
         }
     }
+
+    private data class Scenario(
+        val treff: TreffId,
+        val p1: PersonTreffId,
+        val p2: PersonTreffId,
+        val ag1: ArbeidsgiverTreffId,
+        val ag2: ArbeidsgiverTreffId,
+    )
+
+    /**
+     * Data i alle tabellene: to fremmøtte i hvert sitt rom, begge interessert i første arbeidsgiver,
+     * fordelt over og under sperrelinjen, og en fullstendig vurdering av den første.
+     */
+    private fun fulltScenario(): Scenario {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val (ag1, ag2) = aktiveArbeidsgivere(treff)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        listOf(p1, p2).forEach { assertThat(oppmøte(treff, it, møtt = true).statusCode()).isEqualTo(200) }
+        assertThat(møteoppsett(treff).statusCode()).isEqualTo(200)
+        listOf(p1, p2).forEach { assertThat(interesse(treff, it, ag1, interessert = true).statusCode()).isEqualTo(200) }
+        assertThat(intervjufordeling(treff, ag1, inkluderte = listOf(p1), ekskluderte = listOf(p2)).statusCode())
+            .isEqualTo(200)
+        val fullVurdering = """
+            ,"vurderingsstatus":"AKTUELL","vurderingsnotat":["AG_GODT_INNTRYKK","JS_POSITIV"],
+            "avtaltIntervju":true,"avtaltIntervjuDato":"2026-09-01","jobbtilbud":true
+        """.trimIndent()
+        assertThat(vurderingFor(treff, p1, ag1, fullVurdering).statusCode()).isEqualTo(200)
+        return Scenario(treff, p1, p2, ag1, ag2)
+    }
+
+    private fun nullstillVurdering(treffId: TreffId, person: PersonTreffId, arbeidsgiver: ArbeidsgiverTreffId) =
+        vurderingFor(treffId, person, arbeidsgiver, ""","vurderingsstatus":null,"avtaltIntervju":false,"jobbtilbud":false""")
+
+    /** Jobbsøkerhendelsene fra vurderingssteget, i den rekkefølgen de ble skrevet. */
+    private fun oppfølgingshendelser(treffId: TreffId): List<String> =
+        db.hentJobbsøkerHendelser(treffId).map { it.hendelsestype.name }
+            .filterNot { it == "OPPRETTET" || it == "REGISTRERT_OPPMØTE" }
 
 
     private fun møteoppsett(treffId: TreffId, start: String = "09:00", varighet: Int = 15) =

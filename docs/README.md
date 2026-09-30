@@ -19,6 +19,7 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 - [Teknologi og overordnet arkitektur](2-arkitektur/teknologi%20og%20overorndet%20arkitektur.md) - Viktigste teknologier (frontend + backend) og konseptuell flyt
 - [Arkitekturbeslutninger](2-arkitektur/arkitekturbeslutninger.md) - FAQ: Hvorfor egen MinSide-backend, appoppdeling, synkron vs. asynkron, hendelse_data-struktur
 - [Database](2-arkitektur/database.md) - Databaseskjema, ER-diagram og Flyway-migrasjoner
+- [Treffgjennomføring](2-arkitektur/treffgjennomforing.md) - Stegene på treffdagen, regler, endepunkter og hendelser
 
 ### 3. [Sikkerhet](3-sikkerhet/)
 

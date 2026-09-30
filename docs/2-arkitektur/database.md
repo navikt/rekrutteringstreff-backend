@@ -288,14 +288,14 @@ Samleendepunktet `GET /api/rekrutteringstreff/{id}/hendelser` gjør en `UNION AL
 
 Selve dagen deltakerne møtes. Kolonnen «Variant» sier bare hvilke tabeller en
 vanlig treffgjennomføring lar stå tomme - skjemaet er det samme for begge.
-Se [planen](../9-planer/workop/treffgjennomforing-oppmote-rom-og-fordeling.md).
+Se [treffgjennomføring](treffgjennomforing.md) for steg, regler og endepunkter.
 
 | Tabell                        | Innhold                                                             | Variant |
 | ----------------------------- | ------------------------------------------------------------------- | ------- |
 | **treffgjennomforing**        | 1:1 med treff: unik FK til treffet, og hvilken fase dagen står i    | Begge   |
 | **moteoppsett**               | 1:1 med treffgjennomføring: starttidspunkt og varighet per møte     | WorkOp  |
 | **deltakernummer**            | Nummeret på det fysiske kortet. Unikt per treff, gjenbrukes aldri   | WorkOp  |
-| **jobbsoker_romtildeling**    | Hvem som sitter i hvilket rom, med rekkefølge i rommet              | WorkOp  |
+| **jobbsoker_romtildeling**    | Hvem som sitter i hvilket rom. Rekkefølgen i rommet følger deltakernummeret | WorkOp  |
 | **arbeidsgiver_rotasjon**     | Hvor arbeidsgiveren starter i rotasjonen                            | WorkOp  |
 | **interesse**                 | Hvilke arbeidsgivere en jobbsøker vil møte                          | Begge   |
 | **intervjufordeling**         | Plassering (tidsluke) og om jobbsøkeren er over sperrelinjen        | WorkOp  |
@@ -323,12 +323,12 @@ eventuelle beregnede plasseringer fra eldre data. Dermed får nye arbeidsgivere
 tomme rom uten at eksisterende deltakere flyttes. Ved lovlig sletting fjernes
 det tomme rommet, og høyere romnumre justeres samlet.
 
-Møteplanen oppdateres direkte i arbeidsgiver- og oppmøteservicene på samme
-databaseforbindelse som endringen. De sjekker først om møteoppsett eller romplasseringer for
-ikke-slettede jobbsøkere finnes. Uten slike data hoppes møteplanoppdateringen
-over. Ved tillegg erstatter én eksistenssjekk de 14 lesespørringene før og
-etter endringen. Sjekken gjøres under trefflåsen og er uavhengig av miljø og
-funksjonstoggel; kontroll av trefftilhørighet og slettesperrer beholdes.
+`Møteplansynk` oppdaterer møteplanen på samme databaseforbindelse som endringen, både
+når arbeidsgivere endres og når oppmøte registreres eller fjernes. Den sjekker først om
+møteoppsett eller romplasseringer for ikke-slettede jobbsøkere finnes. Uten slike data
+hoppes møteplanoppdateringen over. Ved tillegg erstatter én eksistenssjekk de 14
+lesespørringene før og etter endringen. Sjekken gjøres under trefflåsen og er uavhengig
+av miljø og funksjonstoggel; kontroll av trefftilhørighet og slettesperrer beholdes.
 
 Disse operasjonene og øvrige skrivinger i treffgjennomføringen bruker
 `medLåstTreff`: radlås på treffet og `READ COMMITTED`. Etter venting på låsen
@@ -340,8 +340,9 @@ intervjufordeling og vurderinger. Formidling alene blokkerer ikke sletting.
 `RegistreringerRepository` og `Registreringer` gir felles telling og
 ryddehint for interesser, intervjufordelinger og vurderinger. Intervjufordeling
 telles separat, også når den finnes uten interesse.
-Blokkert arbeidsgiversletting returnerer HTTP 409 med `ProblemDetails`,
-feilmelding og ryddehint. Antall registreringer brukes internt, ikke i feilresponsen.
+Blokkert arbeidsgiversletting og blokkert fjerning av oppmøte returnerer HTTP 409 med
+`ProblemDetails`, feilmelding og ryddehint. Antall registreringer brukes internt, ikke i
+feilresponsen.
 
 Jobbsøkere får ikke rom bare ved å legges til på treffet; romplassering følger
 oppmøtet. Oppmøte kan fjernes fra et rom, men ikke så lenge noen av de tre

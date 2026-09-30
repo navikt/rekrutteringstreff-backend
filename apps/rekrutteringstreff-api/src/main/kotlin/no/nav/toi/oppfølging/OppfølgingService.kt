@@ -74,15 +74,18 @@ class OppfølgingService(
             hendelse(JobbsøkerHendelsestype.NOTAT_FJERNET, mapOf("notat" to it.name))
         }
 
-        if ((før?.avtaltIntervju ?: false) != etter.avtaltIntervju) {
-            if (etter.avtaltIntervju) {
-                hendelse(
-                    JobbsøkerHendelsestype.AVTALT_INTERVJU,
-                    mapOf("dato" to etter.avtaltIntervjuDato?.toString()),
-                )
-            } else {
-                hendelse(JobbsøkerHendelsestype.AVTALT_INTERVJU_ANGRET)
-            }
+        val haddeAvtaltIntervju = før?.avtaltIntervju ?: false
+        when {
+            !haddeAvtaltIntervju && etter.avtaltIntervju -> hendelse(
+                JobbsøkerHendelsestype.AVTALT_INTERVJU,
+                mapOf("dato" to etter.avtaltIntervjuDato?.toString()),
+            )
+            haddeAvtaltIntervju && !etter.avtaltIntervju -> hendelse(JobbsøkerHendelsestype.AVTALT_INTERVJU_ANGRET)
+            // Datoen settes ofte etter avkryssingen, og kan flyttes. Uten egen hendelse ville historikken mangle datoen.
+            etter.avtaltIntervju && før?.avtaltIntervjuDato != etter.avtaltIntervjuDato -> hendelse(
+                JobbsøkerHendelsestype.AVTALT_INTERVJU_DATO_ENDRET,
+                mapOf("dato" to etter.avtaltIntervjuDato?.toString()),
+            )
         }
 
         if ((før?.jobbtilbud ?: false) != etter.jobbtilbud) {

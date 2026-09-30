@@ -1,5 +1,9 @@
 # Treffgjennomføring: paginert oppmøte og trygg romflytting
 
+> **Historikk.** Endringene er gjennomført. Gjeldende beskrivelse står i
+> [treffgjennomforing.md](../../2-arkitektur/treffgjennomforing.md), og den gjelder der
+> dokumentene er uenige.
+
 ## Rammer
 
 - Endre `rekrutteringsbistand-frontend` og `rekrutteringstreff-backend`.

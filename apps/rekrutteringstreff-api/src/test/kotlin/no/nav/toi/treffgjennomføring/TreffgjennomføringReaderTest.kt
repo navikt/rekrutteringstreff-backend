@@ -9,6 +9,7 @@ import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.treffgjennomføring.matching.MatchingRepository
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.treffgjennomføring.møteplan.Møteplansynk
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
@@ -66,6 +67,7 @@ class TreffgjennomføringReaderTest {
         oppmøteRepository = oppmøteRepository,
         registreringerRepository = RegistreringerRepository(),
         møteplanRepository = møteplanRepository,
+        møteplansynk = Møteplansynk(kontekstRepository, møteplanRepository, oppmøteRepository),
         jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository),
         hendelseWriter = hendelser,
     )
