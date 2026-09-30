@@ -139,6 +139,7 @@ class JobbsøkerController(
                 example = """{
                   "fritekst": "Ola",
                   "status": ["LAGT_TIL"],
+                  "aktuellForTreffStatus": ["AKTUELL", "KONTAKTET"],
                   "aldersgruppe": ["OVER_30"],
                   "kontornummer": ["0403", "1000"],
                   "sortering": "navn",
@@ -159,7 +160,8 @@ class JobbsøkerController(
                       "fødselsnummer": "12345678901",
                       "fornavn": "Ola",
                       "etternavn": "Nordmann",
-                      "status": "LAGT_TIL"
+                      "status": "LAGT_TIL",
+                      "aktuellForTreffStatus": "AKTUELL"
                     }
                   ],
                   "totalt": 4,
@@ -171,6 +173,10 @@ class JobbsøkerController(
                     "INVITERT": 1,
                     "SVART_JA": 1,
                     "SVART_NEI": 1
+                  },
+                  "antallPerAktuellForTreffStatus": {
+                    "AKTUELL": 1,
+                    "VURDERES": 2
                   },
                   "antallPerAldersgruppe": {
                     "UNDER_30": 1,
@@ -196,6 +202,8 @@ class JobbsøkerController(
             val request = ctx.bodyAsClass<JobbsøkerSøkRequest>()
             if (request.side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
             if (request.antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
+            if (request.status.inneholderNull()) throw IllegalArgumentException("Ugyldig verdi i status")
+            if (request.aktuellForTreffStatus.inneholderNull()) throw IllegalArgumentException("Ugyldig verdi i aktuellForTreffStatus")
 
             AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
             ctx.status(200).json(jobbsøkerService.søkJobbsøkere(treff, request))
@@ -678,4 +686,6 @@ class JobbsøkerController(
                 }
             )
         }
+
+    private fun Collection<Any?>?.inneholderNull(): Boolean = this?.any { it == null } == true
 }

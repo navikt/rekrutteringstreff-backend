@@ -410,6 +410,14 @@ class TestDatabase {
         }.executeUpdate()
     }
 
+    fun settAktuellForTreffStatus(personTreffId: PersonTreffId, aktuellForTreffStatus: AktuellForTreffStatus?) =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("UPDATE jobbsoker SET aktuell_for_treff_status = ? WHERE id = ?").apply {
+                setString(1, aktuellForTreffStatus?.name)
+                setObject(2, personTreffId.somUuid)
+            }.executeUpdate()
+        }
+
     fun leggTilMinsideHendelse(personTreffId: PersonTreffId, hendelseData: String) {
         dataSource.connection.use { connection ->
             jobbsøkerRepository.leggTilHendelserForJobbsøkere(
