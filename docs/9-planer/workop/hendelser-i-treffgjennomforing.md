@@ -1,5 +1,9 @@
 # Hendelser i treffgjennomføringen (WorkOp) — dokumentasjon og vurdering
 
+> **Historikk.** Gjeldende hendelser står i
+> [treffgjennomforing.md](../../2-arkitektur/treffgjennomforing.md#hendelser), og den gjelder
+> der dokumentene er uenige. Tabellnavnene under er fra et tidligere utkast av skjemaet.
+
 **Status: gjennomført.** Anbefalingen under er implementert i backend og frontend.
 Beskrivelsene av «i dag» er bevart som begrunnelse for endringen — se
 [Slik ble det gjennomført](#slik-ble-det-gjennomført) for hva som faktisk ble gjort.
@@ -303,15 +307,10 @@ ikke finnes lenger. Derfor beholdes begge typene, ikke bare `NOTAT_LAGT_TIL`.
 
 ### To ting å være klar over
 
-- **Kaskaden skriver ikke notathendelser.** Fjernes et oppmøte, sletter
-  `oppfølgingRepository.slettForJobbsøker` vurderinger og notater uten en
-  `NOTAT_FJERNET` per rad. Tellingen ligger i `REGISTRERT_OPPMØTE_FJERNET`.
-  Sletting av hele vurderingen via skjemaet skriver derimot `NOTAT_FJERNET` for
-  hvert notat, siden `skrivHendelser` sammenligner listene uansett.
-- **Notat i ettertid flytter fasen.** `lagreVurdering` kaller
-  `settFase(..., VURDERING)`. Et notat ført inn uker etter treffet vil dermed
-  sette treffgjennomføringen tilbake til vurderingsfasen. Verdt å sjekke om det
-  er ønsket når notater skal kunne føres i ettertid.
+- ~~**Kaskaden skriver ikke notathendelser.**~~ Ikke lenger aktuelt. Oppmøtet kan ikke
+  fjernes så lenge jobbsøkeren har vurderinger, så det finnes ingen kaskade.
+- ~~**Notat i ettertid flytter fasen.**~~ Ikke lenger aktuelt. Gjeldende steg går bare
+  framover, så et notat ført inn i ettertid setter ikke steget tilbake.
 
 ---
 
@@ -419,16 +418,16 @@ Rekkefølgen betyr noe — slutt å skrive før du sletter.
 
 ## Åpne spørsmål
 
-1. Skal `settInteresse` og `lagreVurdering` ha `krevWorkOp()`? De skriver i dag
-   på alle treff, i strid med planen. Uavhengig av hendelsesspørsmålet.
+1. ~~Skal `settInteresse` og `lagreVurdering` ha `krevWorkOp()`?~~ Avklart: de bruker
+   `krevWorkOpEllerLokalUtvikling`. Vanlige treff har stegene bare lokalt.
 2. Skal `ANDREGANGSINTERVJU_AVTALT` og `JOBBTILBUD_GITT` heller bli felter med
    `sist_endret_av` enn hendelser? De er de eneste beholdte typene som ikke
    beskriver noe destruktivt.
 3. ~~Trenger arbeidsgiverbildet en historikk i det hele tatt?~~ Avklart:
    current state holder. Parskrivingen er fjernet, og arbeidsgiveren finnes i
    `hendelse_data.arbeidsgiverTreffId` på jobbsøkerhendelsen.
-4. Skal notater kunne føres i ettertid uten at fasen settes tilbake til
-   `VURDERING`? Se [To ting å være klar over](#to-ting-å-være-klar-over).
+4. ~~Skal notater kunne føres i ettertid uten at fasen settes tilbake til
+   `VURDERING`?~~ Avklart: gjeldende steg går bare framover.
 5. Bør `NOTAT_LAGT_TIL` bære parten (`AG`/`JS`) eksplisitt i `hendelse_data`,
    eller er det nok at den kan utledes av prefikset? Anbefalingen er å utlede
    den, men det forutsetter at prefikskonvensjonen holdes ved like i

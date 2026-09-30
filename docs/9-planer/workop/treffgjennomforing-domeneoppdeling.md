@@ -1,5 +1,9 @@
 # Plan: Domeneoppdeling av treffgjennomføring i backend
 
+> **Historikk.** Gjeldende beskrivelse står i
+> [treffgjennomforing.md](../../2-arkitektur/treffgjennomforing.md), og den gjelder der
+> dokumentene er uenige.
+
 **Status:** Ferdig. Alle faser implementert  
 **Omfang:** `rekrutteringstreff-api`, pakken `no.nav.toi.treffgjennomføring`  
 **Gjelder ikke:** frontendkontrakten. Alle forslagene her skal være usynlige for `rekrutteringsbistand-frontend`.
@@ -531,6 +535,9 @@ frontendkontrakten.
 `TreffgjennomføringKarakteriseringTest.kt`, 20 tester. Låser dagens oppførsel før
 noe flyttes. Testene sier ikke at oppførselen er riktig – de sier at refaktoreringa
 ikke skal endre den.
+
+Etter oppdelingen er testene slått sammen med `TreffgjennomføringKomponentTest`. Testene
+av jobbsøkerstatus og deltakernummer ligger i `OppmøteServiceTest`.
 
 | Område | Tester | Låser |
 | ------ | -----: | ----- |

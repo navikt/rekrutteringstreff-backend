@@ -52,8 +52,9 @@ class MatchingService(
         }
 
     /**
-     * Når intervjufordelingen er påbegynt, holdes den i takt med interessene,
-     * så ingen faller ut av eller blir hengende igjen i fordelingen.
+     * Når intervjufordelingen på en WorkOp er påbegynt, holdes den i takt med interessene,
+     * så ingen faller ut av eller blir hengende igjen i fordelingen. Vanlige treff har ingen
+     * intervjufordeling, selv om gjeldende steg har passert den.
      */
     private fun speilInteresseIFordeling(
         connection: Connection,
@@ -63,6 +64,7 @@ class MatchingService(
         arbeidsgiver: ArbeidsgiverTreffId,
         interessert: Boolean,
     ) {
+        if (!kontekst.erWorkOp) return
         val fordelinger = repository.hentFor(connection, kontekst).intervjufordelinger
         val erFordelingStartet = fordelinger.isNotEmpty() || gjeldendeSteg >= TreffgjennomføringSteg.FORDELING
         if (!erFordelingStartet) return

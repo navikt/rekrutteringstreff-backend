@@ -10,7 +10,10 @@ object Romfordeler {
             Rom(romnummer, jobbsøkere.filterIndexed { indeks, _ -> indeks % antallRom == romnummer - 1 })
         }
 
-    /** Flytter én jobbsøker til slutten av målrommet. De andre plasseringene er uendret. */
+    /**
+     * Flytter én jobbsøker til målrommet. De andre plasseringene er uendret.
+     * Rekkefølgen i rommet lagres ikke. Ved lesing følger den deltakernummeret.
+     */
     fun flytt(rom: List<Rom>, jobbsøker: PersonTreffId, målromnummer: Int): List<Rom> {
         require(rom.any { it.romnummer == målromnummer }) {
             "Romfordelingen må opprettes før jobbsøkere kan flyttes"

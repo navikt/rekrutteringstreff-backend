@@ -95,7 +95,8 @@ private fun målklasse(hendelsestype: JobbsøkerHendelsestype): Class<out Hendel
         JobbsøkerHendelsestype.VURDERT -> VurderingHendelseDataDto::class.java
         JobbsøkerHendelsestype.NOTAT_LAGT_TIL,
         JobbsøkerHendelsestype.NOTAT_FJERNET -> NotatHendelseDataDto::class.java
-        JobbsøkerHendelsestype.AVTALT_INTERVJU -> AvtaltIntervjuHendelseDataDto::class.java
+        JobbsøkerHendelsestype.AVTALT_INTERVJU,
+        JobbsøkerHendelsestype.AVTALT_INTERVJU_DATO_ENDRET -> AvtaltIntervjuHendelseDataDto::class.java
         JobbsøkerHendelsestype.AVTALT_INTERVJU_ANGRET,
         JobbsøkerHendelsestype.JOBBTILBUD_GITT,
         JobbsøkerHendelsestype.ANGRE_JOBBTILBUD_GITT -> ArbeidsgiverkontekstDataDto::class.java

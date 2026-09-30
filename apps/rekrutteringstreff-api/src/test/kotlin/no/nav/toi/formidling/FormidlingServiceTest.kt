@@ -22,6 +22,7 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 import no.nav.toi.treffgjennomføring.RegistreringerRepository
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.treffgjennomføring.møteplan.Møteplansynk
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -61,7 +62,9 @@ class FormidlingServiceTest {
             val arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
             arbeidsgiverService = ArbeidsgiverService(
                 db.dataSource, arbeidsgiverRepository, mapper,
-                TreffkontekstRepository(), MøteplanRepository(), OppmøteRepository(), RegistreringerRepository(),
+                TreffkontekstRepository(), MøteplanRepository(),
+                Møteplansynk(TreffkontekstRepository(), MøteplanRepository(), OppmøteRepository()),
+                RegistreringerRepository(),
             )
 
             formidlingRepository = FormidlingRepository(db.dataSource)

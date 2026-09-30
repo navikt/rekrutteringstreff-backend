@@ -141,16 +141,13 @@ fun main() {
         meterRegistry = meterRegistry,
         isRunning = rapidsConnection::isRunning,
         isReady = rapidsConnection::isReady,
-        workOpLyttereAktivert = skalRegistrereWorkOpLyttere(env["NAIS_CLUSTER_NAME"]),
+        workOpLyttereAktivert = !Miljø.fraClusterNavn(env["NAIS_CLUSTER_NAME"]).erProd,
     )
     Runtime.getRuntime().addShutdownHook(Thread {
         app.stop()
     })
     app.start()
 }
-
-internal fun skalRegistrereWorkOpLyttere(clusterNavn: String?): Boolean =
-    clusterNavn.isNullOrBlank() || clusterNavn == "local" || clusterNavn == "lokalt" || clusterNavn == "dev-gcp"
 
 fun producerConfig(env: Map<String, String>) = mapOf(
     CommonClientConfigs.CLIENT_ID_CONFIG to "rekrutteringsbistand-aktivitetskort",

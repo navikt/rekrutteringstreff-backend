@@ -10,6 +10,7 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 import no.nav.toi.treffgjennomføring.RegistreringerRepository
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.treffgjennomføring.møteplan.Møteplansynk
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
@@ -39,11 +40,15 @@ class ArbeidsgiverServiceTest {
                 .migrate()
 
             arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-            arbeidsgiverService = ArbeidsgiverService(
-                db.dataSource, arbeidsgiverRepository, JacksonConfig.mapper,
-                TreffkontekstRepository(), MøteplanRepository(), OppmøteRepository(), RegistreringerRepository(),
-            )
+            arbeidsgiverService = lagArbeidsgiverService(db.dataSource, arbeidsgiverRepository)
         }
+
+        private fun lagArbeidsgiverService(dataSource: DataSource, repository: ArbeidsgiverRepository) =
+            ArbeidsgiverService(
+                dataSource, repository, mapper, TreffkontekstRepository(), MøteplanRepository(),
+                Møteplansynk(TreffkontekstRepository(), MøteplanRepository(), OppmøteRepository()),
+                RegistreringerRepository(),
+            )
     }
 
     @BeforeEach
@@ -260,10 +265,7 @@ class ArbeidsgiverServiceTest {
                 }
             }
         }
-        val service = ArbeidsgiverService(
-            dataSource, ArbeidsgiverRepository(dataSource, mapper), mapper,
-            TreffkontekstRepository(), MøteplanRepository(), OppmøteRepository(), RegistreringerRepository(),
-        )
+        val service = lagArbeidsgiverService(dataSource, ArbeidsgiverRepository(dataSource, mapper))
         block(service)
         return spørringer
     }

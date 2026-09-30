@@ -13,8 +13,6 @@ import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.arbeidsgiver.ArbeidsgiverKanIkkeSlettesException
 import no.nav.toi.exception.*
 import no.nav.toi.jobbsoker.oppmøte.OppmøteKanIkkeFjernesException
-import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
-import no.nav.toi.treffgjennomføring.dto.RegistreringerDto
 import no.nav.toi.treffgjennomføring.matching.InteresseKanIkkeFjernesException
 import java.sql.SQLException
 import java.time.LocalDateTime
@@ -146,14 +144,12 @@ object ExceptionMapping {
 
         exception(OppmøteKanIkkeFjernesException::class.java) { e, ctx ->
             ctx.status(409).json(
-                OppmøteBlokkertDto(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.CONFLICT,
+                    ctx = ctx,
                     feil = "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.",
                     hint = e.registreringer.lagHint(),
-                    registreringer = RegistreringerDto(
-                        interesser = e.registreringer.interesser,
-                        intervjufordelinger = e.registreringer.intervjufordelinger,
-                        vurderinger = e.registreringer.vurderinger,
-                    ),
                 )
             )
         }
@@ -177,8 +173,8 @@ object ExceptionMapping {
                     throwable = e,
                     status = HttpStatus.CONFLICT,
                     ctx = ctx,
-                    feil = "Jobbsøkeren har en registrert status og interessen kan derfor ikke fjernes.",
-                    hint = "Nullstill statusen for jobbsøkeren hos denne arbeidsgiveren først.",
+                    feil = "Jobbsøkeren har en registrert vurdering hos arbeidsgiveren, og interessen kan derfor ikke fjernes.",
+                    hint = "Nullstill vurderingen av jobbsøkeren hos denne arbeidsgiveren først.",
                 )
             )
         }

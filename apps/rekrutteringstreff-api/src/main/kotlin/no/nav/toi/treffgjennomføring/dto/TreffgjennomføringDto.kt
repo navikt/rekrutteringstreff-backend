@@ -74,14 +74,6 @@ data class InteresseRequestDto(
     val interessert: Boolean,
 )
 
-data class RegistreringerDto(val interesser: Int, val intervjufordelinger: Int, val vurderinger: Int)
-
-data class OppmøteBlokkertDto(
-    val feil: String,
-    val hint: String,
-    val registreringer: RegistreringerDto,
-)
-
 fun Treffgjennomføring.tilDto(rekrutteringstreffId: String, vurderinger: List<Vurdering>) = TreffgjennomføringDto(
     rekrutteringstreffId = rekrutteringstreffId,
     gjeldendeSteg = gjeldendeSteg,

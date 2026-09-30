@@ -11,6 +11,7 @@ import no.nav.toi.treffgjennomføring.Treffkontekst
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.treffgjennomføring.møteplan.Møteplansynk
 import java.sql.Connection
 
 class OppmøteService(
@@ -18,6 +19,7 @@ class OppmøteService(
     private val oppmøteRepository: OppmøteRepository,
     private val registreringerRepository: RegistreringerRepository,
     private val møteplanRepository: MøteplanRepository,
+    private val møteplansynk: Møteplansynk,
     private val jobbsøkerService: JobbsøkerService,
     private val hendelseWriter: HendelseWriter,
 ) {
@@ -28,20 +30,13 @@ class OppmøteService(
             val jobbsøkerId = kontekst.krevJobbsøkerId(personTreffId)
 
             val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
-            if (oppmøteRequestDto.møtt != harMøtt) {
-                val harMøteplan = møteplanRepository.harMøteplan(connection, treffId)
-                if (harMøteplan) oppdaterMøteplan(connection, kontekst)
+            if (oppmøteRequestDto.møtt == harMøtt) return@skriv
+
+            møteplansynk.medLagretMøteplan(connection, treffId) {
                 if (oppmøteRequestDto.møtt) registrerOppmøte(connection, kontekst, personTreffId, jobbsøkerId, navIdent)
                 else fjernOppmøte(connection, personTreffId, jobbsøkerId, navIdent)
-                if (harMøteplan) oppdaterMøteplan(connection, kontekst)
             }
         }
-
-    private fun oppdaterMøteplan(connection: Connection, kontekst: Treffkontekst) {
-        val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
-        val møteplan = møteplanRepository.hentMøteplan(connection, kontekst, oppmøte)
-        møteplanRepository.lagreMøteplan(connection, kontekst, møteplan)
-    }
 
     private fun registrerOppmøte(
         connection: Connection,

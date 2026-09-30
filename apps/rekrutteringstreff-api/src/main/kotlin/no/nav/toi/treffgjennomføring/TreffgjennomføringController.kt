@@ -11,6 +11,7 @@ import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuditLog
+import no.nav.toi.ProblemDetails
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.oppmøte.OppmøteService
@@ -21,7 +22,6 @@ import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.FlyttJobbsøkerRomRequestDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
-import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomføring.dto.StegRequestDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
@@ -141,8 +141,8 @@ class TreffgjennomføringController(
                 status = "409",
                 description = "Jobbsøkeren har registreringer som må ryddes før oppmøtet kan fjernes.",
                 content = [OpenApiContent(
-                    from = OppmøteBlokkertDto::class,
-                    example = """{"feil": "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.", "hint": "Fjern registrerte intervjufordelinger først.", "registreringer": {"interesser": 0, "intervjufordelinger": 1, "vurderinger": 0}}""",
+                    from = ProblemDetails::class,
+                    example = """{"title": "OppmøteKanIkkeFjernesException", "status": 409, "feil": "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.", "hint": "Fjern registrerte intervjufordelinger først."}""",
                 )],
             ),
         ],
