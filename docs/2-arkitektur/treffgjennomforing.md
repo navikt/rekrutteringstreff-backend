@@ -83,6 +83,7 @@ aggregatet.
 | Metode | Sti                                         | Gjør                                                        |
 | ------ | ------------------------------------------- | ----------------------------------------------------------- |
 | GET    | `/treffgjennomforing-og-oppfolging`         | Henter hele aggregatet                                      |
+| POST   | `/treffgjennomforing-og-oppfolging/jobbsokere` | Henter jobbsøkerne med id, navn, status og fødselsnummer. Usynlige tas med på WorkOp, uten fødselsnummer |
 | PUT    | `/treffgjennomforing/oppmote`               | Registrerer eller angrer oppmøte                            |
 | PUT    | `/treffgjennomforing/moteoppsett`           | Setter tidene. Første kall oppretter rom og rotasjon        |
 | PUT    | `/treffgjennomforing/romfordeling/{person}` | Flytter én person til et rom                                |

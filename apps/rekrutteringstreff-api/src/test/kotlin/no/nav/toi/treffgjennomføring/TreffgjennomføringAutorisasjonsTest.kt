@@ -75,6 +75,7 @@ class TreffgjennomføringAutorisasjonsTest {
         val kunWorkOp: Boolean,
     ) {
         Hent(Metode.GET, "/treffgjennomforing-og-oppfolging", "", false),
+        Jobbsøkere(Metode.POST, "/treffgjennomforing-og-oppfolging/jobbsokere", "{}", false),
         Oppmøte(
             Metode.PUT,
             "/treffgjennomforing/oppmote",
@@ -232,7 +233,7 @@ class TreffgjennomføringAutorisasjonsTest {
     }
 
     @ParameterizedTest(name = "{0} er åpent på et vanlig treff")
-    @EnumSource(Endepunkt::class, names = ["Hent", "Oppmøte", "Interesse", "Steg", "Vurdering"])
+    @EnumSource(Endepunkt::class, names = ["Hent", "Jobbsøkere", "Oppmøte", "Interesse", "Steg", "Vurdering"])
     fun `steg som gjelder alle treff blir ikke stengt av kategorien`(endepunkt: Endepunkt) {
         val treff = vanligTreff()
 

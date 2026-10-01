@@ -119,7 +119,6 @@ data class JobbsøkerSøkRequest(
     val sorteringsretning: JobbsøkerSorteringsretning = sorteringsfelt.standardRetning,
     val side: Int = 1,
     val antallPerSide: Int = 25,
-    val inkluderSkjulte: Boolean = false,
 )
 
 data class JobbsøkerSøkRespons(

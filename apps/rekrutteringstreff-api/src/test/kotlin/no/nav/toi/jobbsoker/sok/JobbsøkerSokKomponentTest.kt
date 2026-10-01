@@ -9,6 +9,7 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkersideDto
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI
@@ -97,6 +98,12 @@ class JobbsøkerSokKomponentTest {
 
     private fun søk(treffId: TreffId, vararg felter: Pair<String, Any>): JobbsøkerSøkRespons =
         mapper.readValue(httpPost(søkPath(treffId), søkBody(*felter)).body())
+
+    private fun gjennomføringPath(treffId: TreffId): String =
+        "/api/rekrutteringstreff/${treffId.somUuid}/treffgjennomforing-og-oppfolging/jobbsokere"
+
+    private fun gjennomføring(treffId: TreffId, vararg felter: Pair<String, Any>): GjennomføringJobbsøkersideDto =
+        mapper.readValue(httpPost(gjennomføringPath(treffId), mapper.writeValueAsString(mapOf(*felter))).body())
 
     private fun jobbsøker(
         fødselsnummer: String,
@@ -306,7 +313,7 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
-    fun `inkluderSkjulte gir usynlige jobbsøkere med navn på WorkOp, men ikke slettede eller sperrede`() {
+    fun `treffgjennomføringen får usynlige med navn på WorkOp, men ikke slettede eller sperrede`() {
         val treffId = opprettTreffMedEier(kategori = RekrutteringstreffKategori.WORKOP)
         val personTreffIder = leggTilJobbsøkere(
             treffId,
@@ -321,22 +328,16 @@ class JobbsøkerSokKomponentTest {
         db.settSynlighet(personTreffIder[4], false)
         db.settSperret(personTreffIder[4], true)
 
-        val jobbsøkerliste = søk(treffId)
-        val gjennomføring = søk(treffId, "inkluderSkjulte" to true)
-        val medStatusfilter = søk(treffId, "inkluderSkjulte" to true, "status" to listOf("LAGT_TIL"))
+        val side = gjennomføring(treffId)
 
-        assertThat(jobbsøkerliste.jobbsøkere.map { it.fornavn }).containsExactly("Person1")
-        assertThat(gjennomføring.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Person1", "Person2")
-        assertThat(medStatusfilter.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Person1", "Person2")
-        assertThat(gjennomføring.totalt).isEqualTo(2)
-        assertThat(gjennomføring.antallPerStatus.values.sum()).isEqualTo(2)
-        assertThat(gjennomføring.antallSkjulte).isEqualTo(jobbsøkerliste.antallSkjulte).isEqualTo(2)
-        assertThat(gjennomføring.antallSlettede).isEqualTo(jobbsøkerliste.antallSlettede).isEqualTo(2)
+        assertThat(side.jobbsøkere.map { it.fornavn }).containsExactly("Person1", "Person2")
+        assertThat(side.totalt).isEqualTo(2)
+        assertThat(side.antallPerStatus).isEqualTo(mapOf(JobbsøkerStatus.LAGT_TIL to 2))
     }
 
     @Test
-    fun `inkluderSkjulte har ingen virkning på vanlige treff`() {
-        val treffId = opprettTreffMedEier()
+    fun `jobbsøkerlisten tar aldri med usynlige, heller ikke med det gamle flagget inkluderSkjulte`() {
+        val treffId = opprettTreffMedEier(kategori = RekrutteringstreffKategori.WORKOP)
         val personTreffIder = leggTilJobbsøkere(
             treffId,
             jobbsøker("14444444444", "Synlig", "Person"),
@@ -345,6 +346,85 @@ class JobbsøkerSokKomponentTest {
         db.settSynlighet(personTreffIder[1], false)
 
         assertThat(søk(treffId, "inkluderSkjulte" to true).jobbsøkere.map { it.fornavn }).containsExactly("Synlig")
+    }
+
+    @Test
+    fun `treffgjennomføringen får bare id, navn, status og fødselsnummer, og ikke fødselsnummer for usynlige`() {
+        val treffId = opprettTreffMedEier(kategori = RekrutteringstreffKategori.WORKOP)
+        val kontor = Kontor(kontornummer = "0315", kontornavn = "Fiktivt kontor")
+        val personTreffIder = leggTilJobbsøkere(
+            treffId,
+            jobbsøker("15555555555", "Synlig", "Person", kontor, alder = 25),
+            jobbsøker("25555555555", "Usynlig", "Person", kontor, alder = 25),
+        )
+        db.settSynlighet(personTreffIder[1], false)
+
+        val respons = httpPost(gjennomføringPath(treffId), "{}").body()
+        val jobbsøkere = mapper.readTree(respons)["jobbsøkere"]
+        jobbsøkere.forEach { jobbsøker ->
+            assertThat(jobbsøker.fieldNames().asSequence().toList())
+                .containsExactlyInAnyOrder("personTreffId", "fornavn", "etternavn", "status", "fødselsnummer")
+        }
+        assertThat(respons).doesNotContain("25555555555")
+
+        val side = gjennomføring(treffId)
+        assertThat(side.jobbsøkere.single { it.fornavn == "Synlig" }.fødselsnummer).isEqualTo("15555555555")
+        val usynlig = side.jobbsøkere.single { it.fornavn == "Usynlig" }
+        assertThat(usynlig.personTreffId).isEqualTo(personTreffIder[1].somString)
+        assertThat(usynlig.etternavn).isEqualTo("Person")
+        assertThat(usynlig.status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
+        assertThat(usynlig.fødselsnummer).isNull()
+
+        val jobbsøkerliste = søk(treffId).jobbsøkere.single()
+        assertThat(jobbsøkerliste.fornavn).isEqualTo("Synlig")
+        assertThat(jobbsøkerliste.alder).isEqualTo(25)
+        assertThat(jobbsøkerliste.kontornummer).isEqualTo("0315")
+        assertThat(jobbsøkerliste.lagtTilDato).isNotNull()
+    }
+
+    @Test
+    fun `treffgjennomføringen tar ikke med usynlige på vanlige treff`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = leggTilJobbsøkere(
+            treffId,
+            jobbsøker("14444444444", "Synlig", "Person"),
+            jobbsøker("24444444444", "Usynlig", "Person"),
+        )
+        db.settSynlighet(personTreffIder[1], false)
+
+        assertThat(gjennomføring(treffId).jobbsøkere.map { it.fornavn }).containsExactly("Synlig")
+    }
+
+    @Test
+    fun `treffgjennomføringen filtrerer på status og sider, men teller alle statuser`() {
+        val treffId = opprettTreffMedEier(kategori = RekrutteringstreffKategori.WORKOP)
+        val personTreffIder = leggTilJobbsøkere(
+            treffId,
+            jobbsøker("16666666661", "Anne", "A"),
+            jobbsøker("16666666662", "Berit", "B"),
+            jobbsøker("16666666663", "Carl", "C"),
+        )
+        db.settJobbsøkerStatus(personTreffIder[0], JobbsøkerStatus.MØTT_OPP)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.FÅTT_JOBB)
+        db.settSynlighet(personTreffIder[2], false)
+
+        val fremmøtte = listOf("MØTT_OPP", "FÅTT_JOBB")
+        val side1 = gjennomføring(treffId, "status" to fremmøtte, "side" to 1, "antallPerSide" to 1)
+        val side2 = gjennomføring(treffId, "status" to fremmøtte, "side" to 2, "antallPerSide" to 1)
+        val forLangt = gjennomføring(treffId, "status" to fremmøtte, "side" to 9, "antallPerSide" to 1)
+
+        assertThat(side1.totalt).isEqualTo(2)
+        assertThat(side1.jobbsøkere.map { it.fornavn }).containsExactly("Anne")
+        assertThat(side2.jobbsøkere.map { it.fornavn }).containsExactly("Carl")
+        assertThat(forLangt.side).isEqualTo(2)
+        assertThat(side1.antallPerStatus).isEqualTo(
+            mapOf(JobbsøkerStatus.MØTT_OPP to 1, JobbsøkerStatus.LAGT_TIL to 1, JobbsøkerStatus.FÅTT_JOBB to 1)
+        )
+        listOf("side" to 0, "antallPerSide" to 101).forEach { ugyldig ->
+            assertThat(httpPost(gjennomføringPath(treffId), mapper.writeValueAsString(mapOf(ugyldig))).statusCode())
+                .describedAs(ugyldig.first)
+                .isEqualTo(400)
+        }
     }
 
     @Test

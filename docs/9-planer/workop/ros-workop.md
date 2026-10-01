@@ -564,12 +564,19 @@ kategorien WorkOp. Vanlige treff er uendret, se «Vanlige treff» under.
   skjulte, som før.
 - **Treffgjennomføringen og vurderingen:** Usynlige vises med navn og
   deltakernummer, og kan registreres og rettes som andre. De merkes ikke som
-  usynlige.
+  usynlige. Fødselsnummeret vises ikke. Der det ellers står, står «Ikke
+  tilgjengelig».
+- **Dataminimering:** Treffgjennomføringen henter fra et eget endepunkt med
+  egen DTO, og får bare id, navn, status og fødselsnummer, også for synlige.
+  Den får ikke alder, kontor, innsatsgruppe, hvem som la personen til, når
+  personen ble lagt til, eller varseldata. Usynlige får heller ikke
+  fødselsnummer. Endepunktet har ingen filtre på fødselsnummer, alder eller
+  kontor, og ingen tellinger per alder og kontor.
 - **Oppmøte:** Usynlige som ikke har møtt, kan registreres som møtt. Vi legger
   til grunn at de var synlige da de ble lagt til eller invitert, og at de har
   fått en status i ettertid som gjør dem usynlige.
-- **Fanen «Hendelser»:** Hendelser for usynlige vises med navn, men uten
-  fødselsnummer.
+- **Fanen «Hendelser»:** Hendelser for usynlige vises med navn, og med
+  «Ikke tilgjengelig» i stedet for fødselsnummer.
 - **Slettede:** Vises aldri, heller ikke når de samtidig er usynlige.
 - **Adressebeskyttelse:** Personen vises aldri med navn. Har personen
   gjennomføringsdata, vises hen som «Ukjent jobbsøker», både i gjennomføringen
@@ -593,10 +600,12 @@ treff, må vurderes i ROS-en før det endres.
 - Dekk reglene med automatiske tester og akseptansetest 6.3.
 
 **Status 01.10.26:** Reglene er på plass i koden, og serveren avgrenser dem til
-WorkOp. Jobbsøkersøket har valget `inkluderSkjulte`, som bare
-treffgjennomføringen bruker, og endepunktet krever eier eller utvikler. For
-vanlige treff har valget ingen virkning. Søket holder alltid slettede utenfor, og holder personer
-med adressebeskyttelse (`sperret`) utenfor også når `inkluderSkjulte` er satt.
+WorkOp. Treffgjennomføringen henter jobbsøkere fra et eget endepunkt,
+`POST …/treffgjennomforing-og-oppfolging/jobbsokere`, som krever eier eller
+utvikler og har en egen DTO med bare de feltene som trengs. Endepunktet tar
+med usynlige bare for WorkOp, og holder alltid slettede og personer med
+adressebeskyttelse (`sperret`) utenfor. Jobbsøkersøket tar aldri med usynlige,
+og et gammelt valg `inkluderSkjulte` i forespørselen blir ignorert.
 Hendelsesoversikten for et WorkOp-treff tar med usynlige, men ikke usynlige
 som er slettet. Detaljer vises bare for hendelsene fra treffgjennomføringen,
 ikke for for eksempel varsler, som kan inneholde fødselsnummer. Den viser fødselsnummer bare for synlige, og navn ikke for personer med
@@ -604,6 +613,13 @@ adressebeskyttelse. Backend sperrer ikke oppmøte for usynlige. Tellingene i
 jobbsøkerlisten er uendret. Komponenttester dekker søket, hendelsene og
 oppmøtet, og at vanlige treff er uendret. WorkOp kan ikke opprettes i
 produksjon, så endringen gir ingen ny eksponering der før piloten.
+
+**Utrulling:** Jobbsøkersøkets view tar nå med usynlige, og koden filtrerer
+selv. Eldre versjoner av appen stoler på at viewet filtrerer. Under en
+rullerende oppdatering kan gamle pods derfor vise usynlige i jobbsøkerlisten
+et kort øyeblikk. Endringen tas ut når det er lite trafikk, og viewet skal
+aldri ut før koden. En deploy fra main til dev underveis tilbakestiller
+viewet uten feil, og branchen må da deployes på nytt.
 
 **Restrisiko:** Eiere ser navn og registreringer for personer som ikke lenger
 oppfyller kravene til synlighet, og kan registrere nye opplysninger om dem.
