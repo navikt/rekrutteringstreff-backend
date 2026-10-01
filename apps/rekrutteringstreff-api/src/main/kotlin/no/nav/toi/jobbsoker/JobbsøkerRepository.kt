@@ -23,6 +23,7 @@ data class JobbsøkerTreffHistorikk(
     val tittel: String,
     val kategori: RekrutteringstreffKategori,
     val status: RekrutteringstreffStatus,
+    val antallArbeidsgivere: Int,
     val lagtTilTidspunkt: Instant?,
     val treffStartTidspunkt: Instant?,
     val lagtTilAvNavn: String?,
@@ -229,6 +230,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     rt.tittel,
                     rt.kategori,
                     rt.status,
+                    (
+                        SELECT count(*)
+                        FROM arbeidsgiver a
+                        WHERE a.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                          AND a.status != 'SLETTET'
+                    ) AS antall_arbeidsgivere,
                     opprettet.tidspunkt AS lagt_til_dato,
                     rt.fratid AS treff_start,
                     opprettet.hendelse_data ->> 'lagtTilAvNavn' AS lagt_til_av_navn,
@@ -262,6 +269,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                                     tittel = resultSet.getString("tittel"),
                                     kategori = RekrutteringstreffKategori.valueOf(resultSet.getString("kategori")),
                                     status = RekrutteringstreffStatus.valueOf(resultSet.getString("status")),
+                                    antallArbeidsgivere = resultSet.getInt("antall_arbeidsgivere"),
                                     lagtTilTidspunkt = resultSet.getTimestamp("lagt_til_dato")?.toInstant(),
                                     treffStartTidspunkt = resultSet.getTimestamp("treff_start")?.toInstant(),
                                     lagtTilAvNavn = resultSet.getString("lagt_til_av_navn"),
