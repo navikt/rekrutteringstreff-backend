@@ -6,6 +6,7 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.dto.parseHendelseData
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.*
@@ -20,6 +21,7 @@ data class JobbsøkerSlettestatus(val jobbsøkerId: Long, val status: Jobbsøker
 
 data class JobbsøkerTreffHistorikk(
     val tittel: String,
+    val kategori: RekrutteringstreffKategori,
     val status: RekrutteringstreffStatus,
     val lagtTilTidspunkt: Instant?,
     val treffStartTidspunkt: Instant?,
@@ -225,6 +227,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 """
                 SELECT
                     rt.tittel,
+                    rt.kategori,
                     rt.status,
                     opprettet.tidspunkt AS lagt_til_dato,
                     rt.fratid AS treff_start,
@@ -257,6 +260,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                             add(
                                 JobbsøkerTreffHistorikk(
                                     tittel = resultSet.getString("tittel"),
+                                    kategori = RekrutteringstreffKategori.valueOf(resultSet.getString("kategori")),
                                     status = RekrutteringstreffStatus.valueOf(resultSet.getString("status")),
                                     lagtTilTidspunkt = resultSet.getTimestamp("lagt_til_dato")?.toInstant(),
                                     treffStartTidspunkt = resultSet.getTimestamp("treff_start")?.toInstant(),

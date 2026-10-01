@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -220,6 +221,24 @@ class JobbsøkerRepositoryTest {
         ).single()
         db.inviterJobbsøkere(listOf(invitert), treff)
 
+        val workopTreff = db.opprettRekrutteringstreffMedAlleFelter(
+            tittel = "WorkOp",
+            kategori = RekrutteringstreffKategori.WORKOP,
+            fraTid = starttidspunkt.plusDays(1),
+        )
+        val workopJobbsøker = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer,
+                    Fornavn("Kari"),
+                    Etternavn("Nordmann"),
+                    Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
+                )
+            ),
+            workopTreff,
+        ).single()
+        db.inviterJobbsøkere(listOf(workopJobbsøker), workopTreff)
+
         val lagtTilTreff = db.opprettRekrutteringstreffMedAlleFelter(tittel = "Kun lagt til")
         db.leggTilJobbsøkereMedHendelse(
             listOf(LeggTilJobbsøker(fødselsnummer, Fornavn("Kari"), Etternavn("Nordmann"))),
@@ -237,14 +256,16 @@ class JobbsøkerRepositoryTest {
 
         val resultat = repository.hentRekrutteringstreffForJobbsøker(fødselsnummer)
 
-        assertThat(resultat).hasSize(1)
-        assertThat(resultat.single().tittel).isEqualTo("Invitert treff")
-        assertThat(resultat.single().status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
-        assertThat(resultat.single().treffStartTidspunkt).isEqualTo(starttidspunkt.toInstant())
-        assertThat(resultat.single().lagtTilTidspunkt).isNotNull()
-        assertThat(resultat.single().lagtTilAvNavn).isEqualTo("Navn på veileder")
-        assertThat(resultat.single().lagtTilAvIdent).isEqualTo("NAV123")
-        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000"))).hasSize(1)
+        assertThat(resultat).hasSize(2)
+        val rekrutteringstreff = resultat.single { it.tittel == "Invitert treff" }
+        assertThat(rekrutteringstreff.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        assertThat(rekrutteringstreff.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        assertThat(rekrutteringstreff.treffStartTidspunkt).isEqualTo(starttidspunkt.toInstant())
+        assertThat(rekrutteringstreff.lagtTilTidspunkt).isNotNull()
+        assertThat(rekrutteringstreff.lagtTilAvNavn).isEqualTo("Navn på veileder")
+        assertThat(rekrutteringstreff.lagtTilAvIdent).isEqualTo("NAV123")
+        assertThat(resultat.single { it.tittel == "WorkOp" }.kategori).isEqualTo(RekrutteringstreffKategori.WORKOP)
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000"))).hasSize(2)
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("9999"))).isEmpty()
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, emptyList())).isEmpty()
     }
