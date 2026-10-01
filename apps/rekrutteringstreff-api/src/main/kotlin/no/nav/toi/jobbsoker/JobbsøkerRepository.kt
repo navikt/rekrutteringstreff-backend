@@ -20,6 +20,7 @@ internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
 data class JobbsøkerSlettestatus(val jobbsøkerId: Long, val status: JobbsøkerStatus)
 
 data class JobbsøkerTreffHistorikk(
+    val id: UUID?,
     val tittel: String,
     val kategori: RekrutteringstreffKategori,
     val status: RekrutteringstreffStatus,
@@ -227,6 +228,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             connection.prepareStatement(
                 """
                 SELECT
+                    CASE WHEN rt.kategori = 'REKRUTTERINGSTREFF' THEN rt.id END AS id,
                     rt.tittel,
                     rt.kategori,
                     rt.status,
@@ -266,6 +268,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                         while (resultSet.next()) {
                             add(
                                 JobbsøkerTreffHistorikk(
+                                    id = resultSet.getObject("id", UUID::class.java),
                                     tittel = resultSet.getString("tittel"),
                                     kategori = RekrutteringstreffKategori.valueOf(resultSet.getString("kategori")),
                                     status = RekrutteringstreffStatus.valueOf(resultSet.getString("status")),

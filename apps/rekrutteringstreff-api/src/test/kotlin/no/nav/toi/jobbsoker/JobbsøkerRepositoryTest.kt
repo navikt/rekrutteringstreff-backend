@@ -284,6 +284,7 @@ class JobbsøkerRepositoryTest {
 
         assertThat(resultat).hasSize(2)
         val rekrutteringstreff = resultat.single { it.tittel == "Invitert treff" }
+        assertThat(rekrutteringstreff.id).isEqualTo(treff.somUuid)
         assertThat(rekrutteringstreff.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
         assertThat(rekrutteringstreff.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
         assertThat(rekrutteringstreff.antallArbeidsgivere).isEqualTo(2)
@@ -292,6 +293,7 @@ class JobbsøkerRepositoryTest {
         assertThat(rekrutteringstreff.lagtTilAvNavn).isEqualTo("Navn på veileder")
         assertThat(rekrutteringstreff.lagtTilAvIdent).isEqualTo("NAV123")
         val workop = resultat.single { it.tittel == "WorkOp" }
+        assertThat(workop.id).isNull()
         assertThat(workop.kategori).isEqualTo(RekrutteringstreffKategori.WORKOP)
         assertThat(workop.antallArbeidsgivere).isZero()
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000"))).hasSize(2)

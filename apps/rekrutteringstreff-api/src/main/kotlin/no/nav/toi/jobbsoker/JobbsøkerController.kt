@@ -68,6 +68,7 @@ class JobbsøkerController(
         summary = "Hent rekrutteringstreff for en jobbsøker",
         description = "Søker på tvers av alle treff. Returnerer bare synlige jobbsøkere med status ulik LAGT_TIL og SLETTET. " +
             "Responsen inneholder kategori REKRUTTERINGSTREFF eller WORKOP og antall ikke-slettede arbeidsgivere. " +
+            "id er UUID-en for rekrutteringstreff og er null for WORKOP. " +
             "Jobbsøkerrettet rolle ser bare treff der jobbsøkerens kontor matcher brukerens Modia-enheter; " +
             "arbeidsgiverrettet rolle og utvikler kan se alle treff. lagtTilAvNavn kan være null dersom navnet ikke ble lagret da jobbsøkeren ble lagt til.",
         operationId = "hentRekrutteringstreffForJobbsøker",
