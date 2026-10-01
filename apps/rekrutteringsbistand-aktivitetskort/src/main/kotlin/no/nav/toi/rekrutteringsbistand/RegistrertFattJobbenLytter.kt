@@ -24,6 +24,7 @@ class RegistrertFattJobbenLytter(
             precondition {
                 it.requireValue("@event_name", "RegistrertFåttJobben")
                 it.forbidValue("@slutt_av_hendelseskjede", true)
+                it.requireKey("stillingsinfo.stillingsid")
             }
             validate {
                 it.requireKey("stillingsId", "utførtAvNavIdent", "tidspunkt", "fnr")

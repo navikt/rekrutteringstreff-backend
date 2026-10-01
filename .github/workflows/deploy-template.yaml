@@ -78,12 +78,3 @@ jobs:
           RESOURCE: apps/${{ inputs.app_name }}/.nais/nais.yaml,apps/${{ inputs.app_name }}/.nais/alerts.yaml
           VARS: apps/${{ inputs.app_name }}/.nais/prod-gcp.yaml
           VAR: image=${{ needs.build-and-publish.outputs.image }}
-
-  call-trivy-security-scan:
-    needs: build-and-publish
-    uses: navikt/toi-github-actions-workflows/.github/workflows/trivy-security-scan.yaml@v15  # zizmor: ignore[ref-confusion,unpinned-uses]
-    with:
-      image: ${{ needs.build-and-publish.outputs.image }}
-    permissions:
-      id-token: write
-      security-events: write

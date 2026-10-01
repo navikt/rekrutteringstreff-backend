@@ -33,6 +33,7 @@ class SamtykkeStatusLytter private constructor(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", hendelse.eventName)
+                it.requireKey("stillingsinfo.stillingsid")
             }
             validate {
                 it.requireKey("fnr", "stillingsId")

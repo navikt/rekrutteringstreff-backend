@@ -408,15 +408,13 @@ Bare eiere eller utviklere kan legge til eller foreslå jobbsøkere til WorkOp. 
 **Kjente feil og uavklarte regler**
 
 - **Tilgang:** Direkte lenke skal gi vanlig forhåndsvisning og mulighet for selvinnmelding via `/eiere/meg`, med gjeldende rollekrav og kontortilknytning. Gjennomføring og eierredigering krever fortsatt eierskap eller utviklerrolle. Flere underressurser mangler WorkOp-eiersjekk; avklar hvilke opplysninger som skal være tilgjengelige før selvinnmelding. Eventuelle innsynsbegrensninger må håndheves i API-et, ikke bare ved å skjule innhold på siden.
-- **Svarstatus:** Oppmøte og «Fått jobb» overskriver ja/nei. Tidligere svar må fortsatt styre svarvisning, endrings-/avlysningsvarsler og kortstatus ved avlysning/fullføring. Direkte svarendring må ikke ødelegge oppmøte/formidling.
+- **Svarstatus:** Oppmøte og «Fått jobb» overskriver ja/nei. Tidligere svar må fortsatt styre svarvisning, endrings-/avlysningsvarsler og kortstatus ved avlysning/fullføring. Direkte svarendring må ikke ødelegge oppmøte/formidling. I dag får jobbsøkere med status `MØTT_OPP` eller `FÅTT_JOBB` verken «Fullført» eller «Avbrutt» på aktivitetskortet når treffet fullføres, fordi fullføringen bare ser på `SVART_JA` og `INVITERT`. Kortet blir stående i «Gjennomføres». «Fått jobb» finnes i prod, så dette kan allerede skje på vanlige treff.
 - **Formidling og oppmøte:** «Fått jobb» telles som møtt, også uten oppmøteregistrering. Oppmøtefjerning kan logges uten faktisk endring. Avklar telling og retting; visning, nummer og historikk må samsvare.
 - **Arbeidsgiverfjerning:** Skjulte interesser/vurderinger hos fjernet arbeidsgiver kan sperre oppmøtefjerning uten tilgjengelig retting. Forslaget er å sperre arbeidsgiverfjerning til avklart opprydding, også for usynlige personer/formidlinger. Siste-arbeidsgiver-sperren finnes bare i skjermbildet; API-regelen må avklares.
 - **Gjeninnlagt arbeidsgiver:** Tidligere data kan bli synlige igjen. Avklar om de skal gjenopptas eller kreve egen opprydding.
 - **Usynlige personer:** Stegene bruker ulike synlighetsfiltre. Avklar visning, registrering, retting, telling og utskrift i alle seks steg, inkludert oppfølgingsunntak.
-- **Intervju-API:** Manuell fordeling mangler oppmøte-/interessevalidering. Personer uten gyldig grunnlag må avvises.
 - **Samtidighet:** Gamle klientdata kan overskrive endringer på samme vurdering/intervjufordeling. Avklar konflikthåndtering; sletting må heller ikke bruke utdatert oppmøtestatus.
 - **Avlyst WorkOp:** Gjennomføringen mangler generell statuskontroll. Avklar hvilke registreringer/rettinger som tillates, likt i skjermbildet og API-et.
-- **Meldingsforhåndsvisning:** Bruker vanlige treffmaler. Skal vise WorkOp-meldingen som faktisk sendes.
 - **Standardtekst:** Tidspunkter i fritekst oppdateres ikke nødvendigvis med strukturerte felt. Avklar dobbelvisning og ansvar for oppdatering.
 - **Notatvalg:** «Helse eller kapasitet» krever avklart behandlingsgrunnlag og godkjent kodeverk før produksjonsbruk.
 - **Møtetider:** Avklar grenser for svært lange møter, tider utenfor treffet og døgnskifte; positiv varighet alene begrenser ikke dette.

@@ -23,6 +23,7 @@ class SamtykkeForespurtLytter(
             precondition {
                 it.requireValue("@event_name", EVENT_NAME)
                 it.forbid("aktivitetskortuuid")
+                it.requireKey("stillingsinfo.stillingsid")
             }
             validate {
                 it.requireKey(

@@ -546,7 +546,26 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "stillingsTittel": "$stillingsTittel",
             "svarfrist": "${ZonedDateTime.now().plusDays(7).truncatedTo(ChronoUnit.MILLIS)}",
             "forespurtAvIdent": "$forespurtAvIdent",
-            "forespurtTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            "forespurtTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+            "stillingsinfo": {
+              "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
+              "stillingsid": "$stillingId",
+              "eier": {
+                "navident": "$forespurtAvIdent",
+                "navn": "F_$forespurtAvIdent E_$forespurtAvIdent",
+                "navKontorEnhetId": "0300"
+              },
+              "stillingskategori": "STILLING",
+              "rekrutteringstreffId": null
+            },
+            "stilling": {
+              "stillingstittel": "Jobbanalytiker",
+              "erDirektemeldt": true,
+              "stillingOpprettetTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+              "antallStillinger": 1,
+              "organisasjonsnummer": "936337651",
+              "stillingensPubliseringstidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            }
         }
     """.trimIndent()
 
@@ -565,7 +584,26 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "samtykkeGitt": "$samtykkeGitt",
             "besvartAvIdent": "$besvartAvIdent",
             "besvartAvIdentType": "$besvartAvIdentType",
-            "besvartTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            "besvartTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+            "stillingsinfo": {
+              "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
+              "stillingsid": "$stillingId",
+              "eier": {
+                "navident": "$besvartAvIdent",
+                "navn": "F_$besvartAvIdent E_$besvartAvIdent",
+                "navKontorEnhetId": "0300"
+              },
+              "stillingskategori": "STILLING",
+              "rekrutteringstreffId": null
+            },
+            "stilling": {
+              "stillingstittel": "Jobbanalytiker",
+              "erDirektemeldt": true,
+              "stillingOpprettetTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+              "antallStillinger": 1,
+              "organisasjonsnummer": "936337651",
+              "stillingensPubliseringstidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            }
         }
     """.trimIndent()
 
@@ -582,7 +620,26 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "stillingsTittel": "Test Stilling",
             "trukketAvIdent": "$trukketAvIdent",
             "trukketAvIdentType": "$trukketAvIdentType",
-            "trukketTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            "trukketTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+            "stillingsinfo": {
+              "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
+              "stillingsid": "$stillingId",
+              "eier": {
+                "navident": "$trukketAvIdent",
+                "navn": "F_$trukketAvIdent E_$trukketAvIdent",
+                "navKontorEnhetId": "0300"
+              },
+              "stillingskategori": "STILLING",
+              "rekrutteringstreffId": null
+            },
+            "stilling": {
+              "stillingstittel": "Jobbanalytiker",
+              "erDirektemeldt": true,
+              "stillingOpprettetTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+              "antallStillinger": 1,
+              "organisasjonsnummer": "936337651",
+              "stillingensPubliseringstidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            }
         }
     """.trimIndent()
 
@@ -595,7 +652,26 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "fnr": "$fnr",
             "stillingsId": "$stillingId",
             "stillingsTittel": "Test Stilling",
-            "samtykkeGittTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            "samtykkeGittTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+            "stillingsinfo": {
+              "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
+              "stillingsid": "$stillingId",
+              "eier": {
+                "navident": "Z01234567",
+                "navn": "F_Z01234567 E_Z01234567",
+                "navKontorEnhetId": "0300"
+              },
+              "stillingskategori": "STILLING",
+              "rekrutteringstreffId": null
+            },
+            "stilling": {
+              "stillingstittel": "Jobbanalytiker",
+              "erDirektemeldt": true,
+              "stillingOpprettetTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+              "antallStillinger": 1,
+              "organisasjonsnummer": "936337651",
+              "stillingensPubliseringstidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            }
         }
     """.trimIndent()
 
@@ -607,7 +683,26 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "@event_name": "samtykke-forespørsel-deling-av-cv-svarfrist-utløpt",
             "stillingsId": "$stillingId",
             "fnr": "$fnr",
-            "svarfrist": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            "svarfrist": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+            "stillingsinfo": {
+              "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
+              "stillingsid": "$stillingId",
+              "eier": {
+                "navident": "Z012334",
+                "navn": "F_Z012334 E_Z012334",
+                "navKontorEnhetId": "0300"
+              },
+              "stillingskategori": "STILLING",
+              "rekrutteringstreffId": null
+            },
+            "stilling": {
+              "stillingstittel": "Jobbanalytiker",
+              "erDirektemeldt": true,
+              "stillingOpprettetTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+              "antallStillinger": 1,
+              "organisasjonsnummer": "936337651",
+              "stillingensPubliseringstidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            }
         }
     """.trimIndent()
 
@@ -621,7 +716,26 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "stillingsId": "$stillingId",
             "fnr": "$fnr",
             "utførtAvNavIdent": "$navIdent",
-            "tidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            "tidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+            "stillingsinfo": {
+              "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
+              "stillingsid": "$stillingId",
+              "eier": {
+                "navident": "$navIdent",
+                "navn": "F_$navIdent E_$navIdent",
+                "navKontorEnhetId": "0300"
+              },
+              "stillingskategori": "STILLING",
+              "rekrutteringstreffId": null
+            },
+            "stilling": {
+              "stillingstittel": "Jobbanalytiker",
+              "erDirektemeldt": true,
+              "stillingOpprettetTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+              "antallStillinger": 1,
+              "organisasjonsnummer": "936337651",
+              "stillingensPubliseringstidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            }
         }
     """.trimIndent()
 
@@ -637,7 +751,26 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "utførtAvNavIdent": "$navIdent",
             "tidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
             "fnrFikkJobben": [${fnrFikkJobben.joinToString(",") { "\"$it\"" }}],
-            "fnrFikkIkkeJobben": [${fnrFikkIkkeJobben.joinToString(",") { "\"$it\"" }}]
+            "fnrFikkIkkeJobben": [${fnrFikkIkkeJobben.joinToString(",") { "\"$it\"" }}],
+            "stillingsinfo": {
+              "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
+              "stillingsid": "$stillingId",
+              "eier": {
+                "navident": "$navIdent",
+                "navn": "F_$navIdent E_$navIdent",
+                "navKontorEnhetId": "0300"
+              },
+              "stillingskategori": "STILLING",
+              "rekrutteringstreffId": null
+            },
+            "stilling": {
+              "stillingstittel": "Jobbanalytiker",
+              "erDirektemeldt": true,
+              "stillingOpprettetTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+              "antallStillinger": 1,
+              "organisasjonsnummer": "936337651",
+              "stillingensPubliseringstidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            }
         }
     """.trimIndent()
 }

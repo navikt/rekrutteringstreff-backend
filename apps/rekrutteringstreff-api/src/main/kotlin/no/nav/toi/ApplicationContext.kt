@@ -48,6 +48,7 @@ import no.nav.toi.treffgjennomføring.matching.MatchingRepository
 import no.nav.toi.treffgjennomføring.matching.MatchingService
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
+import no.nav.toi.treffgjennomføring.møteplan.Møteplansynk
 import no.nav.toi.treffgjennomføring.TreffgjennomføringService
 import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 import no.nav.toi.treffgjennomføring.RegistreringerRepository
@@ -86,6 +87,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val matchingRepository = MatchingRepository()
     val oppfølgingRepository = OppfølgingRepository()
     val registreringerRepository = RegistreringerRepository()
+    val møteplansynk = Møteplansynk(treffkontekstRepository, møteplanRepository, oppmøteRepository)
     val treffgjennomføringReader = TreffgjennomføringReader(
         stegRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
     )
@@ -103,7 +105,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     )
     val arbeidsgiverService = ArbeidsgiverService(
         infra.dataSource, arbeidsgiverRepository, JacksonConfig.mapper,
-        treffkontekstRepository, møteplanRepository, oppmøteRepository, registreringerRepository,
+        treffkontekstRepository, møteplanRepository, møteplansynk, registreringerRepository,
     )
     val eierService = EierService(eierRepository, rekrutteringstreffRepository, infra.dataSource)
     val rekrutteringstreffService = RekrutteringstreffService(
@@ -132,6 +134,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         oppmøteRepository = oppmøteRepository,
         registreringerRepository = registreringerRepository,
         møteplanRepository = møteplanRepository,
+        møteplansynk = møteplansynk,
         jobbsøkerService = jobbsøkerService,
         hendelseWriter = hendelseWriter,
     )

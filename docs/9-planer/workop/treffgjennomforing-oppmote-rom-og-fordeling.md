@@ -1,5 +1,9 @@
 # Plan: Treffgjennomføring – oppmøte, rom og intervju
 
+> **Historikk.** Dette er planen løsningen ble bygget etter. Gjeldende beskrivelse står i
+> [treffgjennomforing.md](../../2-arkitektur/treffgjennomforing.md), og den gjelder der
+> dokumentene er uenige. Backend er implementert.
+
 Forslag til flyt og elementer for de tre oppgavene i
 [behov-og-prioriteringer.md](../../../../behov-og-prioriteringer.md) (kapittelet «Oppgaver
 som må utredes og utvikles»):
@@ -248,8 +252,8 @@ framfor å vandre bakover gjennom stegene.
 **Klemming av ugyldige steg.** Verdien kan komme fra en delt lenke, et bokmerke
 eller et håndredigert adressefelt, og kan peke på et steg treffet ikke har
 kommet til. Den kan også peke på et **WorkOp-steg i et vanlig treff**.
-`nærmesteTilgjengeligeSteg` i
-[treffgjennomføringSteg.ts](../../../../rekrutteringsbistand-frontend/app/rekrutteringstreff/%5BrekrutteringstreffId%5D/_ui/treffgjennomføring/treffgjennomføringSteg.ts)
+`finnNærmesteTilgjengeligeSteg` i
+[treffgjennomføringSteg.ts](../../../../rekrutteringsbistand-frontend/app/rekrutteringstreff/%5BrekrutteringstreffId%5D/_ui/treffgjennomføring/navigasjon/treffgjennomføringSteg.ts)
 går bakover til første steg som faktisk er tilgjengelig, framfor å vise en tom
 side eller kaste brukeren helt til start. URL-en rettes deretter opp, slik at
 adressen viser det man faktisk ser på. Ikke-numeriske verdier faller tilbake
@@ -287,8 +291,8 @@ et vanlig treff går rett videre til interesse.
 - Oppmøtevalg autolagres i samme sekvensielle kø som interesser. Siste valg
   beholdes optimistisk, feil vises per rad, og navigasjon er deaktivert
   mens køen arbeider.
-- **Liste over arbeidsgivere** – deltakende arbeidsgivere (typisk 5), gjenbruker
-  `ArbeidsgiverListeItem`. Teller «Z arbeidsgivere».
+- **Liste over arbeidsgivere** – deltakende arbeidsgivere (typisk 5), i en enkel
+  liste (`DeltakendeArbeidsgivere`). Teller «Z arbeidsgivere».
 - Oppmøtelista har **ingen egen skrollboks**. Den vokser med innholdet, og hele
   siden skroller. En liste i en liste betyr to skrollposisjoner å holde styr på,
   og på en dag med tjue fremmøtte er det den ytre man vil ha.
@@ -1880,7 +1884,7 @@ samme mønster som eksisterende tester: `storageState` for rolle
   navigasjon og lokal feiltilstand for begge datakildene.
 - **Steg 6 – oppsummering:** nøkkeltallene teller hver kandidat én gang med
   beste vurdering, og tabellen per arbeidsgiver teller rader.
-- **Deltakernummer** (`workop-deltakernummer.spec.ts`): nummeret tildeles ved
+- **Deltakernummer** (`e2e/deltakernummer.spec.ts`): nummeret tildeles ved
   oppmøteregistrering og fortsetter der forrige slapp; det beholdes når oppmøtet
   fjernes og gis tilbake til samme person ved ny registrering, mens neste person
   i køen får et nytt nummer; det vises sammen med navnet i alle stegene; og
@@ -1889,7 +1893,7 @@ samme mønster som eksisterende tester: `storageState` for rolle
   riktig test feiler.
 - **Innsatsbehov** vises i steg 5 for jobbsøkere med kjent innsatsgruppe, og
   vises ikke i det hele tatt for jobbsøkere uten.
-- **Generell treffgjennomføring** (`treffgjennomforing-generell.spec.ts`): et treff uten
+- **Generell treffgjennomføring** (`e2e/generelle-treff.spec.ts`): et treff uten
   WorkOp-kategori viser fire steg med generelt språk, ingen møteoppsett-,
   rom- eller fordelingssteg, ingen deltakernummer, og `visSteg` til et
   WorkOp-steg lander på nærmeste tilgjengelige steg i stedet for å vise noe som
