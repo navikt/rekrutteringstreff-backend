@@ -144,6 +144,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             SELECT v.kontornummer
             FROM jobbsoker_sok_view v
             WHERE v.treff_id = ?
+              AND v.er_synlig = true
               AND v.kontornummer IS NOT NULL
             ORDER BY 1
         """.trimIndent()
@@ -231,6 +232,12 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
     private fun byggWhere(treffId: TreffId, request: JobbsøkerSøkRequest): Pair<String, List<Any>> {
         val conditions = mutableListOf("v.treff_id = ?")
         val params = mutableListOf<Any>(treffId.somUuid)
+        // Slettede er alltid utelatt i viewet. Usynlige tas bare med på WorkOp, og sperrede
+        // (adressebeskyttelse) aldri. Vanlige treff er uendret til regelen er avklart i ROS (WO-14).
+        conditions.add(
+            if (request.inkluderSkjulte) "(v.er_synlig = true OR (v.treff_kategori = 'WORKOP' AND v.sperret = false))"
+            else "v.er_synlig = true"
+        )
 
         request.fritekst?.takeIf { it.isNotBlank() }?.let {
             if (it.trim().matches(Regex("\\d{1,11}"))) {

@@ -10,6 +10,8 @@ import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.net.HttpURLConnection.*
 import java.net.http.HttpResponse
 import java.time.Instant
@@ -383,6 +385,104 @@ class JobbsøkerInnloggetBorgerTest {
         val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
         assertThat(jobbsøker!!.statuser.harSvart).isFalse()
     }
+
+    @ParameterizedTest
+    @CsvSource("svar-ja,true,MØTT_OPP", "svar-nei,false,MØTT_OPP", "svar-ja,true,FÅTT_JOBB", "svar-nei,false,FÅTT_JOBB")
+    fun `hentJobbsøkerInnloggetBorger beholder svaret etter oppmøte eller formidling`(
+        svarEndepunkt: String,
+        forventetPåmeldt: Boolean,
+        nyStatus: JobbsøkerStatus,
+    ) {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("44444444444")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
+        val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            """{ "fødselsnumre": ["${fødselsnummer.asString}"] }""",
+            token.serialize()
+        )
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/$svarEndepunkt",
+            """{ "fødselsnummer": "${fødselsnummer.asString}" }""",
+            borgerToken.serialize()
+        )
+        settStatus(treffId, fødselsnummer, nyStatus)
+
+        val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        assertThat(jobbsøker!!.statuser.harSvart).isTrue()
+        assertThat(jobbsøker.statuser.erPåmeldt).isEqualTo(forventetPåmeldt)
+    }
+
+    @Test
+    fun `svar etter oppmøte lagres uten å overskrive oppmøtet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("55555555555")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
+        val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            """{ "fødselsnumre": ["${fødselsnummer.asString}"] }""",
+            token.serialize()
+        )
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei",
+            """{ "fødselsnummer": "${fødselsnummer.asString}" }""",
+            borgerToken.serialize()
+        )
+        settStatus(treffId, fødselsnummer, JobbsøkerStatus.MØTT_OPP)
+
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            """{ "fødselsnummer": "${fødselsnummer.asString}" }""",
+            borgerToken.serialize()
+        )
+
+        val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        assertThat(jobbsøker!!.statuser.erPåmeldt).isTrue()
+        assertThat(hentStatus(treffId, fødselsnummer)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
+    }
+
+    private fun settStatus(treffId: TreffId, fødselsnummer: Fødselsnummer, status: JobbsøkerStatus) {
+        db.dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                UPDATE jobbsoker SET status = ?
+                WHERE fodselsnummer = ?
+                  AND rekrutteringstreff_id = (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?)
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setString(1, status.name)
+                stmt.setString(2, fødselsnummer.asString)
+                stmt.setObject(3, treffId.somUuid)
+                stmt.executeUpdate()
+            }
+        }
+    }
+
+    private fun hentStatus(treffId: TreffId, fødselsnummer: Fødselsnummer): JobbsøkerStatus =
+        db.dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT js.status FROM jobbsoker js
+                JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = js.rekrutteringstreff_id
+                WHERE js.fodselsnummer = ? AND rt.id = ?
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setString(1, fødselsnummer.asString)
+                stmt.setObject(2, treffId.somUuid)
+                stmt.executeQuery().use { rs ->
+                    rs.next()
+                    JobbsøkerStatus.valueOf(rs.getString("status"))
+                }
+            }
+        }
 
     @Test
     fun `hentJobbsøkerInnloggetBorger returnerer 404 for ukjent jobbsøker`() {

@@ -4,6 +4,8 @@
 
 Synlighet avgjør om en jobbsøker skal vises i rekrutteringstreff-frontenden. Jobbsøkere som ikke er synlige (f.eks. pga. adressebeskyttelse, KVP, død, etc.) filtreres automatisk bort fra alle API-responser.
 
+**Unntak i treffgjennomføringen, bare for WorkOp:** Usynlige jobbsøkere vises med navn i treffgjennomføringen og vurderingen, slik at eierne kan fullføre og rette registreringene sine. De kan også registreres som møtt. Jobbsøkersøket tar dem bare med når `inkluderSkjulte` er satt og treffet er WorkOp, og endepunktet krever eier eller utvikler. Hendelsesoversikten for et WorkOp-treff (`/allehendelser`) tar også med usynlige, men uten fødselsnummer, og har detaljer (`hendelseData`) bare for hendelsene fra treffgjennomføringen. Slettede jobbsøkere holdes alltid utenfor, og personer med adressebeskyttelse (`sperret`) vises aldri med navn. I jobbsøkerlisten vises usynlige bare som et samlet tall. For vanlige treff er alt som før, også i treffgjennomføringen: usynlige filtreres bort, og flagget har ingen virkning. Om usynlige skal vises der, må avklares i ROS-en før det endres. Se WO-14 i [ROS for WorkOp](../9-planer/workop/ros-workop.md#wo-14--usynlige-jobbsøkere-vises-i-treffgjennomføringen).
+
 Synlighetsinformasjonen kommer fra **toi-synlighetsmotor**, som evaluerer kandidater basert på data fra flere kildesystemer.
 
 ## Arkitekturoversikt

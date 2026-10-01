@@ -137,7 +137,7 @@ class JobbsøkerService(
             }
 
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
-            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
+            endreStatusEtterSvar(connection, personTreffId, nåværendeStatus, JobbsøkerStatus.SVART_JA)
         }
     }
 
@@ -158,7 +158,7 @@ class JobbsøkerService(
             }
 
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
-            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_NEI)
+            endreStatusEtterSvar(connection, personTreffId, nåværendeStatus, JobbsøkerStatus.SVART_NEI)
         }
     }
 
@@ -188,8 +188,25 @@ class JobbsøkerService(
             }
 
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, hendelsesType, AktørType.ARRANGØR, navIdent)
-            jobbsøkerRepository.endreStatus(connection, personTreffId, nyStatus)
+            endreStatusEtterSvar(connection, personTreffId, nåværendeStatus, nyStatus)
         }
+    }
+
+    /**
+     * Oppmøte og formidling skal ikke overskrives av et svar. Svaret lagres da bare som hendelse,
+     * og leses derfra av [Jobbsøker.gjeldendeSvar].
+     */
+    private fun endreStatusEtterSvar(
+        connection: Connection,
+        personTreffId: PersonTreffId,
+        nåværendeStatus: JobbsøkerStatus?,
+        nyStatus: JobbsøkerStatus,
+    ) {
+        if (nåværendeStatus == JobbsøkerStatus.MØTT_OPP || nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
+            logger.info("Jobbsøker har status $nåværendeStatus, beholder statusen og lagrer bare svaret som hendelse")
+            return
+        }
+        jobbsøkerRepository.endreStatus(connection, personTreffId, nyStatus)
     }
 
     fun registrerFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {

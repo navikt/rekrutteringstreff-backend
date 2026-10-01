@@ -116,7 +116,43 @@ data class Jobbsøker(
     fun erInvitert(): Boolean =
         hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
 
-    fun harSvart(): Boolean = status == JobbsøkerStatus.SVART_JA || status == JobbsøkerStatus.SVART_NEI
+    fun harSvart(): Boolean = gjeldendeSvar() != null
+
+    /** Om jobbsøkeren har svart ja. Oppmøte og formidling overskriver statusen, men ikke svaret. */
+    fun harSvartJa(): Boolean = gjeldendeSvar() == true
+
+    /**
+     * Svaret jobbsøkeren sist ga, eller `null` når det ikke er svart eller svaret er fjernet.
+     * Ved oppmøte eller formidling hentes svaret fra siste svarhendelse.
+     */
+    fun gjeldendeSvar(): Boolean? = when (status) {
+        JobbsøkerStatus.SVART_JA -> true
+        JobbsøkerStatus.SVART_NEI -> false
+        JobbsøkerStatus.MØTT_OPP, JobbsøkerStatus.FÅTT_JOBB ->
+            hendelser.filter { it.hendelsestype in SVARHENDELSER }
+                .maxByOrNull { it.tidspunkt }
+                ?.hendelsestype
+                ?.let(::svarFraHendelse)
+        else -> null
+    }
+
+    private companion object {
+        val SVARHENDELSER = setOf(
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER,
+        )
+
+        fun svarFraHendelse(hendelsestype: JobbsøkerHendelsestype): Boolean? = when (hendelsestype) {
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> true
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> false
+            else -> null
+        }
+    }
 }
 
 data class PersonTreffId(private val id: UUID) {

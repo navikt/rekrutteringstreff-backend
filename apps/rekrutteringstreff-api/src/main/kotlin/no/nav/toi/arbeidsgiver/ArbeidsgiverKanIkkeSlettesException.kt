@@ -17,3 +17,7 @@ class ArbeidsgiverKanIkkeSlettesException(val registreringer: ArbeidsgiverRegist
         return registreringer.treffregistreringer.lagHint(romHandling)
     }
 }
+
+class SisteArbeidsgiverKanIkkeSlettesException : RuntimeException(
+    "Treffet må alltid ha en arbeidsgiver som deltar. Legg til en ny arbeidsgiver først."
+)

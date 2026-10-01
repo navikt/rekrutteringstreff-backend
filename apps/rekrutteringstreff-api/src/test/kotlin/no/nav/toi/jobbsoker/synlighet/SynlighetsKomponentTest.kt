@@ -11,6 +11,7 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.rekrutteringstreff.HendelseRessurs
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -104,8 +105,10 @@ class SynlighetsKomponentTest {
     private fun søkPath(treffId: TreffId): String =
         "${jobbsøkerPath(treffId)}/sok"
 
-    private fun opprettTreffMedEier(): TreffId {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreff")
+    private fun opprettTreffMedEier(
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
+    ): TreffId {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreff", kategori = kategori)
         eierRepository.leggTil(treffId, "A123456", "0315")
         return treffId
     }
@@ -374,27 +377,53 @@ class SynlighetsKomponentTest {
     }
 
     @Test
-    fun `GET alle hendelser filtrerer ut jobbsøker-hendelser for ikke-synlige jobbsøkere`() {
+    fun `GET alle hendelser filtrerer ut jobbsøker-hendelser for ikke-synlige jobbsøkere på vanlige treff`() {
         val treffId = opprettTreffMedEier()
-        
+
         val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
         val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
-        
+
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
         db.settSynlighet(personTreffIder[1], false)
-        
+
         val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/allehendelser")
-        
+
         assertThat(response.statusCode()).isEqualTo(200)
         val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
-        
-        // Det skal være 1 rekrutteringstreff-hendelse (OPPRETTET) + 1 jobbsøker-hendelse (synlig)
         val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
-        val treffHendelser = hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }
-        
         assertThat(jobbsøkerHendelser).hasSize(1)
         assertThat(jobbsøkerHendelser.first().subjektNavn).isEqualTo("Synlig Person")
-        assertThat(treffHendelser).isNotEmpty()
+        assertThat(jobbsøkerHendelser.first().subjektId).isEqualTo("11111111111")
+        assertThat(hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }).isNotEmpty()
+    }
+
+    @Test
+    fun `GET alle hendelser på WorkOp tar med usynlige, men ikke usynlige som er slettet, og viser sperrede uten navn`() {
+        val treffId = opprettTreffMedEier(RekrutteringstreffKategori.WORKOP)
+
+        val jobbsøkere = listOf("Synlig", "Usynlig", "SlettetUsynlig", "Sperret").mapIndexed { i, navn ->
+            LeggTilJobbsøker(Fødselsnummer("${i + 1}".repeat(11)), Fornavn(navn), Etternavn("Person"), null, null, null)
+        }
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId, "A123456")
+        db.settSynlighet(personTreffIder[0], true)
+        db.settSynlighet(personTreffIder[1], false)
+        db.settSynlighet(personTreffIder[2], false)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
+        db.settSynlighet(personTreffIder[3], false)
+        db.settSperret(personTreffIder[3], true)
+
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/allehendelser")
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
+        val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
+
+        assertThat(jobbsøkerHendelser.map { it.subjektNavn to it.subjektId }).containsExactlyInAnyOrder(
+            "Synlig Person" to "11111111111",
+            "Usynlig Person" to null,
+            null to null,
+        )
+        assertThat(hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }).isNotEmpty()
     }
 }

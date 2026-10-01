@@ -5,7 +5,10 @@ import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.atOslo
+import no.nav.toi.jobbsoker.dto.HendelseDataDto
+import no.nav.toi.jobbsoker.dto.parseHendelseData
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -219,11 +222,23 @@ class RekrutteringstreffRepository(
             }
         }
 
+    /**
+     * På WorkOp tas usynlige jobbsøkere med, slik at hendelsene fra treffgjennomføringen er komplette.
+     * Usynlige som også er slettet, utelates. Fødselsnummeret vises bare for synlige, og personer med
+     * adressebeskyttelse vises uten navn. Vanlige treff er uendret til regelen er avklart i ROS (WO-14).
+     */
+    private val jobbsøkerVises =
+        "(js.er_synlig = TRUE OR (r.kategori = 'WORKOP' AND js.status != 'SLETTET'))"
+    private val jobbsøkerSubjekt = """
+        CASE WHEN r.kategori != 'WORKOP' OR (js.er_synlig AND NOT js.sperret) THEN js.fodselsnummer END AS subjekt_id,
+        CASE WHEN r.kategori != 'WORKOP' OR NOT js.sperret THEN js.fornavn || ' ' || js.etternavn END AS subjekt_navn
+    """.trimIndent()
+
     fun hentAlleHendelser(treff: TreffId): List<FellesHendelseOutboundDto> =
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-            SELECT id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, ressurs, subjekt_id, subjekt_navn
+            SELECT id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, ressurs, subjekt_id, subjekt_navn, hendelse_data
             FROM (
                 SELECT h.id,
                        '${HendelseRessurs.REKRUTTERINGSTREFF.name}' AS ressurs,
@@ -232,7 +247,8 @@ class RekrutteringstreffRepository(
                        h.opprettet_av_aktortype,
                        h.aktøridentifikasjon,
                        h.subjekt_id,
-                       h.subjekt_navn
+                       h.subjekt_navn,
+                       NULL::text AS hendelse_data
                 FROM   rekrutteringstreff_hendelse h
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
                 WHERE  r.id = ?
@@ -245,12 +261,12 @@ class RekrutteringstreffRepository(
                        jh.hendelsestype,
                        jh.opprettet_av_aktortype,
                        jh.aktøridentifikasjon,
-                       js.fodselsnummer AS subjekt_id,
-                       js.fornavn || ' ' || js.etternavn AS subjekt_navn
+                       $jobbsøkerSubjekt,
+                       CASE WHEN r.kategori = 'WORKOP' THEN jh.hendelse_data::text END AS hendelse_data
                 FROM   jobbsoker_hendelse jh
                 JOIN   jobbsoker js        ON js.jobbsoker_id = jh.jobbsoker_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = js.rekrutteringstreff_id
-                WHERE  r.id = ? AND js.er_synlig = TRUE
+                WHERE  r.id = ? AND $jobbsøkerVises
 
                 UNION ALL
 
@@ -261,7 +277,8 @@ class RekrutteringstreffRepository(
                        ah.opprettet_av_aktortype,
                        ah.aktøridentifikasjon,
                        ag.orgnr AS subjekt_id,
-                       ag.orgnavn AS subjekt_navn
+                       ag.orgnavn AS subjekt_navn,
+                       NULL::text AS hendelse_data
                 FROM   arbeidsgiver_hendelse ah
                 JOIN   arbeidsgiver ag      ON ag.arbeidsgiver_id = ah.arbeidsgiver_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = ag.rekrutteringstreff_id
@@ -275,13 +292,13 @@ class RekrutteringstreffRepository(
                        fh.hendelsestype,
                        fh.opprettet_av_aktortype,
                        fh.aktøridentifikasjon,
-                       js.fodselsnummer AS subjekt_id,
-                       js.fornavn || ' ' || js.etternavn AS subjekt_navn
+                       $jobbsøkerSubjekt,
+                       NULL::text AS hendelse_data
                 FROM   formidling_hendelse fh
                 JOIN   formidling f         ON f.formidling_id = fh.formidling_id
                 JOIN   jobbsoker js         ON js.jobbsoker_id = f.jobbsoker_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = f.rekrutteringstreff_id
-                WHERE  r.id = ? AND js.er_synlig = TRUE
+                WHERE  r.id = ? AND $jobbsøkerVises
             ) AS union_hendelser
             ORDER BY tidspunkt DESC
             """
@@ -299,6 +316,11 @@ class RekrutteringstreffRepository(
                                 ressurs = HendelseRessurs.valueOf(rs.getString("ressurs")),
                                 subjektId = rs.getString("subjekt_id"),
                                 subjektNavn = rs.getString("subjekt_navn"),
+                                hendelseData = jobbsøkerHendelseData(
+                                    rs.getString("ressurs"),
+                                    rs.getString("hendelsestype"),
+                                    rs.getString("hendelse_data"),
+                                ),
                             )
                         } else null
                     }.toList()
@@ -306,6 +328,24 @@ class RekrutteringstreffRepository(
             }
         }
 
+
+    /** Bare detaljene fra treffgjennomføringen. Varseldata og lignende holdes utenfor oversikten. */
+    private val hendelsetyperMedDetaljer = setOf(
+        JobbsøkerHendelsestype.REGISTRERT_OPPMØTE,
+        JobbsøkerHendelsestype.VURDERT,
+        JobbsøkerHendelsestype.NOTAT_LAGT_TIL,
+        JobbsøkerHendelsestype.NOTAT_FJERNET,
+        JobbsøkerHendelsestype.AVTALT_INTERVJU,
+        JobbsøkerHendelsestype.AVTALT_INTERVJU_DATO_ENDRET,
+        JobbsøkerHendelsestype.JOBBTILBUD_GITT,
+        JobbsøkerHendelsestype.ANGRE_JOBBTILBUD_GITT,
+    )
+
+    private fun jobbsøkerHendelseData(ressurs: String, hendelsestype: String, json: String?): HendelseDataDto? {
+        if (ressurs != HendelseRessurs.JOBBSØKER.name || json == null) return null
+        val type = hendelsetyperMedDetaljer.firstOrNull { it.name == hendelsestype } ?: return null
+        return parseHendelseData(JacksonConfig.mapper, type, json)
+    }
 
     fun leggTilHendelseForTreff(
         connection: Connection,

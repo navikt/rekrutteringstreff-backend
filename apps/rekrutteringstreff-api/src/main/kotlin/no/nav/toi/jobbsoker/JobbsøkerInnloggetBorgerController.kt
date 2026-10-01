@@ -162,7 +162,7 @@ class JobbsøkerInnloggetBorgerController(
             veilederNavn = veilederNavn?.asString,
             veilederNavIdent = veilederNavIdent?.asString,
             statuser = StatuserOutboundDto(
-                erPåmeldt = harAktivtSvarJa(),
+                erPåmeldt = harSvartJa(),
                 erInvitert = erInvitert(),
                 harSvart = harSvart()
             ),

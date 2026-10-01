@@ -7,6 +7,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -62,8 +63,11 @@ class JobbsøkerSokKomponentTest {
         db.slettAlt()
     }
 
-    private fun opprettTreffMedEier(navIdent: String = "A123456"): TreffId {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
+    private fun opprettTreffMedEier(
+        navIdent: String = "A123456",
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
+    ): TreffId {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff", kategori = kategori)
         ctx.eierRepository.leggTil(treffId, navIdent, "0315")
         return treffId
     }
@@ -299,6 +303,48 @@ class JobbsøkerSokKomponentTest {
         assertThat(dto.antallSkjulte).isEqualTo(1)
         assertThat(dto.antallSlettede).isEqualTo(1)
         assertThat(dto.jobbsøkere.map { it.fødselsnummer }).containsExactly("13333333333")
+    }
+
+    @Test
+    fun `inkluderSkjulte gir usynlige jobbsøkere med navn på WorkOp, men ikke slettede eller sperrede`() {
+        val treffId = opprettTreffMedEier(kategori = RekrutteringstreffKategori.WORKOP)
+        val personTreffIder = leggTilJobbsøkere(
+            treffId,
+            *((1..5).map { i ->
+                jobbsøker("${i}3333333333".take(11), "Person$i", "Etternavn$i")
+            }).toTypedArray(),
+        )
+        db.settSynlighet(personTreffIder[1], false)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
+        db.settSynlighet(personTreffIder[3], false)
+        db.settJobbsøkerStatus(personTreffIder[3], JobbsøkerStatus.SLETTET)
+        db.settSynlighet(personTreffIder[4], false)
+        db.settSperret(personTreffIder[4], true)
+
+        val jobbsøkerliste = søk(treffId)
+        val gjennomføring = søk(treffId, "inkluderSkjulte" to true)
+        val medStatusfilter = søk(treffId, "inkluderSkjulte" to true, "status" to listOf("LAGT_TIL"))
+
+        assertThat(jobbsøkerliste.jobbsøkere.map { it.fornavn }).containsExactly("Person1")
+        assertThat(gjennomføring.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Person1", "Person2")
+        assertThat(medStatusfilter.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Person1", "Person2")
+        assertThat(gjennomføring.totalt).isEqualTo(2)
+        assertThat(gjennomføring.antallPerStatus.values.sum()).isEqualTo(2)
+        assertThat(gjennomføring.antallSkjulte).isEqualTo(jobbsøkerliste.antallSkjulte).isEqualTo(2)
+        assertThat(gjennomføring.antallSlettede).isEqualTo(jobbsøkerliste.antallSlettede).isEqualTo(2)
+    }
+
+    @Test
+    fun `inkluderSkjulte har ingen virkning på vanlige treff`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = leggTilJobbsøkere(
+            treffId,
+            jobbsøker("14444444444", "Synlig", "Person"),
+            jobbsøker("24444444444", "Usynlig", "Person"),
+        )
+        db.settSynlighet(personTreffIder[1], false)
+
+        assertThat(søk(treffId, "inkluderSkjulte" to true).jobbsøkere.map { it.fornavn }).containsExactly("Synlig")
     }
 
     @Test
