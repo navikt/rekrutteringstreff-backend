@@ -604,8 +604,11 @@ WorkOp. Treffgjennomføringen henter jobbsøkere fra et eget endepunkt,
 `POST …/treffgjennomforing-og-oppfolging/jobbsokere`, som krever eier eller
 utvikler og har en egen DTO med bare de feltene som trengs. Endepunktet tar
 med usynlige bare for WorkOp, og holder alltid slettede og personer med
-adressebeskyttelse (`sperret`) utenfor. Jobbsøkersøket tar aldri med usynlige,
-og et gammelt valg `inkluderSkjulte` i forespørselen blir ignorert.
+adressebeskyttelse (`sperret`) utenfor. Endepunktet leser tabellene
+`jobbsoker` og `rekrutteringstreff` direkte. Jobbsøkersøket bruker fortsatt
+`jobbsoker_sok_view`, som er uendret og bare har synlige. Jobbsøkerlisten kan
+derfor ikke få med usynlige, og et gammelt valg `inkluderSkjulte` i
+forespørselen blir ignorert.
 Hendelsesoversikten for et WorkOp-treff tar med usynlige, men ikke usynlige
 som er slettet. Detaljer vises bare for hendelsene fra treffgjennomføringen,
 ikke for for eksempel varsler, som kan inneholde fødselsnummer. Den viser fødselsnummer bare for synlige, og navn ikke for personer med
@@ -614,12 +617,8 @@ jobbsøkerlisten er uendret. Komponenttester dekker søket, hendelsene og
 oppmøtet, og at vanlige treff er uendret. WorkOp kan ikke opprettes i
 produksjon, så endringen gir ingen ny eksponering der før piloten.
 
-**Utrulling:** Jobbsøkersøkets view tar nå med usynlige, og koden filtrerer
-selv. Eldre versjoner av appen stoler på at viewet filtrerer. Under en
-rullerende oppdatering kan gamle pods derfor vise usynlige i jobbsøkerlisten
-et kort øyeblikk. Endringen tas ut når det er lite trafikk, og viewet skal
-aldri ut før koden. En deploy fra main til dev underveis tilbakestiller
-viewet uten feil, og branchen må da deployes på nytt.
+**Utrulling:** Ingen databaseendring. Viewet for jobbsøkersøket er uendret,
+så rekkefølgen på deploy av main og branch spiller ingen rolle.
 
 **Restrisiko:** Eiere ser navn og registreringer for personer som ikke lenger
 oppfyller kravene til synlighet, og kan registrere nye opplysninger om dem.

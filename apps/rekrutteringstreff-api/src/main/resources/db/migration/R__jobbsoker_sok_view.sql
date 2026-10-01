@@ -14,10 +14,7 @@ SELECT
     opprettet.aktøridentifikasjon AS lagt_til_av,
     opprettet.hendelse_data ->> 'lagtTilAvNavn' AS lagt_til_av_navn,
     j.alder,
-    j.kontornummer,
-    j.er_synlig,
-    j.sperret,
-    rt.kategori AS treff_kategori
+    j.kontornummer
 FROM jobbsoker j
 JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
 LEFT JOIN LATERAL (
@@ -31,4 +28,5 @@ LEFT JOIN LATERAL (
     ORDER BY jh.tidspunkt ASC
     LIMIT 1
 ) opprettet ON true
-WHERE j.status != 'SLETTET';
+WHERE j.er_synlig = true
+  AND j.status != 'SLETTET';

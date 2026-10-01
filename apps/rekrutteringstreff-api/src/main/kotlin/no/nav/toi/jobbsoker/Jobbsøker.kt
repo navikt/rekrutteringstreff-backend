@@ -118,13 +118,8 @@ data class Jobbsøker(
 
     fun harSvart(): Boolean = gjeldendeSvar() != null
 
-    /** Om jobbsøkeren har svart ja. Oppmøte og formidling overskriver statusen, men ikke svaret. */
     fun harSvartJa(): Boolean = gjeldendeSvar() == true
 
-    /**
-     * Svaret jobbsøkeren sist ga, eller `null` når det ikke er svart eller svaret er fjernet.
-     * Ved oppmøte eller formidling hentes svaret fra siste svarhendelse.
-     */
     fun gjeldendeSvar(): Boolean? = when (status) {
         JobbsøkerStatus.SVART_JA -> true
         JobbsøkerStatus.SVART_NEI -> false

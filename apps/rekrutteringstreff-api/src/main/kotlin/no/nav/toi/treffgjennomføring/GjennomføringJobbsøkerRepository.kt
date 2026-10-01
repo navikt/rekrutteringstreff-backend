@@ -1,8 +1,6 @@
 package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.jobbsoker.JobbsøkerStatus
-import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringsfelt
-import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringsretning
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkerDto
 import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkereRequestDto
@@ -16,10 +14,9 @@ class GjennomføringJobbsøkerRepository {
     companion object {
         private const val QUERY_TIMEOUT_SECONDS = 10
 
-        // Slettede er alltid utelatt i viewet. Usynlige tas bare med på WorkOp, og sperrede
-        // (adressebeskyttelse) aldri. Vanlige treff er uendret til regelen er avklart i ROS (WO-14).
+        private const val FRA = "FROM jobbsoker j JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id"
         private const val VISES =
-            "v.treff_id = ? AND (v.er_synlig = true OR (v.treff_kategori = 'WORKOP' AND v.sperret = false))"
+            "rt.id = ? AND j.status != 'SLETTET' AND (j.er_synlig = true OR (rt.kategori = 'WORKOP' AND j.sperret = false))"
     }
 
     fun hentSide(
@@ -29,8 +26,8 @@ class GjennomføringJobbsøkerRepository {
     ): GjennomføringJobbsøkersideDto {
         val statuser = request.status.orEmpty()
         val statusfilter =
-            if (statuser.isEmpty()) "" else " AND v.status IN (${statuser.joinToString(",") { "?" }})"
-        val totalt = connection.spør("SELECT count(*) FROM jobbsoker_sok_view v WHERE $VISES$statusfilter", treffId, statuser) { rs ->
+            if (statuser.isEmpty()) "" else " AND j.status IN (${statuser.joinToString(",") { "?" }})"
+        val totalt = connection.spør("SELECT count(*) $FRA WHERE $VISES$statusfilter", treffId, statuser) { rs ->
             rs.next()
             rs.getLong(1)
         }
@@ -44,7 +41,7 @@ class GjennomføringJobbsøkerRepository {
     }
 
     private fun hentAntallPerStatus(connection: Connection, treffId: TreffId): Map<JobbsøkerStatus, Int> =
-        connection.spør("SELECT v.status, count(*) AS antall FROM jobbsoker_sok_view v WHERE $VISES GROUP BY v.status", treffId) { rs ->
+        connection.spør("SELECT j.status, count(*) AS antall $FRA WHERE $VISES GROUP BY j.status", treffId) { rs ->
             buildMap {
                 while (rs.next()) put(JobbsøkerStatus.valueOf(rs.getString("status")), rs.getInt("antall"))
             }
@@ -59,10 +56,10 @@ class GjennomføringJobbsøkerRepository {
         antallPerSide: Int,
     ): List<GjennomføringJobbsøkerDto> {
         val sql = """
-            SELECT v.person_treff_id::text, v.fornavn, v.etternavn, v.status, v.er_synlig, v.fodselsnummer
-            FROM jobbsoker_sok_view v
+            SELECT j.id::text AS person_treff_id, j.fornavn, j.etternavn, j.status, j.er_synlig, j.fodselsnummer
+            $FRA
             WHERE $VISES$statusfilter
-            ORDER BY ${JobbsøkerSorteringsfelt.NAVN.sql(JobbsøkerSorteringsretning.ASC)}
+            ORDER BY LOWER(j.etternavn), LOWER(j.fornavn), j.jobbsoker_id DESC
             LIMIT ? OFFSET ?
         """.trimIndent()
         return connection.spør(sql, treffId, statuser, antallPerSide.toLong(), (side - 1).toLong() * antallPerSide) { rs ->

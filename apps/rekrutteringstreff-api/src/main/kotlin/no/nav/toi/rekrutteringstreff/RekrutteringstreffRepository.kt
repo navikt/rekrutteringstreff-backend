@@ -223,9 +223,8 @@ class RekrutteringstreffRepository(
         }
 
     /**
-     * På WorkOp tas usynlige jobbsøkere med, slik at hendelsene fra treffgjennomføringen er komplette.
-     * Usynlige som også er slettet, utelates. Fødselsnummeret vises bare for synlige, og personer med
-     * adressebeskyttelse vises uten navn. Vanlige treff er uendret til regelen er avklart i ROS (WO-14).
+     * Vi tar med data for usynlige jobbsøkere i hendelser, men i første omgang bare for workop, vi kan gjøre dette fellles senere,
+     * men det er workop med sin treffgjennomføring som først og fremst trenger dette.
      */
     private val jobbsøkerVises =
         "(js.er_synlig = TRUE OR (r.kategori = 'WORKOP' AND js.status != 'SLETTET'))"
@@ -329,7 +328,6 @@ class RekrutteringstreffRepository(
         }
 
 
-    /** Bare detaljene fra treffgjennomføringen. Varseldata og lignende holdes utenfor oversikten. */
     private val hendelsetyperMedDetaljer = setOf(
         JobbsøkerHendelsestype.REGISTRERT_OPPMØTE,
         JobbsøkerHendelsestype.VURDERT,
