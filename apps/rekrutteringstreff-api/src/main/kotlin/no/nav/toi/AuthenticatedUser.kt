@@ -44,6 +44,7 @@ interface AuthenticatedUser {
     fun extractPid(): String
     fun innkommendeToken(): String
     fun erUtvikler(): Boolean = false
+    fun harRolle(rolle: Rolle): Boolean = false
     val erBorger: Boolean get() = false
     val erNavAnsatt: Boolean get() = false
 
@@ -104,6 +105,7 @@ private class AuthenticatedNavUser(
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
     override fun innkommendeToken() = token
     override fun erUtvikler() = roller.any { it == Rolle.UTVIKLER }
+    override fun harRolle(rolle: Rolle) = rolle in roller
     override val erNavAnsatt = true
 }
 

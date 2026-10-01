@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -194,6 +195,58 @@ class JobbsøkerRepositoryTest {
 
         val ikkeEksisterendeJobbsøker = repository.hentJobbsøker(treffId, Fødselsnummer("99999999999"))
         assertThat(ikkeEksisterendeJobbsøker).isNull()
+    }
+
+    @Test
+    fun `henter treff for jobbsøker med status unntatt lagt til og slettet`() {
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val starttidspunkt = java.time.ZonedDateTime.parse("2026-10-10T09:00:00+02:00")
+        val treff = db.opprettRekrutteringstreffMedAlleFelter(
+            tittel = "Invitert treff",
+            fraTid = starttidspunkt,
+        )
+        val invitert = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer,
+                    Fornavn("Kari"),
+                    Etternavn("Nordmann"),
+                    Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
+                )
+            ),
+            treff,
+            opprettetAv = "NAV123",
+            lagtTilAvNavn = "Navn på veileder",
+        ).single()
+        db.inviterJobbsøkere(listOf(invitert), treff)
+
+        val lagtTilTreff = db.opprettRekrutteringstreffMedAlleFelter(tittel = "Kun lagt til")
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(fødselsnummer, Fornavn("Kari"), Etternavn("Nordmann"))),
+            lagtTilTreff,
+        )
+
+        val slettetTreff = db.opprettRekrutteringstreffMedAlleFelter(tittel = "Slettet treff")
+        val slettet = db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(fødselsnummer, Fornavn("Kari"), Etternavn("Nordmann"))),
+            slettetTreff,
+        ).single()
+        db.dataSource.connection.use { connection ->
+            repository.endreStatus(connection, slettet, JobbsøkerStatus.SLETTET)
+        }
+
+        val resultat = repository.hentRekrutteringstreffForJobbsøker(fødselsnummer)
+
+        assertThat(resultat).hasSize(1)
+        assertThat(resultat.single().tittel).isEqualTo("Invitert treff")
+        assertThat(resultat.single().status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        assertThat(resultat.single().treffStartTidspunkt).isEqualTo(starttidspunkt.toInstant())
+        assertThat(resultat.single().lagtTilTidspunkt).isNotNull()
+        assertThat(resultat.single().lagtTilAvNavn).isEqualTo("Navn på veileder")
+        assertThat(resultat.single().lagtTilAvIdent).isEqualTo("NAV123")
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000"))).hasSize(1)
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("9999"))).isEmpty()
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, emptyList())).isEmpty()
     }
 
     @Test
