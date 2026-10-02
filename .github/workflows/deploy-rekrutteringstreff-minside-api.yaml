@@ -1,4 +1,7 @@
 name: rekrutteringstreff-minside-api
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 on:
   push:
@@ -16,7 +19,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/oppgrader-avhengigheter
+      deploy_dev_branch: refs/heads/autobump-docker-baseimage
     permissions:
       contents: read
       id-token: write

@@ -4,6 +4,10 @@ on:
       app_name:
         required: true
         type: string
+      baseimage-tagged-ref:
+        required: false
+        type: string
+        default: 'europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/jre:openjdk-25'
       deploy_dev_branch:
         required: false
         type: string
@@ -18,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.docker-build-push.outputs.image }}
+      baseimage-digest: ${{ steps.baseimage.outputs.baseimage-digest }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,6 +40,43 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew :apps:${INPUTS_APP_NAME}:test :apps:${INPUTS_APP_NAME}:build
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-report
+          path: apps/${{ inputs.app_name }}/build/reports/tests/test
+      - uses: nais/login@bb6c3e1e14e53d40d69d0d092bd2fce2e39ae3bf # v0
+        with:
+          team: toi
+      - name: Finn digest for runtime-baseimage
+        id: baseimage
+        env:
+          BASEIMAGE_TAGGED_REF: ${{ inputs.baseimage-tagged-ref }}
+          DOCKERFILE: apps/${{ inputs.app_name }}/Dockerfile
+        run: |
+          set -euo pipefail
+
+          # Sikre at digesten som lagres, gjelder runtime-basen som faktisk bygges.
+          runtime_from=$(awk 'toupper($1) == "FROM" { image = $2 ~ /^--platform=/ ? $3 : $2 } END { print image }' "$DOCKERFILE")
+          if [[ "$runtime_from" != '$BASE_IMAGE_DIGEST_PINNED_REF' && "$runtime_from" != '${BASE_IMAGE_DIGEST_PINNED_REF}' ]]; then
+            echo "::error::Siste FROM i Dockerfile må bruke BASE_IMAGE_DIGEST_PINNED_REF som build-argument"
+            exit 1
+          fi
+
+          if [[ ! "$BASEIMAGE_TAGGED_REF" =~ ^[^[:space:]@]+:[^[:space:]@]+$ ]]; then
+            echo "::error::baseimage-tagged-ref må være en full image-referanse med tag, uten digest"
+            exit 1
+          fi
+
+          baseimage_digest=$( docker buildx imagetools inspect "$BASEIMAGE_TAGGED_REF" | awk '$1 == "Digest:" && !found { print $2; found = 1 }' )
+          if [[ -z "$baseimage_digest" || ! "$baseimage_digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Fant ingen gyldig SHA-256-digest for runtime-baseimaget: $BASEIMAGE_TAGGED_REF" >&2
+            exit 1
+          fi
+
+          echo "baseimage-digest=$baseimage_digest" >> "$GITHUB_OUTPUT"
+          echo "baseimage-digest-pinned-ref=$BASEIMAGE_TAGGED_REF@$baseimage_digest" >> "$GITHUB_OUTPUT"
       - name: Push docker image to GAR
         uses: nais/docker-build-push@2d2b0a7193e65422b7f0355d4afb445e0a8b2cc3 # v0
         id: docker-build-push
@@ -46,6 +88,7 @@ jobs:
           tag: ${{ github.ref == 'refs/heads/main' && 'latest' || github.sha }}
           build_args: |
             APP_NAME=${{ inputs.app_name }}
+            BASE_IMAGE_DIGEST_PINNED_REF=${{ steps.baseimage.outputs.baseimage-digest-pinned-ref }}
 
   deploy-to-dev-gcp:
     name: Deploy to dev-gcp
@@ -78,3 +121,12 @@ jobs:
           RESOURCE: apps/${{ inputs.app_name }}/.nais/nais.yaml,apps/${{ inputs.app_name }}/.nais/alerts.yaml
           VARS: apps/${{ inputs.app_name }}/.nais/prod-gcp.yaml
           VAR: image=${{ needs.build-and-publish.outputs.image }}
+
+  call-lagre-docker-baseimage-digest:
+    needs: [ build-and-publish, deploy-to-prod-gcp ]
+    uses: navikt/toi-github-actions-workflows/.github/workflows/lagre-docker-baseimage-digest.yaml@v16
+    with:
+      app-navn: ${{ inputs.app_name }}
+      baseimage-tagged-ref: ${{ inputs.baseimage-tagged-ref }}
+      baseimage-digest: ${{ needs.build-and-publish.outputs.baseimage-digest }}
+    permissions: { }

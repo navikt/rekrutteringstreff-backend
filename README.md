@@ -1,5 +1,12 @@
 # rekrutteringstreff-backend
 
+## Bygg og deploy
+
+### Automatisk oppdatering av Docker run-time base-image
+
+Hver app har en scheduled workflow `oppdater-docker-baseimage-<app>.yaml` som potensielt bygger og deployer appen til prod ukentlig, uten manuelle trinn.
+Hensikten med det er å få med nye patcher av sikkerhets-issues i appens Docker run-time base-image.
+
 ## Swagger
 
 URL; https://rekrutteringstreff-api.intern.dev.nav.no/swagger
