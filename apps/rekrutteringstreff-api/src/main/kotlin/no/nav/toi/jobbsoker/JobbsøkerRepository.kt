@@ -19,6 +19,8 @@ internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
 
 data class JobbsøkerSlettestatus(val jobbsøkerId: Long, val status: JobbsøkerStatus)
 
+data class LåstAktuellForTreffStatus(val aktuellForTreffStatus: AktuellForTreffStatus?)
+
 data class JobbsøkerTreffHistorikk(
     val id: UUID?,
     val tittel: String,
@@ -301,6 +303,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.innsatsgruppe,
                     js.kontornummer,
                     js.status,
+                    js.aktuell_for_treff_status,
                     js.sperret,
                     rt.id as treff_id
                 FROM jobbsoker js
@@ -333,6 +336,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 js.innsatsgruppe,
                 js.kontornummer,
                 js.status,
+                js.aktuell_for_treff_status,
                 js.sperret,
                 rt.id as treff_id,
                 COALESCE(
@@ -496,6 +500,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.valueOf(getString("status")),
+        aktuellForTreffStatus = getString("aktuell_for_treff_status")?.let(AktuellForTreffStatus::valueOf),
         hendelser = parseHendelser(getString("hendelser")),
         alder = nullableInt("alder"),
         innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
@@ -512,6 +517,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.valueOf(getString("status")),
+        aktuellForTreffStatus = getString("aktuell_for_treff_status")?.let(AktuellForTreffStatus::valueOf),
         alder = nullableInt("alder"),
         innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
         sperret = getBoolean("sperret"),
@@ -598,6 +604,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.innsatsgruppe,
                     js.kontornummer,
                     js.status,
+                    js.aktuell_for_treff_status,
                     js.sperret,
                     rt.id as treff_id,
                     COALESCE(
@@ -694,6 +701,57 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.executeUpdate()
         }
     }
+
+    fun hentAktuellForTreffStatusForOppdatering(
+        connection: Connection,
+        treffId: TreffId,
+        personTreffId: PersonTreffId,
+    ): LåstAktuellForTreffStatus? =
+        connection.prepareStatement(
+            """
+            SELECT j.aktuell_for_treff_status FROM jobbsoker j
+            JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
+            WHERE rt.id = ? AND j.id = ? AND j.status != 'SLETTET' AND j.er_synlig = TRUE
+            FOR UPDATE OF j
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.setObject(2, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) LåstAktuellForTreffStatus(
+                    rs.getString("aktuell_for_treff_status")?.let(AktuellForTreffStatus::valueOf)
+                ) else null
+            }
+        }
+
+    fun endreAktuellForTreffStatus(
+        connection: Connection,
+        personTreffId: PersonTreffId,
+        aktuellForTreffStatus: AktuellForTreffStatus?,
+    ) {
+        connection.prepareStatement("UPDATE jobbsoker SET aktuell_for_treff_status = ? WHERE id = ?").use { stmt ->
+            stmt.setString(1, aktuellForTreffStatus?.name)
+            stmt.setObject(2, personTreffId.somUuid)
+            stmt.executeUpdate()
+        }
+    }
+
+    fun leggTilAktuellForTreffStatusHendelse(
+        connection: Connection,
+        personTreffId: PersonTreffId,
+        nyAktuellForTreffStatus: AktuellForTreffStatus?,
+        forrigeAktuellForTreffStatus: AktuellForTreffStatus?,
+        navIdent: String,
+    ) = leggTilHendelse(
+        connection,
+        personTreffId,
+        JobbsøkerHendelsestype.AKTUELL_FOR_TREFF_STATUS_ENDRET,
+        AktørType.ARRANGØR,
+        navIdent,
+        mapper.writeValueAsString(
+            mapOf("aktuellForTreffStatus" to nyAktuellForTreffStatus?.name, "forrigeAktuellForTreffStatus" to forrigeAktuellForTreffStatus?.name)
+        ),
+    )
 
     /**
      * Henter distinkte fødselsnumre for jobbsøkere der synlighet ikke er evaluert ennå.

@@ -90,6 +90,7 @@ class AutentiseringAlleEndepunkterTest {
         SvarForJobbsøker(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/{jobbsokerid}/svar"),
         HentJobbsøkerHendelser(Metode.GET, "/api/rekrutteringstreff/{id}/jobbsoker/hendelser"),
         InviterJobbsøkere(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/inviter"),
+        EndreAktuellForTreffStatus(Metode.PUT, "/api/rekrutteringstreff/{id}/jobbsoker/{jobbsokerid}/aktuell-for-treff-status"),
         FormidlingEgne(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/egne"),
         FormidlingMittKontor(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/mittkontor"),
         FormidlingAlle(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/alle"),

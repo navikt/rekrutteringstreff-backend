@@ -118,6 +118,7 @@ class JobbsøkerRepositoryTest {
                 VeilederNavn("Veileder1"),
                 VeilederNavIdent("NAV1"),
                 JobbsøkerStatus.INVITERT,
+                null
             )
         )
         val js2 = listOf(
@@ -131,6 +132,7 @@ class JobbsøkerRepositoryTest {
                 VeilederNavn("Veileder1"),
                 VeilederNavIdent("NAV1"),
                 JobbsøkerStatus.INVITERT,
+                null
             ),
             Jobbsøker(
                 PersonTreffId(UUID.randomUUID()),
@@ -142,6 +144,7 @@ class JobbsøkerRepositoryTest {
                 VeilederNavn("Veileder2"),
                 VeilederNavIdent("NAV2"),
                 JobbsøkerStatus.INVITERT,
+                null
             )
         )
         db.leggTilJobbsøkere(js1)
@@ -341,6 +344,7 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.INVITERT,
+                aktuellForTreffStatus = null
             ),
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -352,6 +356,7 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.SVART_JA,
+                aktuellForTreffStatus = null
             ),
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -363,6 +368,7 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.SVART_JA,
+                aktuellForTreffStatus = null
             ),
              Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -374,6 +380,7 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.FÅTT_JOBB,
+                 aktuellForTreffStatus = null
             )
         )
         db.leggTilJobbsøkere(jobbsøkere)
@@ -396,6 +403,7 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.INVITERT,
+                aktuellForTreffStatus = null
             ),
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -407,6 +415,7 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.FÅTT_JOBB,
+                aktuellForTreffStatus = null
             ),
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -418,6 +427,7 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.FÅTT_JOBB,
+                aktuellForTreffStatus = null
             ),
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -429,6 +439,7 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.FÅTT_JOBB,
+                aktuellForTreffStatus = null
             ),
         )
         db.leggTilJobbsøkere(jobbsøkere)
@@ -732,5 +743,52 @@ class JobbsøkerRepositoryTest {
         assertThat(ikkeSynligMenInkludertJobbsøker).isNotNull
         assertThat(ikkeSynligMenInkludertJobbsøker?.fødselsnummer).isEqualTo(fnr)
     }
+
+    @Test
+    fun `hentJobbsøkere håndterer at aktuellForTreffStatus er null`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        db.leggTilJobbsøkere(listOf(testjobbsøker(treffId, aktuellForTreffStatus = null)))
+
+        assertThat(repository.hentJobbsøkere(treffId).single().aktuellForTreffStatus).isNull()
+    }
+
+    @Test
+    fun `hentJobbsøkere og hentJobbsøker leser aktuellForTreffStatus`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = Fødselsnummer("12345678901")
+        db.leggTilJobbsøkere(listOf(testjobbsøker(treffId, fnr, AktuellForTreffStatus.KONTAKTET)))
+
+        assertThat(repository.hentJobbsøkere(treffId).single().aktuellForTreffStatus)
+            .isEqualTo(AktuellForTreffStatus.KONTAKTET)
+        assertThat(repository.hentJobbsøker(treffId, fnr)?.aktuellForTreffStatus)
+            .isEqualTo(AktuellForTreffStatus.KONTAKTET)
+    }
+
+    @Test
+    fun `endreAktuellForTreffStatus setter og fjerner verdien`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        db.leggTilJobbsøkere(listOf(testjobbsøker(treffId)))
+        val personTreffId = repository.hentJobbsøkere(treffId).single().personTreffId
+
+        db.dataSource.connection.use {
+            repository.endreAktuellForTreffStatus(it, personTreffId, AktuellForTreffStatus.AKTUELL)
+        }
+        assertThat(repository.hentJobbsøkere(treffId).single().aktuellForTreffStatus)
+            .isEqualTo(AktuellForTreffStatus.AKTUELL)
+
+        db.dataSource.connection.use { repository.endreAktuellForTreffStatus(it, personTreffId, null) }
+        assertThat(repository.hentJobbsøkere(treffId).single().aktuellForTreffStatus).isNull()
+    }
+
+    private fun testjobbsøker(
+        treffId: TreffId,
+        fnr: Fødselsnummer = Fødselsnummer("12345678901"),
+        aktuellForTreffStatus: AktuellForTreffStatus? = null,
+    ) = Jobbsøker(
+        PersonTreffId(UUID.randomUUID()), treffId, fnr,
+        Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+        JobbsøkerStatus.LAGT_TIL,
+        aktuellForTreffStatus,
+    )
 
 }

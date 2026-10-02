@@ -181,6 +181,14 @@ class JobbsokerControllerAutorisasjonsTest {
                 )
             }
         ),
+        endreAktuellForTreffStatus(
+            { "http://localhost:${appPort}/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/jobbsoker/${gyldigJobbsøkerId.somString}/aktuell-for-treff-status" },
+            {
+                HttpRequest.newBuilder()
+                    .header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString("""{ "aktuellForTreffStatus": "AKTUELL" }"""))
+            }
+        ),
     }
 
     enum class Gruppe(val somStringListe: List<UUID>) {
@@ -220,6 +228,11 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.inviterJobbsøker, Gruppe.Arbeidsgiverrettet, HTTP_OK),
         Arguments.of(Endepunkt.inviterJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.inviterJobbsøker, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.Utvikler, HTTP_OK),
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
     ).stream()
 
 
@@ -260,6 +273,11 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.svarForJobbsøker, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.svarForJobbsøker, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
 
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.endreAktuellForTreffStatus, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
         ).stream()
 
     private fun leggTilCaserPerKategori() = RekrutteringstreffKategori.entries.flatMap { kategori ->

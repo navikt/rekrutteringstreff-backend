@@ -18,6 +18,7 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
     JsonSubTypes.Type(NotatHendelseDataDto::class),
     JsonSubTypes.Type(AvtaltIntervjuHendelseDataDto::class),
     JsonSubTypes.Type(ArbeidsgiverkontekstDataDto::class),
+    JsonSubTypes.Type(AktuellForTreffStatusHendelseDataDto::class),
 )
 @OneOf(
     MinsideVarselSvarDataDto::class,
@@ -25,6 +26,7 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
     OppmøteRegistrertDataDto::class,
     VurderingHendelseDataDto::class,
     NotatHendelseDataDto::class,
+    AktuellForTreffStatusHendelseDataDto::class,
     AvtaltIntervjuHendelseDataDto::class,
     ArbeidsgiverkontekstDataDto::class,
 )
@@ -87,6 +89,13 @@ data class ArbeidsgiverkontekstDataDto(
     val arbeidsgiverTreffId: String? = null,
 ) : HendelseDataDto
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
+@OpenApiName("AktuellForTreffStatusHendelseData")
+data class AktuellForTreffStatusHendelseDataDto(
+    val aktuellForTreffStatus: String? = null,
+    val forrigeAktuellForTreffStatus: String? = null,
+) : HendelseDataDto
+
 private fun målklasse(hendelsestype: JobbsøkerHendelsestype): Class<out HendelseDataDto>? =
     when (hendelsestype) {
         JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE -> MinsideVarselSvarDataDto::class.java
@@ -100,6 +109,7 @@ private fun målklasse(hendelsestype: JobbsøkerHendelsestype): Class<out Hendel
         JobbsøkerHendelsestype.AVTALT_INTERVJU_ANGRET,
         JobbsøkerHendelsestype.JOBBTILBUD_GITT,
         JobbsøkerHendelsestype.ANGRE_JOBBTILBUD_GITT -> ArbeidsgiverkontekstDataDto::class.java
+        JobbsøkerHendelsestype.AKTUELL_FOR_TREFF_STATUS_ENDRET -> AktuellForTreffStatusHendelseDataDto::class.java
         else -> null
     }
 

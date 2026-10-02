@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker.sok
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
+import no.nav.toi.jobbsoker.AktuellForTreffStatus
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import java.time.Instant
 
@@ -31,6 +32,7 @@ enum class JobbsøkerSorteringsfelt {
     LAGT_TIL,
     STATUS,
     KONTOR,
+    AKTUELL_FOR_TREFF_STATUS,
     ;
 
     @JsonValue
@@ -39,6 +41,7 @@ enum class JobbsøkerSorteringsfelt {
         LAGT_TIL -> "lagt-til"
         STATUS -> "status"
         KONTOR -> "kontor"
+        AKTUELL_FOR_TREFF_STATUS -> "aktuell-for-treff-status"
     }
 
     val standardRetning: JobbsøkerSorteringsretning
@@ -47,6 +50,7 @@ enum class JobbsøkerSorteringsfelt {
             NAVN -> JobbsøkerSorteringsretning.ASC
             STATUS -> JobbsøkerSorteringsretning.ASC
             KONTOR -> JobbsøkerSorteringsretning.ASC
+            AKTUELL_FOR_TREFF_STATUS -> JobbsøkerSorteringsretning.ASC
         }
 
     private fun statusSorteringSql(retning: JobbsøkerSorteringsretning): String {
@@ -66,12 +70,30 @@ enum class JobbsøkerSorteringsfelt {
         return "CASE v.status $caseSql ELSE 999 END ${retning.sql}, v.jobbsoker_id ${retning.sql}"
     }
 
+
+    private fun aktuellForTreffStatusSorteringSql(retning: JobbsøkerSorteringsretning): String {
+        val sortertRekkefølge = listOf(
+            AktuellForTreffStatus.AKTUELL,
+            AktuellForTreffStatus.KONTAKTET,
+            AktuellForTreffStatus.VURDERES,
+            AktuellForTreffStatus.IKKE_AKTUELL,
+        )
+        val caseSql = sortertRekkefølge
+            .mapIndexed { index, status -> "WHEN '${status.name}' THEN ${index + 1}" }
+            .joinToString(" ")
+
+        return "v.aktuell_for_treff_status IS NULL, " +
+                "CASE v.aktuell_for_treff_status $caseSql ELSE 999 END ${retning.sql}, " +
+                "v.jobbsoker_id ${retning.sql}"
+    }
+
     fun sql(retning: JobbsøkerSorteringsretning): String =
         when (this) {
             NAVN -> "LOWER(v.etternavn) ${retning.sql}, LOWER(v.fornavn) ${retning.sql}, v.lagt_til_dato DESC NULLS LAST, v.jobbsoker_id DESC"
             LAGT_TIL -> "v.lagt_til_dato ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
             STATUS -> statusSorteringSql(retning)
             KONTOR -> "v.kontornummer ${retning.sql} NULLS LAST, LOWER(v.etternavn) ASC, LOWER(v.fornavn) ASC, v.jobbsoker_id DESC"
+            AKTUELL_FOR_TREFF_STATUS -> aktuellForTreffStatusSorteringSql(retning)
         }
 
     companion object {
@@ -83,6 +105,7 @@ enum class JobbsøkerSorteringsfelt {
                 "lagt-til" -> LAGT_TIL
                 "status" -> STATUS
                 "kontor" -> KONTOR
+                "aktuell-for-treff-status" -> AKTUELL_FOR_TREFF_STATUS
                 else -> throw IllegalArgumentException("Ugyldig sortering: $verdi")
             }
     }
@@ -111,6 +134,7 @@ enum class Aldersgruppe(val sql: String) {
 data class JobbsøkerSøkRequest(
     val fritekst: String? = null,
     val status: List<JobbsøkerStatus>? = null,
+    val aktuellForTreffStatus: List<AktuellForTreffStatus>? = null,
     val aldersgruppe: List<Aldersgruppe>? = null,
     val kontornummer: List<String>? = null,
     @JsonProperty("sortering")
@@ -128,6 +152,7 @@ data class JobbsøkerSøkRespons(
     val side: Int,
     val jobbsøkere: List<JobbsøkerSøkTreff>,
     val antallPerStatus: Map<JobbsøkerStatus, Int> = emptyMap(),
+    val antallPerAktuellForTreffStatus: Map<AktuellForTreffStatus, Int> = emptyMap(),
     val antallPerAldersgruppe: Map<Aldersgruppe, Int> = emptyMap(),
     val antallPerKontor: Map<String, Int> = emptyMap(),
 )
@@ -138,6 +163,7 @@ data class JobbsøkerSøkTreff(
     val fornavn: String?,
     val etternavn: String?,
     val status: JobbsøkerStatus,
+    val aktuellForTreffStatus: AktuellForTreffStatus? = null,
     val lagtTilDato: Instant?,
     val lagtTilAv: String?,
     val lagtTilAvNavn: String?,

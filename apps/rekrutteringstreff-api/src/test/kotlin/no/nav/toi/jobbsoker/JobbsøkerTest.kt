@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
+import no.nav.toi.jobbsoker.dto.AktuellForTreffStatusHendelseDataDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.MinsideVarselSvarDataDto
 import no.nav.toi.jobbsoker.dto.RekrutteringstreffendringerDto
@@ -223,14 +224,14 @@ class JobbsøkerTest {
         val veilederNavIdent2 = VeilederNavIdent("NAV002")
         val veilederNavIdent3 = VeilederNavIdent("NAV003")
         val jobbsøkere1 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId1, fnr1, fornavn1, etternavn1, kontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId1, fnr1, fornavn1, etternavn1, kontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL, null)
         )
         val jobbsøkere2 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr2, fornavn2, etternavn2, kontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL),
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr3, fornavn3, etternavn3, kontor2, veilederNavn2, veilederNavIdent2, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr2, fornavn2, etternavn2, kontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL, null),
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr3, fornavn3, etternavn3, kontor2, veilederNavn2, veilederNavIdent2, JobbsøkerStatus.LAGT_TIL, null)
         )
         val jobbsøkere3 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId3, fnr4, fornavn4, etternavn4, kontor3, veilederNavn3, veilederNavIdent3, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId3, fnr4, fornavn4, etternavn4, kontor3, veilederNavn3, veilederNavIdent3, JobbsøkerStatus.LAGT_TIL, null)
         )
         db.leggTilJobbsøkere(jobbsøkere1)
         db.leggTilJobbsøkere(jobbsøkere2)
@@ -317,12 +318,12 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.fornavn, input1.etternavn, input1.kontor, input1.veilederNavn, input1.veilederNavIdent, JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.fornavn, input1.etternavn, input1.kontor, input1.veilederNavn, input1.veilederNavIdent, JobbsøkerStatus.LAGT_TIL, null)
             )
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.fornavn, input2.etternavn, input2.kontor, input2.veilederNavn, input2.veilederNavIdent,JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.fornavn, input2.etternavn, input2.kontor, input2.veilederNavn, input2.veilederNavIdent,JobbsøkerStatus.LAGT_TIL, null)
             )
         )
         ctx.eierRepository.leggTil(treffId, "A123456", "0315")
@@ -360,8 +361,8 @@ class JobbsøkerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr1, Fornavn("Fornavn1"), Etternavn("Etternavn1"), null, null, null, JobbsøkerStatus.LAGT_TIL),
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr2, Fornavn("Fornavn2"), Etternavn("Etternavn2"), null, null, null, JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr1, Fornavn("Fornavn1"), Etternavn("Etternavn1"), null, null, null, JobbsøkerStatus.LAGT_TIL, null),
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr2, Fornavn("Fornavn2"), Etternavn("Etternavn2"), null, null, null, JobbsøkerStatus.LAGT_TIL, null)
             )
         )
 
@@ -419,7 +420,8 @@ class JobbsøkerTest {
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null,
-            JobbsøkerStatus.LAGT_TIL
+            JobbsøkerStatus.LAGT_TIL,
+            null
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
 
@@ -461,7 +463,8 @@ class JobbsøkerTest {
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null,
-            JobbsøkerStatus.LAGT_TIL
+            JobbsøkerStatus.LAGT_TIL,
+            null
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
 
@@ -548,7 +551,8 @@ class JobbsøkerTest {
         val jobbsøker = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, fnr,
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
-            JobbsøkerStatus.INVITERT
+            JobbsøkerStatus.INVITERT,
+            null
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
         val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
@@ -578,7 +582,8 @@ class JobbsøkerTest {
         val jobbsøker = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, fnr,
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
-            JobbsøkerStatus.INVITERT
+            JobbsøkerStatus.INVITERT,
+            null
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
         val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
@@ -608,7 +613,8 @@ class JobbsøkerTest {
         val jobbsøker = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, fnr,
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
-            JobbsøkerStatus.SVART_JA
+            JobbsøkerStatus.SVART_JA,
+            null
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
         val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
@@ -625,6 +631,118 @@ class JobbsøkerTest {
         assertThat(response.statusCode()).isEqualTo(HTTP_OK)
         val jobbsøkere = db.hentAlleJobbsøkere()
         assertThat(jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.INVITERT)
+    }
+
+    private val testeierIdent = "A123456"
+
+    private fun opprettJobbsøkerOgRegistrerEierPåTreff(
+        status: JobbsøkerStatus = JobbsøkerStatus.LAGT_TIL,
+        aktuellForTreffStatus: AktuellForTreffStatus? = null,
+    ): Pair<TreffId, PersonTreffId> {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val personTreffId = PersonTreffId(UUID.randomUUID())
+        db.leggTilJobbsøkere(listOf(Jobbsøker(
+            personTreffId, treffId, Fødselsnummer("12312312312"),
+            Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+            status, aktuellForTreffStatus,
+        )))
+        ctx.eierRepository.leggTil(treffId, testeierIdent, "0315")
+        return treffId to personTreffId
+    }
+
+    private fun endreAktuellForTreffStatus(treffId: TreffId, personTreffId: PersonTreffId, verdi: String?) =
+        httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/$personTreffId/aktuell-for-treff-status",
+            """{ "aktuellForTreffStatus": ${verdi?.let { "\"$it\"" } ?: "null"} }""",
+            infra.authServer.lagToken(infra.authPort, navIdent = testeierIdent).serialize(),
+        )
+
+    private fun aktuellForTreffStatusHendelser(treffId: TreffId) =
+        db.hentJobbsøkerHendelser(treffId)
+            .filter { it.hendelsestype == JobbsøkerHendelsestype.AKTUELL_FOR_TREFF_STATUS_ENDRET }
+
+    @Test
+    fun `eier kan sette aktuellForTreffStatus og det skrives hendelse`() {
+        val (treffId, personTreffId) = opprettJobbsøkerOgRegistrerEierPåTreff()
+
+        val response = endreAktuellForTreffStatus(treffId, personTreffId, "AKTUELL")
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        assertThat(db.hentAlleJobbsøkere().single().aktuellForTreffStatus).isEqualTo(AktuellForTreffStatus.AKTUELL)
+        val hendelse = aktuellForTreffStatusHendelser(treffId).single()
+        assertThat(hendelse.aktørIdentifikasjon).isEqualTo(testeierIdent)
+        assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+        assertThat(hendelse.hendelseData).isEqualTo(
+            AktuellForTreffStatusHendelseDataDto(aktuellForTreffStatus = "AKTUELL", forrigeAktuellForTreffStatus = null)
+        )
+    }
+
+    @Test
+    fun `endring av aktuellForTreffStatus lagrer forrige verdi i hendelsen`() {
+        val (treffId, personTreffId) = opprettJobbsøkerOgRegistrerEierPåTreff(aktuellForTreffStatus = AktuellForTreffStatus.VURDERES)
+
+        endreAktuellForTreffStatus(treffId, personTreffId, "IKKE_AKTUELL")
+
+        assertThat(db.hentAlleJobbsøkere().single().aktuellForTreffStatus).isEqualTo(AktuellForTreffStatus.IKKE_AKTUELL)
+        assertThat(aktuellForTreffStatusHendelser(treffId).single().hendelseData).isEqualTo(
+            AktuellForTreffStatusHendelseDataDto("IKKE_AKTUELL", "VURDERES")
+        )
+    }
+
+    @Test
+    fun `null fjerner aktuellForTreffStatus`() {
+        val (treffId, personTreffId) = opprettJobbsøkerOgRegistrerEierPåTreff(aktuellForTreffStatus = AktuellForTreffStatus.KONTAKTET)
+
+        val response = endreAktuellForTreffStatus(treffId, personTreffId, null)
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        assertThat(db.hentAlleJobbsøkere().single().aktuellForTreffStatus).isNull()
+        assertThat(aktuellForTreffStatusHendelser(treffId).single().hendelseData).isEqualTo(
+            AktuellForTreffStatusHendelseDataDto(null, "KONTAKTET")
+        )
+    }
+
+    @Test
+    fun `samme aktuellForTreffStatus to ganger gir bare én hendelse`() {
+        val (treffId, personTreffId) = opprettJobbsøkerOgRegistrerEierPåTreff()
+
+        endreAktuellForTreffStatus(treffId, personTreffId, "AKTUELL")
+        val response = endreAktuellForTreffStatus(treffId, personTreffId, "AKTUELL")
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        assertThat(aktuellForTreffStatusHendelser(treffId)).hasSize(1)
+    }
+
+    @Test
+    fun `slettet jobbsøker gir 404`() {
+        val (treffId, personTreffId) = opprettJobbsøkerOgRegistrerEierPåTreff(status = JobbsøkerStatus.SLETTET)
+
+        assertThat(endreAktuellForTreffStatus(treffId, personTreffId, "AKTUELL").statusCode()).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
+    fun `ikke synlig jobbsøker gir 404`() {
+        val (treffId, personTreffId) = opprettJobbsøkerOgRegistrerEierPåTreff()
+        db.settSynlighet(personTreffId, erSynlig = false)
+
+        assertThat(endreAktuellForTreffStatus(treffId, personTreffId, "AKTUELL").statusCode()).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
+    fun `jobbsøker fra et annet treff gir 404 og endres ikke`() {
+        val (egetTreff, _) = opprettJobbsøkerOgRegistrerEierPåTreff()
+        val annetTreff = db.opprettRekrutteringstreffIDatabase()
+        val fremmedJobbsøker = PersonTreffId(UUID.randomUUID())
+        db.leggTilJobbsøkere(listOf(Jobbsøker(
+            fremmedJobbsøker, annetTreff, Fødselsnummer("32132132132"),
+            Fornavn("Kari"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.LAGT_TIL, null,
+        )))
+
+        val response = endreAktuellForTreffStatus(egetTreff, fremmedJobbsøker, "AKTUELL")
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
+        assertThat(db.hentJobbsøkereForTreff(annetTreff).single().aktuellForTreffStatus).isNull()
     }
 
 }
