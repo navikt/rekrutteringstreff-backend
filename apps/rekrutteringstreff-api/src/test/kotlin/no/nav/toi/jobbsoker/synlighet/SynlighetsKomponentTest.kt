@@ -402,16 +402,19 @@ class SynlighetsKomponentTest {
     fun `GET alle hendelser på WorkOp tar med usynlige, men ikke usynlige som er slettet, og viser sperrede uten navn`() {
         val treffId = opprettTreffMedEier(RekrutteringstreffKategori.WORKOP)
 
-        val jobbsøkere = listOf("Synlig", "Usynlig", "SlettetUsynlig", "Sperret").mapIndexed { i, navn ->
+        val jobbsøkere = listOf("Synlig", "Usynlig", "SlettetUsynlig", "Sperret", "SlettetSynlig").mapIndexed { i, navn ->
             LeggTilJobbsøker(Fødselsnummer("${i + 1}".repeat(11)), Fornavn(navn), Etternavn("Person"), null, null, null)
         }
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId, "A123456")
+        jobbsøkere.take(4).forEach { db.svarJaTilInvitasjon(it.fødselsnummer, treffId, it.fødselsnummer.asString) }
         db.settSynlighet(personTreffIder[0], true)
         db.settSynlighet(personTreffIder[1], false)
         db.settSynlighet(personTreffIder[2], false)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
         db.settSynlighet(personTreffIder[3], false)
         db.settSperret(personTreffIder[3], true)
+        db.settSynlighet(personTreffIder[4], true)
+        db.settJobbsøkerStatus(personTreffIder[4], JobbsøkerStatus.SLETTET)
 
         val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/allehendelser")
 
@@ -419,11 +422,41 @@ class SynlighetsKomponentTest {
         val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
         val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
 
-        assertThat(jobbsøkerHendelser.map { it.subjektNavn to it.subjektId }).containsExactlyInAnyOrder(
-            "Synlig Person" to "11111111111",
-            "Usynlig Person" to null,
-            null to null,
+        assertThat(jobbsøkerHendelser.map { Triple(it.hendelsestype, it.subjektNavn, it.subjektId) }).containsExactlyInAnyOrder(
+            Triple("OPPRETTET", "Synlig Person", "11111111111"),
+            Triple("SVART_JA_TIL_INVITASJON", "Synlig Person", "11111111111"),
+            Triple("OPPRETTET", "Usynlig Person", null),
+            Triple("SVART_JA_TIL_INVITASJON", "Usynlig Person", null),
+            Triple("OPPRETTET", null, null),
+            Triple("SVART_JA_TIL_INVITASJON", null, null),
+            Triple("OPPRETTET", "SlettetSynlig Person", "55555555555"),
         )
+        val svar = jobbsøkerHendelser.filter { it.hendelsestype == "SVART_JA_TIL_INVITASJON" }
+        assertThat(svar.single { it.subjektId == "11111111111" }.aktørIdentifikasjon).isEqualTo("11111111111")
+        assertThat(svar.filter { it.subjektId == null }.map { it.aktørIdentifikasjon }).containsOnlyNulls()
+        listOf("22222222222", "33333333333", "44444444444").forEach {
+            assertThat(response.body()).doesNotContain(it)
+        }
         assertThat(hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }).isNotEmpty()
+    }
+
+    @Test
+    fun `GET alle hendelser på vanlige treff viser fortsatt synlige som er slettet, med fødselsnummer`() {
+        val treffId = opprettTreffMedEier()
+
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Slettet"), Etternavn("Person"), null, null, null)
+        val personTreffId = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "A123456").single()
+        db.svarJaTilInvitasjon(jobbsøker.fødselsnummer, treffId, jobbsøker.fødselsnummer.asString)
+        db.settJobbsøkerStatus(personTreffId, JobbsøkerStatus.SLETTET)
+
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/allehendelser")
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
+        val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
+        assertThat(jobbsøkerHendelser.map { Triple(it.hendelsestype, it.subjektId, it.aktørIdentifikasjon) }).containsExactlyInAnyOrder(
+            Triple("OPPRETTET", "11111111111", "A123456"),
+            Triple("SVART_JA_TIL_INVITASJON", "11111111111", "11111111111"),
+        )
     }
 }

@@ -21,9 +21,10 @@ ROS-verktøyet står samlet i
 ## Endringer 01.10.26
 
 - Ny risiko WO-14: usynlige jobbsøkere vises med navn i treffgjennomføringen,
-  vurderingen og «Hendelser», og kan registreres som møtt. Slettede vises
-  ikke, og personer med adressebeskyttelse vises uten navn. Reglene er avklart
-  med produkteier og gjelder bare WorkOp. Vanlige treff er uendret.
+  vurderingen og «Hendelser», og kan registreres som møtt. Usynlige som er
+  slettet, vises ikke, og personer med adressebeskyttelse vises uten navn.
+  Reglene er avklart med produkteier og gjelder bare WorkOp. Vanlige treff er
+  uendret.
 
 ## Endringer 30.09.26
 
@@ -116,7 +117,7 @@ og WO-13 er forslag.
 | WO-11 | 31573 | Jobbsøkeren forveksler formøtet og WorkOp-dagen                                             |   2 |   2 | Standardtekst med begge avtalene og svarside som sier at svaret gjelder WorkOp-dagen            | –                   |
 | WO-12 | 31575 | Markedskontakt som ikke skal være medeier, legger seg selv til som eier                     |   2 |   3 | Tydelig bekreftelse, sporbarhet, beskjed til eierne og retningslinjer for medeierskap           | 27217               |
 | WO-13 | 31576 | Tekst i løsningen bryter med prinsippet om frivillig deltakelse                             |   2 |   3 | Gjennomgåtte faste tekster, retningslinjer og opplæring for arrangørene                         | 27485               |
-| WO-14 | –     | Usynlige jobbsøkere vises og kan registreres i treffgjennomføringen                         |   2 |   3 | Bare WorkOp og eiere, aldri slettede, adressebeskyttede uten navn, ikke i jobbsøkerlisten      | –                   |
+| WO-14 | –     | Usynlige jobbsøkere vises og kan registreres i treffgjennomføringen                         |   2 |   3 | Bare WorkOp og eiere, aldri usynlige som er slettet, adressebeskyttede uten navn, ikke i jobbsøkerlisten | –                   |
 
 WO-01 og WO-02 har ingen ID i utskriften fra ROS-verktøyet 30.09.26. WO-06
 er bare delvis dekket av 31574, som gjelder søket.
@@ -576,8 +577,12 @@ kategorien WorkOp. Vanlige treff er uendret, se «Vanlige treff» under.
   til grunn at de var synlige da de ble lagt til eller invitert, og at de har
   fått en status i ettertid som gjør dem usynlige.
 - **Fanen «Hendelser»:** Hendelser for usynlige vises med navn, og med
-  «Ikke tilgjengelig» i stedet for fødselsnummer.
-- **Slettede:** Vises aldri, heller ikke når de samtidig er usynlige.
+  «Ikke tilgjengelig» i stedet for fødselsnummer. Har personen svart selv,
+  står «Jobbsøker» under «Utført av», ikke fødselsnummeret.
+- **Slettede:** Vises ikke i jobbsøkerlisten, treffgjennomføringen eller
+  vurderingen. Usynlige som er slettet, vises heller ikke i «Hendelser».
+  Synlige som er slettet, vises i «Hendelser» som på vanlige treff, slik at
+  eierne kan se hvem som slettet personen.
 - **Adressebeskyttelse:** Personen vises aldri med navn. Har personen
   gjennomføringsdata, vises hen som «Ukjent jobbsøker», både i gjennomføringen
   og i «Hendelser».
@@ -610,10 +615,13 @@ adressebeskyttelse (`sperret`) utenfor. Endepunktet leser tabellene
 derfor ikke få med usynlige, og et gammelt valg `inkluderSkjulte` i
 forespørselen blir ignorert.
 Hendelsesoversikten for et WorkOp-treff tar med usynlige, men ikke usynlige
-som er slettet. Detaljer vises bare for hendelsene fra treffgjennomføringen,
-ikke for for eksempel varsler, som kan inneholde fødselsnummer. Den viser fødselsnummer bare for synlige, og navn ikke for personer med
-adressebeskyttelse. Backend sperrer ikke oppmøte for usynlige. Tellingene i
-jobbsøkerlisten er uendret. Komponenttester dekker søket, hendelsene og
+som er slettet. Synlige som er slettet, vises som på vanlige treff. Detaljer
+vises bare for hendelsene fra treffgjennomføringen, ikke for for eksempel
+varsler, som kan inneholde fødselsnummer. Den viser fødselsnummer bare for
+synlige, og navn ikke for personer med adressebeskyttelse. Det gjelder også
+aktørfeltet: Når jobbsøkeren selv har svart, er aktøren fødselsnummeret, og
+serveren skjermer det på samme måte. Backend sperrer ikke oppmøte for
+usynlige. Tellingene i jobbsøkerlisten er uendret. Komponenttester dekker søket, hendelsene og
 oppmøtet, og at vanlige treff er uendret. WorkOp kan ikke opprettes i
 produksjon, så endringen gir ingen ny eksponering der før piloten.
 
@@ -623,6 +631,12 @@ så rekkefølgen på deploy av main og branch spiller ingen rolle.
 **Restrisiko:** Eiere ser navn og registreringer for personer som ikke lenger
 oppfyller kravene til synlighet, og kan registrere nye opplysninger om dem.
 Dette er avgrenset til WorkOp-treff de selv eier.
+
+For usynlige som er slettet, viser «Hendelser» ingenting, heller ikke hvem som
+la til eller slettet personen. Det gjelder også vanlige treff, og er som før.
+Hendelsene ligger i databasen, så utviklere kan finne dem ved behov. Sletting
+er bare mulig før personen har registreringer, så det er ingen
+gjennomføringsdata som forsvinner fra visningen.
 
 **Ansvar:** Produkteier og Team Toi.  
 **Ny vurdering:** Før pilot.
@@ -983,8 +997,8 @@ Disse risikoene står i dette dokumentet, men har ingen ID i utskriften:
   > Jobbsøkere som blir usynlige etter at de er lagt til, vises fortsatt med
   > navn i treffgjennomføringen, vurderingen og hendelsesoversikten, slik at
   > eierne kan fullføre og rette registreringene. De kan også registreres som
-  > møtt. Slettede jobbsøkere vises aldri, og personer med adressebeskyttelse
-  > vises uten navn. Jobbsøkerlisten viser usynlige bare som et samlet tall.
+  > møtt. Usynlige som er slettet, vises aldri, og personer med
+  > adressebeskyttelse vises uten navn. Jobbsøkerlisten viser usynlige bare som et samlet tall.
   > Gjelder bare WorkOp. Vanlige treff er uendret.
 
 Dokumentet er gjennomgått mot implementasjonen i de berørte repoene

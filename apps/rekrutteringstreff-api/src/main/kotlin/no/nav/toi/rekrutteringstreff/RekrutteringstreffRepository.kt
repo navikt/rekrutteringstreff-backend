@@ -223,14 +223,23 @@ class RekrutteringstreffRepository(
         }
 
     /**
-     * Vi tar med data for usynlige jobbsøkere i hendelser, men i første omgang bare for workop, vi kan gjøre dette fellles senere,
-     * men det er workop med sin treffgjennomføring som først og fremst trenger dette.
+     * På WorkOp tar hendelsene også med usynlige jobbsøkere, men ikke usynlige som er slettet (WO-14). Synlige som er
+     * slettet, vises som på vanlige treff, slik at det går an å se hvem som slettet dem. Fødselsnummeret vises bare
+     * for synlige uten adressebeskyttelse, og navnet bare uten adressebeskyttelse. Vanlige treff er uendret.
      */
     private val jobbsøkerVises =
         "(js.er_synlig = TRUE OR (r.kategori = 'WORKOP' AND js.status != 'SLETTET'))"
+    private val fødselsnummerVises = "(r.kategori != 'WORKOP' OR (js.er_synlig AND NOT js.sperret))"
     private val jobbsøkerSubjekt = """
-        CASE WHEN r.kategori != 'WORKOP' OR (js.er_synlig AND NOT js.sperret) THEN js.fodselsnummer END AS subjekt_id,
+        CASE WHEN $fødselsnummerVises THEN js.fodselsnummer END AS subjekt_id,
         CASE WHEN r.kategori != 'WORKOP' OR NOT js.sperret THEN js.fornavn || ' ' || js.etternavn END AS subjekt_navn
+    """.trimIndent()
+
+    /** Når jobbsøkeren selv har svart, er aktøren fødselsnummeret, og det skal skjermes på samme måte. */
+    private fun jobbsøkerAktør(hendelse: String) = """
+        CASE WHEN NOT $fødselsnummerVises
+                  AND ($hendelse.opprettet_av_aktortype = '${AktørType.JOBBSØKER.name}' OR $hendelse.aktøridentifikasjon = js.fodselsnummer)
+             THEN NULL ELSE $hendelse.aktøridentifikasjon END AS aktøridentifikasjon
     """.trimIndent()
 
     fun hentAlleHendelser(treff: TreffId): List<FellesHendelseOutboundDto> =
@@ -259,7 +268,7 @@ class RekrutteringstreffRepository(
                        jh.tidspunkt,
                        jh.hendelsestype,
                        jh.opprettet_av_aktortype,
-                       jh.aktøridentifikasjon,
+                       ${jobbsøkerAktør("jh")},
                        $jobbsøkerSubjekt,
                        CASE WHEN r.kategori = 'WORKOP' THEN jh.hendelse_data::text END AS hendelse_data
                 FROM   jobbsoker_hendelse jh
@@ -290,7 +299,7 @@ class RekrutteringstreffRepository(
                        fh.tidspunkt,
                        fh.hendelsestype,
                        fh.opprettet_av_aktortype,
-                       fh.aktøridentifikasjon,
+                       ${jobbsøkerAktør("fh")},
                        $jobbsøkerSubjekt,
                        NULL::text AS hendelse_data
                 FROM   formidling_hendelse fh
