@@ -178,7 +178,6 @@ class MinsideTest {
                     veilederNavn = VeilederNavn("Veileder"),
                     veilederNavIdent = VeilederNavIdent("navIdent"),
                     status = JobbsøkerStatus.LAGT_TIL,
-                    aktuellForTreffStatus = null,
                     hendelser = emptyList(),
                 )
                 ))

@@ -9,6 +9,6 @@ data class JobbsøkerOutboundDto(
     val fornavn: String,
     val etternavn: String,
     val status: JobbsøkerStatus,
-    val aktuellForTreffStatus: AktuellForTreffStatus?,
+    val aktuellForTreffStatus: AktuellForTreffStatus,
     val hendelser: List<JobbsøkerHendelseOutboundDto>
 )

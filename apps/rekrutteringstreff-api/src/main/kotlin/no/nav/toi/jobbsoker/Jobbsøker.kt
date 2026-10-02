@@ -112,7 +112,7 @@ data class Jobbsøker(
     val veilederNavn: VeilederNavn?,
     val veilederNavIdent: VeilederNavIdent?,
     val status: JobbsøkerStatus,
-    val aktuellForTreffStatus: AktuellForTreffStatus?,
+    val aktuellForTreffStatus: AktuellForTreffStatus = AktuellForTreffStatus.VURDERES,
     val hendelser: List<JobbsøkerHendelse> = emptyList(),
     val alder: Int? = null,
     val innsatsgruppe: Innsatsgruppe? = null,

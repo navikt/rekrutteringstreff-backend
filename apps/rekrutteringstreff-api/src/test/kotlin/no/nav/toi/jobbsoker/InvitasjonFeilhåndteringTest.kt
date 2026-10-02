@@ -87,7 +87,6 @@ class InvitasjonFeilhåndteringTest {
                     Etternavn("Person"),
                     null, null, null,
                     JobbsøkerStatus.LAGT_TIL,
-                    null
                 )
             )
         )
@@ -153,7 +152,6 @@ class InvitasjonFeilhåndteringTest {
                     Etternavn("Person"),
                     null, null, null,
                     JobbsøkerStatus.LAGT_TIL,
-                    null
                 ),
                 Jobbsøker(
                     personTreffIdSynlig,
@@ -163,7 +161,6 @@ class InvitasjonFeilhåndteringTest {
                     Etternavn("Person"),
                     null, null, null,
                     JobbsøkerStatus.LAGT_TIL,
-                    null
                 )
             )
         )
@@ -213,7 +210,6 @@ class InvitasjonFeilhåndteringTest {
                     Etternavn("Person"),
                     null, null, null,
                     JobbsøkerStatus.LAGT_TIL,
-                    null
                 )
             )
         )
