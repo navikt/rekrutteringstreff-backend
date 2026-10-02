@@ -410,6 +410,12 @@ class ArbeidsgiversBehovTest {
             token
         )
         assertThat(db.hentNæringskodeForArbeidsgiverPåTreff(treffId, orgnr)).isEqualTo(opprinneligeNæringskoder)
+        // Treffet må ha minst én arbeidsgiver igjen etter sletting
+        httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver",
+            """{ "organisasjonsnummer": "000000002", "navn": "Fiktiv ekstrabedrift" }""",
+            token
+        )
 
         // Slett arbeidsgiver
         val mapper = JacksonConfig.mapper
@@ -418,7 +424,7 @@ class ArbeidsgiversBehovTest {
             httpGet("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov", token).body(),
             type
         )
-        val arbeidsgiverTreffId = før.first().arbeidsgiverTreffId
+        val arbeidsgiverTreffId = før.single { it.organisasjonsnummer == orgnr.asString }.arbeidsgiverTreffId
         httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/$arbeidsgiverTreffId",
             token
@@ -428,7 +434,7 @@ class ArbeidsgiversBehovTest {
             httpGet("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov", token).body(),
             type
         )
-        assertThat(etterSlett).isEmpty()
+        assertThat(etterSlett.filter { it.organisasjonsnummer == orgnr.asString }).isEmpty()
 
         // Reaktivering ved ny POST på samme orgnr
         val reaktiverBehov = """
@@ -450,10 +456,10 @@ class ArbeidsgiversBehovTest {
         assertThat(reaktiverResp.statusCode()).isEqualTo(HTTP_CREATED)
         assertThat(db.hentNæringskodeForArbeidsgiverPåTreff(treffId, orgnr)).isEqualTo(opprinneligeNæringskoder)
 
-        val etterReaktivering: List<ArbeidsgiverMedBehovDto> = mapper.readValue(
+        val etterReaktivering: List<ArbeidsgiverMedBehovDto> = mapper.readValue<List<ArbeidsgiverMedBehovDto>>(
             httpGet("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov", token).body(),
             type
-        )
+        ).filter { it.organisasjonsnummer == orgnr.asString }
         assertThat(etterReaktivering).hasSize(1)
         // Samme arbeidsgiverTreffId — reaktivert rad
         assertThat(etterReaktivering.first().arbeidsgiverTreffId).isEqualTo(arbeidsgiverTreffId)
@@ -468,7 +474,7 @@ class ArbeidsgiversBehovTest {
         )
         val htype = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto::class.java)
         val hendelseListe: List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto> = mapper.readValue(hendelser.body(), htype)
-        val typer = hendelseListe.map { it.hendelsestype }
+        val typer = hendelseListe.filter { it.orgnr == orgnr.asString }.map { it.hendelsestype }
         assertThat(typer.count { it == ArbeidsgiverHendelsestype.OPPRETTET.name }).isEqualTo(1)
         assertThat(typer.count { it == ArbeidsgiverHendelsestype.SLETTET.name }).isEqualTo(1)
         assertThat(typer.count { it == ArbeidsgiverHendelsestype.REAKTIVERT.name }).isEqualTo(1)

@@ -116,6 +116,9 @@ class ArbeidsgiverService(
             val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
             val kontekst = kontekstRepository.krevKontekst(connection, treffId)
             val internId = kontekst.arbeidsgiverId(arbeidsgiverTreffId) ?: return@medLåstTreff false
+            if (kontekst.arbeidsgiverTreffIder.size <= 1) {
+                throw SisteArbeidsgiverKanIkkeSlettesException()
+            }
             møteplansynk.lagreFørEndring(connection, treffId)
             val registreringer = ArbeidsgiverRegistreringer(
                 personerIRom = møteplanRepository.tellPersonerIStartrom(connection, internId, kontekst.treffDbId),

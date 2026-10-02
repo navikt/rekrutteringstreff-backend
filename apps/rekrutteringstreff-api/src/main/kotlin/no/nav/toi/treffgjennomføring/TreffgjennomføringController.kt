@@ -20,6 +20,8 @@ import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.eier.krevEierEllerUtvikler
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.FlyttJobbsøkerRomRequestDto
+import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkereRequestDto
+import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkersideDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
@@ -51,6 +53,7 @@ class TreffgjennomføringController(
         const val FORDEL_INTERVJUER = "$INTERVJUFORDELING/fordel"
         const val STEG = "$skrivPath/steg"
         const val HENT = lesPath
+        const val JOBBSØKERE = "$lesPath/jobbsokere"
 
         private const val PERSON_ID = "11111111-1111-1111-1111-111111111111"
         private const val ARBEIDSGIVER_ID = "22222222-2222-2222-2222-222222222222"
@@ -85,6 +88,7 @@ class TreffgjennomføringController(
 
     override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.get(HENT, hentHandler())
+        routes.post(JOBBSØKERE, hentJobbsøkereHandler())
         routes.put(OPPMØTE, oppmøteHandler())
         routes.put(MØTEOPPSETT, møteoppsettHandler())
         routes.put(FLYTT_JOBBSØKER_ROM, flyttJobbsøkerRomHandler())
@@ -123,6 +127,44 @@ class TreffgjennomføringController(
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
         ctx.status(200).json(treffgjennomføringService.hent(treffId))
+    }
+
+    @OpenApi(
+        summary = "Hent jobbsøkerne i treffgjennomføringen",
+        description = "Gir bare id, navn, status og fødselsnummer, sortert på navn. På WorkOp tas usynlige med, " +
+            "men uten fødselsnummer. Slettede og personer med adressebeskyttelse tas aldri med. " +
+            "antallPerStatus teller alle som vises, uavhengig av statusfilteret.",
+        operationId = "hentTreffgjennomforingJobbsokere",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(
+            from = GjennomføringJobbsøkereRequestDto::class,
+            example = """{"status": ["MØTT_OPP", "FÅTT_JOBB"], "side": 1, "antallPerSide": 100}""",
+        )]),
+        responses = [
+            OpenApiResponse(status = "200", content = [OpenApiContent(
+                from = GjennomføringJobbsøkersideDto::class,
+                example = """{
+                  "totalt": 1,
+                  "side": 1,
+                  "antallPerStatus": {"MØTT_OPP": 1, "SVART_JA": 2},
+                  "jobbsøkere": [{"personTreffId": "$PERSON_ID", "fornavn": "Test", "etternavn": "Testesen", "status": "MØTT_OPP", "fødselsnummer": null}]
+                }""",
+            )]),
+            OpenApiResponse(status = "400", description = "Ugyldig side eller antallPerSide."),
+            OpenApiResponse(status = "403", description = "Bruker er ikke eier eller utvikler."),
+        ],
+        path = JOBBSØKERE,
+        methods = [HttpMethod.POST],
+    )
+    private fun hentJobbsøkereHandler(): (Context) -> Unit = { ctx ->
+        val treffId = ctx.treffId()
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
+        val request = ctx.bodyAsClass<GjennomføringJobbsøkereRequestDto>()
+        if (request.side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
+        if (request.antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
+        AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
+        ctx.status(200).json(treffgjennomføringService.hentJobbsøkere(treffId, request))
     }
 
     @OpenApi(

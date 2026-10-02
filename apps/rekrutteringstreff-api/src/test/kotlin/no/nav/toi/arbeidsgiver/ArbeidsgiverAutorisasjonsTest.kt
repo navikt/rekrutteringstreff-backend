@@ -101,6 +101,17 @@ class ArbeidsgiverAutorisasjonsTest {
                 poststed = "OSLO"
             ), gyldigRekrutteringstreff, "A000001"
         )
+        // Treffet må ha en arbeidsgiver igjen etter sletting
+        ctx.arbeidsgiverService.leggTilArbeidsgiver(
+            LeggTilArbeidsgiver(
+                orgnr = Orgnr("000000002"),
+                orgnavn = Orgnavn("Fiktiv ekstrabedrift"),
+                næringskoder = emptyList(),
+                gateadresse = null,
+                postnummer = null,
+                poststed = null
+            ), gyldigRekrutteringstreff, "A000001"
+        )
         arbeidsgiverId = ctx.arbeidsgiverRepository.hentArbeidsgiver(gyldigRekrutteringstreff, Orgnr("123456789"))?.arbeidsgiverTreffId!!
     }
 

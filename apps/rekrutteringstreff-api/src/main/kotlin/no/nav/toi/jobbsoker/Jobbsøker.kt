@@ -124,7 +124,38 @@ data class Jobbsøker(
     fun erInvitert(): Boolean =
         hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
 
-    fun harSvart(): Boolean = status == JobbsøkerStatus.SVART_JA || status == JobbsøkerStatus.SVART_NEI
+    fun harSvart(): Boolean = gjeldendeSvar() != null
+
+    fun harSvartJa(): Boolean = gjeldendeSvar() == true
+
+    fun gjeldendeSvar(): Boolean? = when (status) {
+        JobbsøkerStatus.SVART_JA -> true
+        JobbsøkerStatus.SVART_NEI -> false
+        JobbsøkerStatus.MØTT_OPP, JobbsøkerStatus.FÅTT_JOBB ->
+            hendelser.filter { it.hendelsestype in SVARHENDELSER }
+                .maxByOrNull { it.tidspunkt }
+                ?.hendelsestype
+                ?.let(::svarFraHendelse)
+        else -> null
+    }
+
+    private companion object {
+        val SVARHENDELSER = setOf(
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER,
+        )
+
+        fun svarFraHendelse(hendelsestype: JobbsøkerHendelsestype): Boolean? = when (hendelsestype) {
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> true
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> false
+            else -> null
+        }
+    }
 }
 
 data class PersonTreffId(private val id: UUID) {
