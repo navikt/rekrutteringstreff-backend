@@ -7,7 +7,6 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.dto.parseHendelseData
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.*
 import java.time.Instant
@@ -25,7 +24,7 @@ data class JobbsøkerTreffHistorikk(
     val id: UUID?,
     val tittel: String,
     val kategori: RekrutteringstreffKategori,
-    val status: RekrutteringstreffStatus,
+    val status: JobbsøkerStatus,
     val antallArbeidsgivere: Int,
     val lagtTilTidspunkt: Instant?,
     val treffStartTidspunkt: Instant?,
@@ -233,7 +232,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     CASE WHEN rt.kategori = 'REKRUTTERINGSTREFF' THEN rt.id END AS id,
                     rt.tittel,
                     rt.kategori,
-                    rt.status,
+                    j.status AS status,
                     (
                         SELECT count(*)
                         FROM arbeidsgiver a
@@ -273,7 +272,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                                     id = resultSet.getObject("id", UUID::class.java),
                                     tittel = resultSet.getString("tittel"),
                                     kategori = RekrutteringstreffKategori.valueOf(resultSet.getString("kategori")),
-                                    status = RekrutteringstreffStatus.valueOf(resultSet.getString("status")),
+                                    status = JobbsøkerStatus.valueOf(resultSet.getString("status")),
                                     antallArbeidsgivere = resultSet.getInt("antall_arbeidsgivere"),
                                     lagtTilTidspunkt = resultSet.getTimestamp("lagt_til_dato")?.toInstant(),
                                     treffStartTidspunkt = resultSet.getTimestamp("treff_start")?.toInstant(),

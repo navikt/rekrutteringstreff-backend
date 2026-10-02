@@ -7,7 +7,6 @@ import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -289,7 +288,7 @@ class JobbsøkerRepositoryTest {
         val rekrutteringstreff = resultat.single { it.tittel == "Invitert treff" }
         assertThat(rekrutteringstreff.id).isEqualTo(treff.somUuid)
         assertThat(rekrutteringstreff.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
-        assertThat(rekrutteringstreff.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        assertThat(rekrutteringstreff.status).isEqualTo(JobbsøkerStatus.INVITERT)
         assertThat(rekrutteringstreff.antallArbeidsgivere).isEqualTo(2)
         assertThat(rekrutteringstreff.treffStartTidspunkt).isEqualTo(starttidspunkt.toInstant())
         assertThat(rekrutteringstreff.lagtTilTidspunkt).isNotNull()
@@ -298,6 +297,7 @@ class JobbsøkerRepositoryTest {
         val workop = resultat.single { it.tittel == "WorkOp" }
         assertThat(workop.id).isNull()
         assertThat(workop.kategori).isEqualTo(RekrutteringstreffKategori.WORKOP)
+        assertThat(workop.status).isEqualTo(JobbsøkerStatus.INVITERT)
         assertThat(workop.antallArbeidsgivere).isZero()
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000"))).hasSize(2)
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("9999"))).isEmpty()
