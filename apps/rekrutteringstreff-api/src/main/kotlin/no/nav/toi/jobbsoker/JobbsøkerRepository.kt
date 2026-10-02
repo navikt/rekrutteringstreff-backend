@@ -256,6 +256,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 WHERE j.fodselsnummer = ?
                   AND j.status NOT IN ('LAGT_TIL', 'SLETTET')
                   AND j.er_synlig = TRUE
+                  AND rt.status != 'SLETTET'
                   $kontorFilter
                 ORDER BY rt.fratid DESC NULLS LAST, opprettet.tidspunkt DESC NULLS LAST
                 """.trimIndent()

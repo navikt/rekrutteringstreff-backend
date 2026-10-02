@@ -273,6 +273,21 @@ class JobbsøkerRepositoryTest {
             lagtTilTreff,
         )
 
+        val slettetRekrutteringstreff = db.opprettRekrutteringstreffMedAlleFelter(tittel = "Slettet rekrutteringstreff")
+        val jobbsøkerPåSlettetRekrutteringstreff = db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(fødselsnummer, Fornavn("Kari"), Etternavn("Nordmann"))),
+            slettetRekrutteringstreff,
+        ).single()
+        db.inviterJobbsøkere(listOf(jobbsøkerPåSlettetRekrutteringstreff), slettetRekrutteringstreff)
+        db.dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                "UPDATE rekrutteringstreff SET status = 'SLETTET' WHERE id = ?"
+            ).use { statement ->
+                statement.setObject(1, slettetRekrutteringstreff.somUuid)
+                statement.executeUpdate()
+            }
+        }
+
         val slettetTreff = db.opprettRekrutteringstreffMedAlleFelter(tittel = "Slettet treff")
         val slettet = db.leggTilJobbsøkereMedHendelse(
             listOf(LeggTilJobbsøker(fødselsnummer, Fornavn("Kari"), Etternavn("Nordmann"))),
