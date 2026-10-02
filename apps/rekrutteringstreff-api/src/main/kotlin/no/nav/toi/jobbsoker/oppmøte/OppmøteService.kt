@@ -50,11 +50,11 @@ class OppmøteService(
                 oppmøteRepository.tildelDeltakernummer(connection, treffkontekst.treffDbId, jobbsøkerId)
             } else null
 
-        jobbsøkerService.registrerOppmøte(connection, personTreffId)
         hendelseWriter.forJobbsøker(
             connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, navIdent,
             deltakernummer?.let { mapOf("deltakernummer" to it) } ?: emptyMap(),
         )
+        jobbsøkerService.oppdaterStatus(connection, personTreffId)
     }
 
     private fun fjernOppmøte(
@@ -67,9 +67,9 @@ class OppmøteService(
         if (registreringer.finnesRegistreringer()) throw OppmøteKanIkkeFjernesException(registreringer)
 
         møteplanRepository.slettRomForJobbsøker(connection, jobbsøkerId)
-        jobbsøkerService.fjernOppmøte(connection, personTreffId)
         hendelseWriter.forJobbsøker(
             connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET, navIdent,
         )
+        jobbsøkerService.oppdaterStatus(connection, personTreffId)
     }
 }

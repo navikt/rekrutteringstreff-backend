@@ -22,6 +22,7 @@ import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.dto.AvtaltIntervjuHendelseDataDto
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.oppfølging.Vurderingsvalg
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -213,6 +214,52 @@ class TreffgjennomføringKomponentTest {
 
         oppmøte(treff, person, møtt = true)
         assertThat(oppmøteliste(treff)).containsExactly(person.somString)
+    }
+
+    @Test
+    fun `svar etter oppmøte endrer svaret, mens status, visning og filtrering følger oppmøtet`() {
+        val treff = workOpTreff()
+        val fnr = "12345678901"
+        val person = jobbsøker(treff, fnr)
+        ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+
+        oppmøte(treff, person, møtt = true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, false)
+
+        assertThat(db.hentJobbsøkerStatus(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
+        assertThat(gjeldendeSvar(treff, fnr)).isFalse()
+        assertThat(oppmøteliste(treff)).containsExactly(person.somString)
+        assertThat(gjennomføringsstatus(treff, "MØTT_OPP")).containsExactly(person.somString to "MØTT_OPP")
+        assertThat(søkMedStatus(treff, JobbsøkerStatus.MØTT_OPP)).containsExactly(person.somString)
+        assertThat(søkMedStatus(treff, JobbsøkerStatus.SVART_NEI)).isEmpty()
+
+        oppmøte(treff, person, møtt = false)
+
+        assertThat(db.hentJobbsøkerStatus(person)).isEqualTo(JobbsøkerStatus.SVART_NEI)
+        assertThat(gjeldendeSvar(treff, fnr)).isFalse()
+        assertThat(oppmøteliste(treff)).isEmpty()
+        assertThat(søkMedStatus(treff, JobbsøkerStatus.SVART_NEI)).containsExactly(person.somString)
+        assertThat(søkMedStatus(treff, JobbsøkerStatus.MØTT_OPP)).isEmpty()
+
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        oppmøte(treff, person, møtt = true)
+
+        assertThat(db.hentJobbsøkerStatus(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
+        assertThat(gjeldendeSvar(treff, fnr)).isTrue()
+    }
+
+    @Test
+    fun `gjentatt svar etter oppmøte gir ingen ny svarhendelse`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        oppmøte(treff, person, møtt = true)
+
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+
+        assertThat(antallHendelser(treff, "SVART_JA_TIL_INVITASJON_AV_EIER")).isEqualTo(1)
     }
 
     @Test
@@ -1503,7 +1550,8 @@ class TreffgjennomføringKomponentTest {
         val person = jobbsøker(treff, "00000000000")
 
         val svar = medVentendeOperasjon(treff, { slettJobbsøker(treff, person) }) { connection ->
-            ctx.jobbsøkerService.registrerOppmøte(connection, person)
+            ctx.hendelseWriter.forJobbsøker(connection, person, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, eier)
+            ctx.jobbsøkerService.oppdaterStatus(connection, person)
         }
 
         assertThat(svar.statusCode()).isEqualTo(422)
@@ -1788,6 +1836,20 @@ class TreffgjennomføringKomponentTest {
             listOf(LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Testesen"))),
             treffId,
         ).first()
+
+    private fun gjeldendeSvar(treffId: TreffId, fnr: String): Boolean? =
+        ctx.jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(fnr))!!.gjeldendeSvar()
+
+    private fun søkMedStatus(treffId: TreffId, status: JobbsøkerStatus): List<String> =
+        ctx.jobbsøkerService.søkJobbsøkere(treffId, JobbsøkerSøkRequest(status = listOf(status)))
+            .jobbsøkere.map { it.personTreffId }
+
+    private fun gjennomføringsstatus(treffId: TreffId, vararg status: String): List<Pair<String, String>> {
+        val body = """{"status":[${status.joinToString(",") { "\"$it\"" }}]}"""
+        val svar = post(treffId, "/treffgjennomforing-og-oppfolging/jobbsokere", body)
+        assertThat(svar.statusCode()).isEqualTo(200)
+        return mapper.readTree(svar.body())["jobbsøkere"].map { it["personTreffId"].asText() to it["status"].asText() }
+    }
 
     private fun oppmøteliste(treffId: TreffId): List<String> =
         aggregat(treffId)["oppmøte"].map { it.asText() }

@@ -118,9 +118,6 @@ data class Jobbsøker(
     val innsatsgruppe: Innsatsgruppe? = null,
     val sperret: Boolean = false,
 ) {
-    fun harAktivtSvarJa(): Boolean =
-        status == JobbsøkerStatus.SVART_JA
-
     fun erInvitert(): Boolean =
         hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
 
@@ -128,34 +125,12 @@ data class Jobbsøker(
 
     fun harSvartJa(): Boolean = gjeldendeSvar() == true
 
-    fun gjeldendeSvar(): Boolean? = when (status) {
-        JobbsøkerStatus.SVART_JA -> true
-        JobbsøkerStatus.SVART_NEI -> false
-        JobbsøkerStatus.MØTT_OPP, JobbsøkerStatus.FÅTT_JOBB ->
-            hendelser.filter { it.hendelsestype in SVARHENDELSER }
-                .maxByOrNull { it.tidspunkt }
-                ?.hendelsestype
-                ?.let(::svarFraHendelse)
-        else -> null
-    }
+    fun gjeldendeSvar(): Boolean? = Jobbsøkerstatusregler.sisteSvar(hendelsestyperKronologisk())
 
-    private companion object {
-        val SVARHENDELSER = setOf(
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER,
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER,
-            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER,
-        )
-
-        fun svarFraHendelse(hendelsestype: JobbsøkerHendelsestype): Boolean? = when (hendelsestype) {
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> true
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> false
-            else -> null
-        }
-    }
+    // Repositoryet leverer nyeste først, sortert på tidspunkt og løpenummer. Reverseringen
+    // beholder rekkefølgen når to hendelser har samme tidspunkt.
+    private fun hendelsestyperKronologisk(): List<JobbsøkerHendelsestype> =
+        hendelser.reversed().sortedBy { it.tidspunkt }.map { it.hendelsestype }
 }
 
 data class PersonTreffId(private val id: UUID) {

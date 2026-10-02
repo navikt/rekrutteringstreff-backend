@@ -609,10 +609,12 @@ class JobbsøkerTest {
         val jobbsøker = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, fnr,
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
-            JobbsøkerStatus.SVART_JA
+            JobbsøkerStatus.LAGT_TIL
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
         val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
+        db.inviterJobbsøkere(listOf(personTreffId), treffId)
+        db.svarJaTilInvitasjon(fnr, treffId, fnr.asString)
         ctx.eierRepository.leggTil(treffId, "A123456", "0315")
 
         val requestBody = """{ "personTreffId": "$personTreffId", "svar": null }"""

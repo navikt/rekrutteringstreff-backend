@@ -116,8 +116,13 @@ Interesse, intervjufordeling og vurdering:
 
 Oppmøte og status:
 
-- Oppmøtet lagres som status `MØTT_OPP` og overskriver svaret mens det står. Angres
-  oppmøtet, får jobbsøkeren tilbake statusen fra før: svart ja, svart nei eller invitert.
+- Statusen utledes fra hendelsene i `Jobbsøkerstatusregler`. Gjelder flere tilstander
+  samtidig, vinner den øverste: slettet, fått jobb, møtt opp, svart ja eller nei,
+  invitert og lagt til.
+- Svaret leses med `Jobbsøkerstatusregler.sisteSvar`, og det nyeste svaret gjelder. Svarer
+  jobbsøkeren etter oppmøtet, endres svaret, men statusen er fortsatt `MØTT_OPP`.
+- Angres oppmøtet eller formidlingen, blir statusen den neste i prioriteten, for eksempel
+  det nyeste svaret.
 - «Fått jobb» regnes også som fremmøtt.
 
 Sperrer:
