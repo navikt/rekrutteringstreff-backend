@@ -16,11 +16,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-<<<<<<< Updated upstream
-      deploy_dev_branch: refs/heads/aktuell-status
-=======
       deploy_dev_branch: refs/heads/testgjennomgang
->>>>>>> Stashed changes
     permissions:
       contents: read
       id-token: write
