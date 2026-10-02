@@ -17,8 +17,6 @@ internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
 
 data class JobbsøkerSlettestatus(val jobbsøkerId: Long, val status: JobbsøkerStatus)
 
-data class LåstAktuellForTreffStatus(val aktuellForTreffStatus: AktuellForTreffStatus?)
-
 class JobbsøkerRepository(private val dataSource: DataSource, private val mapper: ObjectMapper) {
 
     private fun PreparedStatement.execBatchReturnIds(): List<Long> =
@@ -417,7 +415,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.valueOf(getString("status")),
-        aktuellForTreffStatus = getString("aktuell_for_treff_status")?.let(AktuellForTreffStatus::valueOf),
+        aktuellForTreffStatus = AktuellForTreffStatus.valueOf(getString("aktuell_for_treff_status")),
         hendelser = parseHendelser(getString("hendelser")),
         alder = nullableInt("alder"),
         innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
@@ -434,7 +432,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.valueOf(getString("status")),
-        aktuellForTreffStatus = getString("aktuell_for_treff_status")?.let(AktuellForTreffStatus::valueOf),
+        aktuellForTreffStatus = AktuellForTreffStatus.valueOf(getString("aktuell_for_treff_status")),
         alder = nullableInt("alder"),
         innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
         sperret = getBoolean("sperret"),
@@ -623,7 +621,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         connection: Connection,
         treffId: TreffId,
         personTreffId: PersonTreffId,
-    ): LåstAktuellForTreffStatus? =
+    ): AktuellForTreffStatus? =
         connection.prepareStatement(
             """
             SELECT j.aktuell_for_treff_status FROM jobbsoker j
@@ -635,19 +633,17 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.setObject(1, treffId.somUuid)
             stmt.setObject(2, personTreffId.somUuid)
             stmt.executeQuery().use { rs ->
-                if (rs.next()) LåstAktuellForTreffStatus(
-                    rs.getString("aktuell_for_treff_status")?.let(AktuellForTreffStatus::valueOf)
-                ) else null
+                if (rs.next()) AktuellForTreffStatus.valueOf(rs.getString("aktuell_for_treff_status")) else null
             }
         }
 
     fun endreAktuellForTreffStatus(
         connection: Connection,
         personTreffId: PersonTreffId,
-        aktuellForTreffStatus: AktuellForTreffStatus?,
+        aktuellForTreffStatus: AktuellForTreffStatus,
     ) {
         connection.prepareStatement("UPDATE jobbsoker SET aktuell_for_treff_status = ? WHERE id = ?").use { stmt ->
-            stmt.setString(1, aktuellForTreffStatus?.name)
+            stmt.setString(1, aktuellForTreffStatus.name)
             stmt.setObject(2, personTreffId.somUuid)
             stmt.executeUpdate()
         }
@@ -656,8 +652,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     fun leggTilAktuellForTreffStatusHendelse(
         connection: Connection,
         personTreffId: PersonTreffId,
-        nyAktuellForTreffStatus: AktuellForTreffStatus?,
-        forrigeAktuellForTreffStatus: AktuellForTreffStatus?,
+        nyAktuellForTreffStatus: AktuellForTreffStatus,
+        forrigeAktuellForTreffStatus: AktuellForTreffStatus,
         navIdent: String,
     ) = leggTilHendelse(
         connection,
@@ -666,7 +662,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         AktørType.ARRANGØR,
         navIdent,
         mapper.writeValueAsString(
-            mapOf("aktuellForTreffStatus" to nyAktuellForTreffStatus?.name, "forrigeAktuellForTreffStatus" to forrigeAktuellForTreffStatus?.name)
+            mapOf("aktuellForTreffStatus" to nyAktuellForTreffStatus.name, "forrigeAktuellForTreffStatus" to forrigeAktuellForTreffStatus.name)
         ),
     )
 

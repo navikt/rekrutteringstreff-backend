@@ -410,10 +410,10 @@ class TestDatabase {
         }.executeUpdate()
     }
 
-    fun settAktuellForTreffStatus(personTreffId: PersonTreffId, aktuellForTreffStatus: AktuellForTreffStatus?) =
+    fun settAktuellForTreffStatus(personTreffId: PersonTreffId, aktuellForTreffStatus: AktuellForTreffStatus) =
         dataSource.connection.use { conn ->
             conn.prepareStatement("UPDATE jobbsoker SET aktuell_for_treff_status = ? WHERE id = ?").apply {
-                setString(1, aktuellForTreffStatus?.name)
+                setString(1, aktuellForTreffStatus.name)
                 setObject(2, personTreffId.somUuid)
             }.executeUpdate()
         }
@@ -689,7 +689,7 @@ class TestDatabase {
                     setObject(10, js.alder)
                     setString(11, js.innsatsgruppe?.asString)
                     setString(12, js.kontor?.kontornummer)
-                    setString(13, js.aktuellForTreffStatus?.name)
+                    setString(13, js.aktuellForTreffStatus.name)
                 }.executeQuery().let {
                     if (it.next()) it.getLong(1) else error("Kunne ikke legge til jobbsøker")
                 }
