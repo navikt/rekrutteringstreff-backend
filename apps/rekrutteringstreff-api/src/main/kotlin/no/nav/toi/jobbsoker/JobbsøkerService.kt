@@ -249,17 +249,17 @@ class JobbsøkerService(
     fun endreAktuellForTreffStatus(
         treffId: TreffId,
         personTreffId: PersonTreffId,
-        nyAktuellForTreffStatus: AktuellForTreffStatus?,
+        nyAktuellForTreffStatus: AktuellForTreffStatus,
         navIdent: String,
     ): EndreAktuellForTreffStatusResultat =
         dataSource.executeInTransaction { connection ->
-            val nåværendeLåstAktuellForTreffStatus = jobbsøkerRepository.hentAktuellForTreffStatusForOppdatering(connection, treffId, personTreffId)
+            val nåværendeAktuellForTreffStatus = jobbsøkerRepository.hentAktuellForTreffStatusForOppdatering(connection, treffId, personTreffId)
                 ?: return@executeInTransaction EndreAktuellForTreffStatusResultat.IKKE_FUNNET
-            if (nåværendeLåstAktuellForTreffStatus.aktuellForTreffStatus == nyAktuellForTreffStatus) return@executeInTransaction EndreAktuellForTreffStatusResultat.OK
+            if (nåværendeAktuellForTreffStatus == nyAktuellForTreffStatus) return@executeInTransaction EndreAktuellForTreffStatusResultat.OK
 
             jobbsøkerRepository.endreAktuellForTreffStatus(connection, personTreffId, nyAktuellForTreffStatus)
             jobbsøkerRepository.leggTilAktuellForTreffStatusHendelse(
-                connection, personTreffId, nyAktuellForTreffStatus, nåværendeLåstAktuellForTreffStatus.aktuellForTreffStatus, navIdent
+                connection, personTreffId, nyAktuellForTreffStatus, nåværendeAktuellForTreffStatus, navIdent
             )
             EndreAktuellForTreffStatusResultat.OK
         }

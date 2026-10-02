@@ -1189,19 +1189,18 @@ class JobbsøkerSokKomponentTest {
         assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Ola")
     }
 
-    @Test
-    fun `søketreff inneholder aktuellForTreffStatus, også når den ikke er satt`() {
+    fun `søketreff inneholder aktuellForTreffStatus med VURDERES som standard`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
             jobbsøker("11111111111", "Ola", "A"),
             jobbsøker("22222222222", "Kari", "B"),
         )
-        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.VURDERES)
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
 
         val dto = søk(treffId, "sortering" to "navn")
 
         assertThat(dto.jobbsøkere.map { it.aktuellForTreffStatus })
-            .containsExactly(AktuellForTreffStatus.VURDERES, null)
+            .containsExactly(AktuellForTreffStatus.AKTUELL, AktuellForTreffStatus.VURDERES)
     }
 
     @Test
@@ -1221,8 +1220,7 @@ class JobbsøkerSokKomponentTest {
 
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.antallPerAktuellForTreffStatus).containsExactlyInAnyOrderEntriesOf(
-            mapOf(AktuellForTreffStatus.AKTUELL to 1, AktuellForTreffStatus.VURDERES to 1)
-        )
+            mapOf(AktuellForTreffStatus.AKTUELL to 1, AktuellForTreffStatus.VURDERES to 2)        )
     }
 
     @Test
@@ -1243,19 +1241,17 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
-    fun `sortering på aktuellForTreffStatus stigende legger ikke-satt sist`() {
+    fun `sortering på aktuellForTreffStatus støtter stigende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "IkkeSatt", "A"),
             jobbsøker("22222222222", "IkkeAktuell", "B"),
             jobbsøker("33333333333", "Vurderes", "C"),
             jobbsøker("44444444444", "Kontaktet", "D"),
             jobbsøker("55555555555", "Aktuell", "E"),
         )
-        db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.IKKE_AKTUELL)
-        db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.VURDERES)
-        db.settAktuellForTreffStatus(ider[3], AktuellForTreffStatus.KONTAKTET)
-        db.settAktuellForTreffStatus(ider[4], AktuellForTreffStatus.AKTUELL)
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.IKKE_AKTUELL)
+        db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.KONTAKTET)
+        db.settAktuellForTreffStatus(ider[3], AktuellForTreffStatus.AKTUELL)
 
         val dto = søk(treffId, "sortering" to "aktuell-for-treff-status", "retning" to "asc")
 
@@ -1264,12 +1260,11 @@ class JobbsøkerSokKomponentTest {
             AktuellForTreffStatus.KONTAKTET,
             AktuellForTreffStatus.VURDERES,
             AktuellForTreffStatus.IKKE_AKTUELL,
-            null,
         )
     }
 
     @Test
-    fun `sortering på aktuellForTreffStatus synkende legger også ikke-satt sist`() {
+    fun `sortering på aktuellForTreffStatus støtter synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
             jobbsøker("11111111111", "IkkeSatt", "A"),
@@ -1283,8 +1278,8 @@ class JobbsøkerSokKomponentTest {
 
         assertThat(dto.jobbsøkere.map { it.aktuellForTreffStatus }).containsExactly(
             AktuellForTreffStatus.IKKE_AKTUELL,
+            AktuellForTreffStatus.VURDERES,
             AktuellForTreffStatus.AKTUELL,
-            null,
         )
     }
 
