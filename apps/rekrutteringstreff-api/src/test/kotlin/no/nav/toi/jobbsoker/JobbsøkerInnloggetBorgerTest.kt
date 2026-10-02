@@ -398,7 +398,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         httpPost(
             "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
@@ -424,7 +424,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         httpPost(
             "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
