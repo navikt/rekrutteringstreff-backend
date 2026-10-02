@@ -1012,4 +1012,188 @@ class JobbsøkerSokKomponentTest {
 
         assertThat(dto.jobbsøkere.map { it.kontornummer }).containsExactly("1000", "3000")
     }
+
+    @Test
+    fun `aktuellForTreffStatus-filter returnerer kun jobbsøkere med gitt verdi`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "A"),
+            jobbsøker("22222222222", "Kari", "B"),
+            jobbsøker("33333333333", "Per", "C"),
+        )
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
+        db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.IKKE_AKTUELL)
+
+        val dto = søk(treffId, "aktuellForTreffStatus" to listOf("AKTUELL"))
+
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.jobbsøkere.single().fornavn).isEqualTo("Ola")
+        assertThat(dto.jobbsøkere.single().aktuellForTreffStatus).isEqualTo(AktuellForTreffStatus.AKTUELL)
+    }
+
+    @Test
+    fun `aktuellForTreffStatus-filter med flere verdier returnerer unionen og ekskluderer ikke satt`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "A"),
+            jobbsøker("22222222222", "Kari", "B"),
+            jobbsøker("33333333333", "Per", "C"),
+        )
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
+        db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.KONTAKTET)
+
+        val dto = søk(treffId, "aktuellForTreffStatus" to listOf("AKTUELL", "KONTAKTET"))
+
+        assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Ola", "Kari")
+    }
+
+    @Test
+    fun `aktuellForTreffStatus-filter kombineres med statusfilter`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "A"),
+            jobbsøker("22222222222", "Kari", "B"),
+        )
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
+        db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.AKTUELL)
+        db.inviterJobbsøkere(listOf(ider[0]), treffId)
+
+        val dto = søk(treffId, "status" to listOf("INVITERT"), "aktuellForTreffStatus" to listOf("AKTUELL"))
+
+        assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Ola")
+    }
+
+    @Test
+    fun `søketreff inneholder aktuellForTreffStatus, også når den ikke er satt`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "A"),
+            jobbsøker("22222222222", "Kari", "B"),
+        )
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.VURDERES)
+
+        val dto = søk(treffId, "sortering" to "navn")
+
+        assertThat(dto.jobbsøkere.map { it.aktuellForTreffStatus })
+            .containsExactly(AktuellForTreffStatus.VURDERES, null)
+    }
+
+    @Test
+    fun `antallPerAktuellForTreffStatus teller uavhengig av eget filter, men respekterer andre filtre`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "A"),
+            jobbsøker("22222222222", "Ola", "B"),
+            jobbsøker("33333333333", "Kari", "C"),
+            jobbsøker("44444444444", "Ola", "D"),
+        )
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
+        db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.VURDERES)
+        db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.AKTUELL)
+
+        val dto = søk(treffId, "fritekst" to "ola", "aktuellForTreffStatus" to listOf("AKTUELL"))
+
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.antallPerAktuellForTreffStatus).containsExactlyInAnyOrderEntriesOf(
+            mapOf(AktuellForTreffStatus.AKTUELL to 1, AktuellForTreffStatus.VURDERES to 1)
+        )
+    }
+
+    @Test
+    fun `antallPerAktuellForTreffStatus ekskluderer skjulte og slettede jobbsøkere`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Synlig", "A"),
+            jobbsøker("22222222222", "Skjult", "B"),
+            jobbsøker("33333333333", "Slettet", "C"),
+        )
+        ider.forEach { db.settAktuellForTreffStatus(it, AktuellForTreffStatus.AKTUELL) }
+        db.settSynlighet(ider[1], false)
+        db.settJobbsøkerStatus(ider[2], JobbsøkerStatus.SLETTET)
+
+        val dto = søk(treffId)
+
+        assertThat(dto.antallPerAktuellForTreffStatus[AktuellForTreffStatus.AKTUELL]).isEqualTo(1)
+    }
+
+    @Test
+    fun `sortering på aktuellForTreffStatus stigende legger ikke-satt sist`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "IkkeSatt", "A"),
+            jobbsøker("22222222222", "IkkeAktuell", "B"),
+            jobbsøker("33333333333", "Vurderes", "C"),
+            jobbsøker("44444444444", "Kontaktet", "D"),
+            jobbsøker("55555555555", "Aktuell", "E"),
+        )
+        db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.IKKE_AKTUELL)
+        db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.VURDERES)
+        db.settAktuellForTreffStatus(ider[3], AktuellForTreffStatus.KONTAKTET)
+        db.settAktuellForTreffStatus(ider[4], AktuellForTreffStatus.AKTUELL)
+
+        val dto = søk(treffId, "sortering" to "aktuell-for-treff-status", "retning" to "asc")
+
+        assertThat(dto.jobbsøkere.map { it.aktuellForTreffStatus }).containsExactly(
+            AktuellForTreffStatus.AKTUELL,
+            AktuellForTreffStatus.KONTAKTET,
+            AktuellForTreffStatus.VURDERES,
+            AktuellForTreffStatus.IKKE_AKTUELL,
+            null,
+        )
+    }
+
+    @Test
+    fun `sortering på aktuellForTreffStatus synkende legger også ikke-satt sist`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "IkkeSatt", "A"),
+            jobbsøker("22222222222", "Aktuell", "B"),
+            jobbsøker("33333333333", "IkkeAktuell", "C"),
+        )
+        db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.AKTUELL)
+        db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.IKKE_AKTUELL)
+
+        val dto = søk(treffId, "sortering" to "aktuell-for-treff-status", "retning" to "desc")
+
+        assertThat(dto.jobbsøkere.map { it.aktuellForTreffStatus }).containsExactly(
+            AktuellForTreffStatus.IKKE_AKTUELL,
+            AktuellForTreffStatus.AKTUELL,
+            null,
+        )
+    }
+
+    @Test
+    fun `sortering på aktuellForTreffStatus bruker stigende som standardretning`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "IkkeAktuell", "A"),
+            jobbsøker("22222222222", "Aktuell", "B"),
+        )
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.IKKE_AKTUELL)
+        db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.AKTUELL)
+
+        val dto = søk(treffId, "sortering" to "aktuell-for-treff-status")
+
+        assertThat(dto.jobbsøkere.map { it.aktuellForTreffStatus })
+            .containsExactly(AktuellForTreffStatus.AKTUELL, AktuellForTreffStatus.IKKE_AKTUELL)
+    }
+
+    @Test
+    fun `ugyldig aktuellForTreffStatus i filter gir 400`() {
+        val treffId = opprettTreffMedEier()
+
+        val response = httpPost(søkPath(treffId), søkBody("aktuellForTreffStatus" to listOf("FINNES_IKKE")))
+
+        assertThat(response.statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `ugyldig status i filter gir 400`() {
+        val treffId = opprettTreffMedEier()
+
+        val response = httpPost(søkPath(treffId), søkBody("status" to listOf("FINNES_IKKE")))
+
+        assertThat(response.statusCode()).isEqualTo(400)
+    }
+
 }
