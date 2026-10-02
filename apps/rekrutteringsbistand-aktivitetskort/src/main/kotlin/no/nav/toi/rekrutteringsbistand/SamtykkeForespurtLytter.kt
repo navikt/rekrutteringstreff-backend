@@ -12,6 +12,7 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
 import java.time.ZonedDateTime
+import java.util.UUID
 
 class SamtykkeForespurtLytter(
     rapidsConnection: RapidsConnection,
@@ -50,13 +51,16 @@ class SamtykkeForespurtLytter(
         val fnr = packet["fnr"].asText()
         val stillingId = packet["stillingsId"].asText()
 
+        val hendelseId = UUID.randomUUID()
         repository.opprettDeltStilling(
             fnr = fnr,
             stillingId = stillingId,
             tittel = packet["stillingsTittel"].asText(),
             opprettetAv = packet["forespurtAvIdent"].asText(),
+            messageId = hendelseId
         )?.let { aktivitetskortId ->
             packet["aktivitetskortuuid"] = aktivitetskortId
+            packet["hendelseId"] = hendelseId
             context.publish(fnr, packet.toJson())
         }
     }

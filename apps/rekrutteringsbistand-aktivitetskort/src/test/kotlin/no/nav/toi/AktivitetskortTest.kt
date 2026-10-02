@@ -137,6 +137,7 @@ class AktivitetskortTest {
             stillingId = expectedStillingId.toString(),
             tittel = expectedTittel,
             opprettetAv = expectedOpprettetAv,
+            messageId = UUID.randomUUID()
         )
 
         AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
@@ -440,6 +441,7 @@ class AktivitetskortTest {
             stillingId = stillingId.toString(),
             tittel = "Teststilling",
             opprettetAv = "testuser",
+            messageId = UUID.randomUUID(),
         )
         val deltStilling = testRepository.hentAlleRekrutteringsbistandStillinger().single()
         val errorMessage = "Aktivitetskortet ble avvist"
