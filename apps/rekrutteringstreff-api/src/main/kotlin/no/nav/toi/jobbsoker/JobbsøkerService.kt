@@ -246,6 +246,24 @@ class JobbsøkerService(
         logger.info("Tilbakestilte jobbsøker $personTreffId fra MØTT_OPP til $forrigeStatus ved fjerning av oppmøte")
     }
 
+    fun endreAktuellForTreffStatus(
+        treffId: TreffId,
+        personTreffId: PersonTreffId,
+        nyAktuellForTreffStatus: AktuellForTreffStatus?,
+        navIdent: String,
+    ): EndreAktuellForTreffStatusResultat =
+        dataSource.executeInTransaction { connection ->
+            val nåværendeLåstAktuellForTreffStatus = jobbsøkerRepository.hentAktuellForTreffStatusForOppdatering(connection, treffId, personTreffId)
+                ?: return@executeInTransaction EndreAktuellForTreffStatusResultat.IKKE_FUNNET
+            if (nåværendeLåstAktuellForTreffStatus.aktuellForTreffStatus == nyAktuellForTreffStatus) return@executeInTransaction EndreAktuellForTreffStatusResultat.OK
+
+            jobbsøkerRepository.endreAktuellForTreffStatus(connection, personTreffId, nyAktuellForTreffStatus)
+            jobbsøkerRepository.leggTilAktuellForTreffStatusHendelse(
+                connection, personTreffId, nyAktuellForTreffStatus, nåværendeLåstAktuellForTreffStatus.aktuellForTreffStatus, navIdent
+            )
+            EndreAktuellForTreffStatusResultat.OK
+        }
+
     private fun finnStatusFør(
         connection: Connection,
         personTreffId: PersonTreffId,
@@ -494,3 +512,5 @@ enum class MarkerSlettetResultat {
     IKKE_FUNNET,
     IKKE_TILLATT
 }
+
+enum class EndreAktuellForTreffStatusResultat { OK, IKKE_FUNNET }

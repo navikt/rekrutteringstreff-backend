@@ -410,6 +410,14 @@ class TestDatabase {
         }.executeUpdate()
     }
 
+    fun settAktuellForTreffStatus(personTreffId: PersonTreffId, aktuellForTreffStatus: AktuellForTreffStatus?) =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("UPDATE jobbsoker SET aktuell_for_treff_status = ? WHERE id = ?").apply {
+                setString(1, aktuellForTreffStatus?.name)
+                setObject(2, personTreffId.somUuid)
+            }.executeUpdate()
+        }
+
     fun leggTilMinsideHendelse(personTreffId: PersonTreffId, hendelseData: String) {
         dataSource.connection.use { connection ->
             jobbsøkerRepository.leggTilHendelserForJobbsøkere(
@@ -664,8 +672,8 @@ class TestDatabase {
                     INSERT INTO jobbsoker
                       (id, rekrutteringstreff_id, fodselsnummer, fornavn, etternavn,
                        kontornavn, veileder_navn, veileder_navident, status,
-                       alder, innsatsgruppe, kontornummer)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       alder, innsatsgruppe, kontornummer, aktuell_for_treff_status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     RETURNING jobbsoker_id
                     """.trimIndent()
                 ).apply {
@@ -681,6 +689,7 @@ class TestDatabase {
                     setObject(10, js.alder)
                     setString(11, js.innsatsgruppe?.asString)
                     setString(12, js.kontor?.kontornummer)
+                    setString(13, js.aktuellForTreffStatus?.name)
                 }.executeQuery().let {
                     if (it.next()) it.getLong(1) else error("Kunne ikke legge til jobbsøker")
                 }

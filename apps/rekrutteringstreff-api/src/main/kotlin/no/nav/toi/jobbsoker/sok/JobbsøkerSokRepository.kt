@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker.sok
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.executeInTransaction
+import no.nav.toi.jobbsoker.AktuellForTreffStatus
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
@@ -29,6 +30,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val tellinger = hentTellinger(conn, treffId)
             val antallPerStatus = hentAntallPerStatus(conn, treffId, request)
+            val antallPerAktuellForTreffStatus = hentAntallPerAktuellForTreffStatus(conn, treffId, request)
             val antallPerAldersgruppe = hentAntallPerAldersgruppe(conn, treffId, request)
             val antallPerKontor = hentAntallPerKontor(conn, treffId, request, tilgjengeligeKontornumre)
             val treff = if (totalt == 0L) {
@@ -55,6 +57,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 side = responsSide,
                 jobbsøkere = jobbsøkereMedHendelser,
                 antallPerStatus = antallPerStatus,
+                antallPerAktuellForTreffStatus = antallPerAktuellForTreffStatus,
                 antallPerAldersgruppe = antallPerAldersgruppe,
                 antallPerKontor = antallPerKontor,
             )
@@ -104,6 +107,32 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                     result[JobbsøkerStatus.valueOf(rs.getString("status"))] = rs.getInt("antall")
                 }
                 result
+            }
+        }
+    }
+
+    private fun hentAntallPerAktuellForTreffStatus(
+        conn: Connection,
+        treffId: TreffId,
+        request: JobbsøkerSøkRequest,
+    ): Map<AktuellForTreffStatus, Int> {
+        val (where, params) = byggWhere(treffId, request.copy(aktuellForTreffStatus = null))
+        val sql = """
+            SELECT v.aktuell_for_treff_status, COUNT(*) AS antall
+            FROM jobbsoker_sok_view v
+            $where
+              AND v.aktuell_for_treff_status IS NOT NULL
+            GROUP BY v.aktuell_for_treff_status
+        """.trimIndent()
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            params.forEachIndexed { index, param -> settParam(stmt, index + 1, param) }
+            stmt.executeQuery().use { rs ->
+                buildMap {
+                    while (rs.next()) {
+                        put(AktuellForTreffStatus.valueOf(rs.getString("aktuell_for_treff_status")), rs.getInt("antall"))
+                    }
+                }
             }
         }
     }
@@ -209,7 +238,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             SELECT v.person_treff_id::text, v.fodselsnummer,
                    v.fornavn, v.etternavn,
                    v.status, v.lagt_til_dato, v.lagt_til_av, v.lagt_til_av_navn, v.alder,
-                   v.kontornummer
+                   v.kontornummer, v.aktuell_for_treff_status
             FROM jobbsoker_sok_view v
             $where
             ORDER BY ${sorteringsfelt.sql(sorteringsretning)}
@@ -253,6 +282,12 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             statuser.forEach { params.add(it.name) }
         }
 
+        request.aktuellForTreffStatus?.takeIf { it.isNotEmpty() }?.let { statuser ->
+            val placeholders = statuser.indices.joinToString(",") { "?" }
+            conditions.add("v.aktuell_for_treff_status IN ($placeholders)")
+            statuser.forEach { params.add(it.name) }
+        }
+
         request.aldersgruppe?.takeIf { it.isNotEmpty() }?.let { aldersgrupper ->
             val orClause = aldersgrupper.joinToString(" OR ") { it.sql }
             conditions.add("($orClause)")
@@ -290,6 +325,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         lagtTilAvNavn = getString("lagt_til_av_navn"),
         alder = getInt("alder"),
         kontornummer = getString("kontornummer"),
+        aktuellForTreffStatus = getString("aktuell_for_treff_status")?.let(AktuellForTreffStatus::valueOf),
     )
 
     private fun hentMinsideHendelser(

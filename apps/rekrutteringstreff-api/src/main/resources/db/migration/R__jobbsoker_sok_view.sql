@@ -14,7 +14,8 @@ SELECT
     opprettet.aktøridentifikasjon AS lagt_til_av,
     opprettet.hendelse_data ->> 'lagtTilAvNavn' AS lagt_til_av_navn,
     j.alder,
-    j.kontornummer
+    j.kontornummer,
+    j.aktuell_for_treff_status
 FROM jobbsoker j
 JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
 LEFT JOIN LATERAL (
