@@ -570,6 +570,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         stillingId: String,
         tittel: String,
         opprettetAv: String,
+        messageId: UUID
     ): UUID? {
         val aktivitetskortId = UUID.randomUUID()
 
@@ -614,7 +615,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                         3,
                         DeleCvMedArbeidsgiverType.beskrivelse
                     )
-                    setObject(4, UUID.randomUUID())
+                    setObject(4, messageId)
                     setObject(5, aktivitetskortId)
                     setString(6, opprettetAv)
                     setObject(7, ZonedDateTime.now().toLocalDateTime())
