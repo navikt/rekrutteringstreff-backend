@@ -1,4 +1,7 @@
 name: rekrutteringsbistand-aktivitetskort
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 on:
   push:

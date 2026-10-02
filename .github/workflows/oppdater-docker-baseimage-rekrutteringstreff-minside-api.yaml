@@ -1,0 +1,14 @@
+name: 'Oppdater Docker baseimage: rekrutteringstreff-minside-api'
+on:
+  schedule:
+    - cron: '20 6 * * 1'
+  workflow_dispatch:
+jobs:
+  call-oppdater-docker-baseimage:
+    uses: navikt/toi-github-actions-workflows/.github/workflows/oppdater-docker-baseimage.yaml@v16
+    with:
+      app-navn: rekrutteringstreff-minside-api
+      deploy-workflow-filnavn: deploy-rekrutteringstreff-minside-api.yaml
+    permissions:
+      id-token: write
+      actions: write
