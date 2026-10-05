@@ -28,6 +28,8 @@ class ArbeidsgiverServiceTest {
     companion object {
         private val db = TestDatabase()
         private val mapper = JacksonConfig.mapper
+        private const val FIKTIVT_ORGNR = "000000001"
+        private const val EKSTRA_ORGNR = "000000002"
         private lateinit var arbeidsgiverRepository: ArbeidsgiverRepository
         private lateinit var arbeidsgiverService: ArbeidsgiverService
 
@@ -103,7 +105,8 @@ class ArbeidsgiverServiceTest {
             poststed = null
         )
         arbeidsgiverService.leggTilArbeidsgiver(arbeidsgiver, treffId, "testperson")
-        val arbeidsgiverId = arbeidsgiverService.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId.somUuid
+        leggTilEkstraArbeidsgiver(treffId)
+        val arbeidsgiverId = arbeidsgiverService.hentArbeidsgiver(treffId, Orgnr("123456789"))!!.arbeidsgiverTreffId.somUuid
 
         val resultat = arbeidsgiverService.markerArbeidsgiverSlettet(arbeidsgiverId, treffId, "testperson")
 
@@ -111,13 +114,27 @@ class ArbeidsgiverServiceTest {
 
         // Verifiser at arbeidsgiver ikke lenger returneres (har status SLETTET)
         val arbeidsgivere = arbeidsgiverService.hentArbeidsgivere(treffId)
-        assertThat(arbeidsgivere).isEmpty()
+        assertThat(arbeidsgivere.map { it.orgnr.asString }).containsExactly(EKSTRA_ORGNR)
 
-        // Verifiser at begge hendelser er registrert (OPPRETTET og SLETTET)
+        // Verifiser at hendelsene er registrert (OPPRETTET for begge og SLETTET)
         val hendelser = arbeidsgiverService.hentArbeidsgiverHendelser(treffId)
-        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser).hasSize(3)
         assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.OPPRETTET }).isTrue()
         assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET }).isTrue()
+    }
+
+    @Test
+    fun `siste arbeidsgiver kan ikke slettes`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        leggTilEkstraArbeidsgiver(treffId)
+        val arbeidsgiverId = arbeidsgiverService.hentArbeidsgivere(treffId).single().arbeidsgiverTreffId.somUuid
+
+        assertThatThrownBy { arbeidsgiverService.markerArbeidsgiverSlettet(arbeidsgiverId, treffId, "testperson") }
+            .isInstanceOf(SisteArbeidsgiverKanIkkeSlettesException::class.java)
+
+        assertThat(arbeidsgiverService.hentArbeidsgivere(treffId)).hasSize(1)
+        assertThat(arbeidsgiverService.hentArbeidsgiverHendelser(treffId).map { it.hendelsestype })
+            .containsExactly(ArbeidsgiverHendelsestype.OPPRETTET)
     }
 
     @Test
@@ -197,20 +214,22 @@ class ArbeidsgiverServiceTest {
     fun `reaktivering uten møteplan bruker samme korte lesevei`() {
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "TESTPERSON", tittel = "Fiktivt treff")
         leggTilFiktivArbeidsgiver(arbeidsgiverService, treff, medBehov = true)
-        val arbeidsgiver = arbeidsgiverService.hentArbeidsgivere(treff).single().arbeidsgiverTreffId
+        leggTilEkstraArbeidsgiver(treff)
+        val arbeidsgiver = arbeidsgiverService.hentArbeidsgiver(treff, Orgnr(FIKTIVT_ORGNR))!!.arbeidsgiverTreffId
         arbeidsgiverService.markerArbeidsgiverSlettet(arbeidsgiver.somUuid, treff, "TESTPERSON")
 
         val sql = sporSql { service -> leggTilFiktivArbeidsgiver(service, treff, medBehov = true) }
 
         assertThat(sql.filter { it.startsWith("SELECT") }).hasSize(3)
-        assertThat(arbeidsgiverService.hentArbeidsgivere(treff).single().arbeidsgiverTreffId).isEqualTo(arbeidsgiver)
+        assertThat(arbeidsgiverService.hentArbeidsgiver(treff, Orgnr(FIKTIVT_ORGNR))!!.arbeidsgiverTreffId).isEqualTo(arbeidsgiver)
     }
 
     @Test
     fun `sletting uten møteplan hopper over møteplanlesing men beholder registreringssjekkene`() {
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "TESTPERSON", tittel = "Fiktivt treff")
         leggTilFiktivArbeidsgiver(arbeidsgiverService, treff, medBehov = false)
-        val arbeidsgiver = arbeidsgiverService.hentArbeidsgivere(treff).single().arbeidsgiverTreffId
+        leggTilEkstraArbeidsgiver(treff)
+        val arbeidsgiver = arbeidsgiverService.hentArbeidsgiver(treff, Orgnr(FIKTIVT_ORGNR))!!.arbeidsgiverTreffId
 
         val sql = sporSql { service ->
             assertThat(service.markerArbeidsgiverSlettet(arbeidsgiver.somUuid, treff, "TESTPERSON")).isTrue()
@@ -221,7 +240,7 @@ class ArbeidsgiverServiceTest {
             "SELECT COUNT(*) FROM interesse", "SELECT COUNT(*) FROM intervjufordeling", "SELECT COUNT(*) FROM vurdering",
         )
         assertThat(sql).noneMatch { it.contains("deltakernummer") }
-        assertThat(arbeidsgiverService.hentArbeidsgivere(treff)).isEmpty()
+        assertThat(arbeidsgiverService.hentArbeidsgivere(treff).map { it.orgnr.asString }).containsExactly(EKSTRA_ORGNR)
     }
 
     @ParameterizedTest
@@ -239,7 +258,7 @@ class ArbeidsgiverServiceTest {
 
     private fun leggTilFiktivArbeidsgiver(service: ArbeidsgiverService, treff: TreffId, medBehov: Boolean) {
         val arbeidsgiver = LeggTilArbeidsgiver(
-            Orgnr("000000001"), Orgnavn("Fiktiv testbedrift"), emptyList(), null, null, null,
+            Orgnr(FIKTIVT_ORGNR), Orgnavn("Fiktiv testbedrift"), emptyList(), null, null, null,
         )
         if (medBehov) {
             val behov = ArbeidsgiversBehov(
@@ -250,6 +269,14 @@ class ArbeidsgiverServiceTest {
         } else {
             service.leggTilArbeidsgiver(arbeidsgiver, treff, "TESTPERSON")
         }
+    }
+
+    private fun leggTilEkstraArbeidsgiver(treff: TreffId) {
+        arbeidsgiverService.leggTilArbeidsgiver(
+            LeggTilArbeidsgiver(Orgnr(EKSTRA_ORGNR), Orgnavn("Fiktiv ekstrabedrift"), emptyList(), null, null, null),
+            treff,
+            "TESTPERSON",
+        )
     }
 
     private fun sporSql(block: (ArbeidsgiverService) -> Unit): List<String> {

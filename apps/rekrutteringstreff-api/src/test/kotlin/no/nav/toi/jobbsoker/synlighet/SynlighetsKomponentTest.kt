@@ -11,6 +11,7 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.rekrutteringstreff.HendelseRessurs
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -104,8 +105,10 @@ class SynlighetsKomponentTest {
     private fun søkPath(treffId: TreffId): String =
         "${jobbsøkerPath(treffId)}/sok"
 
-    private fun opprettTreffMedEier(): TreffId {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreff")
+    private fun opprettTreffMedEier(
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
+    ): TreffId {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreff", kategori = kategori)
         eierRepository.leggTil(treffId, "A123456", "0315")
         return treffId
     }
@@ -374,27 +377,86 @@ class SynlighetsKomponentTest {
     }
 
     @Test
-    fun `GET alle hendelser filtrerer ut jobbsøker-hendelser for ikke-synlige jobbsøkere`() {
+    fun `GET alle hendelser filtrerer ut jobbsøker-hendelser for ikke-synlige jobbsøkere på vanlige treff`() {
         val treffId = opprettTreffMedEier()
-        
+
         val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
         val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
-        
+
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
         db.settSynlighet(personTreffIder[1], false)
-        
+
         val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/allehendelser")
-        
+
         assertThat(response.statusCode()).isEqualTo(200)
         val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
-        
-        // Det skal være 1 rekrutteringstreff-hendelse (OPPRETTET) + 1 jobbsøker-hendelse (synlig)
         val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
-        val treffHendelser = hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }
-        
         assertThat(jobbsøkerHendelser).hasSize(1)
         assertThat(jobbsøkerHendelser.first().subjektNavn).isEqualTo("Synlig Person")
-        assertThat(treffHendelser).isNotEmpty()
+        assertThat(jobbsøkerHendelser.first().subjektId).isEqualTo("11111111111")
+        assertThat(hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }).isNotEmpty()
+    }
+
+    @Test
+    fun `GET alle hendelser på WorkOp tar med usynlige, men ikke usynlige som er slettet, og viser sperrede uten navn`() {
+        val treffId = opprettTreffMedEier(RekrutteringstreffKategori.WORKOP)
+
+        val jobbsøkere = listOf("Synlig", "Usynlig", "SlettetUsynlig", "Sperret", "SlettetSynlig").mapIndexed { i, navn ->
+            LeggTilJobbsøker(Fødselsnummer("${i + 1}".repeat(11)), Fornavn(navn), Etternavn("Person"), null, null, null)
+        }
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId, "A123456")
+        jobbsøkere.take(4).forEach { db.svarJaTilInvitasjon(it.fødselsnummer, treffId, it.fødselsnummer.asString) }
+        db.settSynlighet(personTreffIder[0], true)
+        db.settSynlighet(personTreffIder[1], false)
+        db.settSynlighet(personTreffIder[2], false)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
+        db.settSynlighet(personTreffIder[3], false)
+        db.settSperret(personTreffIder[3], true)
+        db.settSynlighet(personTreffIder[4], true)
+        db.settJobbsøkerStatus(personTreffIder[4], JobbsøkerStatus.SLETTET)
+
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/allehendelser")
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
+        val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
+
+        assertThat(jobbsøkerHendelser.map { Triple(it.hendelsestype, it.subjektNavn, it.subjektId) }).containsExactlyInAnyOrder(
+            Triple("OPPRETTET", "Synlig Person", "11111111111"),
+            Triple("SVART_JA_TIL_INVITASJON", "Synlig Person", "11111111111"),
+            Triple("OPPRETTET", "Usynlig Person", null),
+            Triple("SVART_JA_TIL_INVITASJON", "Usynlig Person", null),
+            Triple("OPPRETTET", null, null),
+            Triple("SVART_JA_TIL_INVITASJON", null, null),
+            Triple("OPPRETTET", "SlettetSynlig Person", "55555555555"),
+        )
+        val svar = jobbsøkerHendelser.filter { it.hendelsestype == "SVART_JA_TIL_INVITASJON" }
+        assertThat(svar.single { it.subjektId == "11111111111" }.aktørIdentifikasjon).isEqualTo("11111111111")
+        assertThat(svar.filter { it.subjektId == null }.map { it.aktørIdentifikasjon }).containsOnlyNulls()
+        listOf("22222222222", "33333333333", "44444444444").forEach {
+            assertThat(response.body()).doesNotContain(it)
+        }
+        assertThat(hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }).isNotEmpty()
+    }
+
+    @Test
+    fun `GET alle hendelser på vanlige treff viser fortsatt synlige som er slettet, med fødselsnummer`() {
+        val treffId = opprettTreffMedEier()
+
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Slettet"), Etternavn("Person"), null, null, null)
+        val personTreffId = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "A123456").single()
+        db.svarJaTilInvitasjon(jobbsøker.fødselsnummer, treffId, jobbsøker.fødselsnummer.asString)
+        db.settJobbsøkerStatus(personTreffId, JobbsøkerStatus.SLETTET)
+
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/allehendelser")
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
+        val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
+        assertThat(jobbsøkerHendelser.map { Triple(it.hendelsestype, it.subjektId, it.aktørIdentifikasjon) }).containsExactlyInAnyOrder(
+            Triple("OPPRETTET", "11111111111", "A123456"),
+            Triple("SVART_JA_TIL_INVITASJON", "11111111111", "11111111111"),
+        )
     }
 }

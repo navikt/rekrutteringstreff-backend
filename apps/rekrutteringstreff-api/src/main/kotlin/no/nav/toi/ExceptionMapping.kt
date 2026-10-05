@@ -11,6 +11,7 @@ import io.opentelemetry.api.trace.Span
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.arbeidsgiver.ArbeidsgiverKanIkkeSlettesException
+import no.nav.toi.arbeidsgiver.SisteArbeidsgiverKanIkkeSlettesException
 import no.nav.toi.exception.*
 import no.nav.toi.jobbsoker.oppmøte.OppmøteKanIkkeFjernesException
 import no.nav.toi.treffgjennomføring.matching.InteresseKanIkkeFjernesException
@@ -163,6 +164,18 @@ object ExceptionMapping {
                     melding = e.message,
                     feil = e.message,
                     hint = e.lagHint(),
+                )
+            )
+        }
+
+        exception(SisteArbeidsgiverKanIkkeSlettesException::class.java) { e, ctx ->
+            ctx.status(409).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.CONFLICT,
+                    ctx = ctx,
+                    melding = e.message,
+                    feil = e.message,
                 )
             )
         }

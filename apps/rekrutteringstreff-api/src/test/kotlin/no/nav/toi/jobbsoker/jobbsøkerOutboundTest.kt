@@ -84,7 +84,6 @@ class JobbsøkerOutboundTest {
                     veilederNavn = null,
                     veilederNavIdent = null,
                     status = JobbsøkerStatus.LAGT_TIL,
-                    aktuellForTreffStatus = null
                 )
             )
         )

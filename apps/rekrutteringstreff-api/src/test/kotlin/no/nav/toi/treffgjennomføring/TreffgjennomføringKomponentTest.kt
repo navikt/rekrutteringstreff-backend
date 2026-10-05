@@ -216,6 +216,18 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `usynlig jobbsøker kan registreres som møtt`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        db.settSynlighet(person, false)
+
+        assertThat(oppmøte(treff, person, møtt = true).statusCode()).isEqualTo(200)
+
+        assertThat(oppmøteliste(treff)).containsExactly(person.somString)
+        assertThat(deltakernummer(treff)[person.somString]).isEqualTo(1)
+    }
+
+    @Test
     fun `gjentatt registrering av samme oppmøte gir ingen ny hendelse`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
@@ -242,6 +254,43 @@ class TreffgjennomføringKomponentTest {
         // Samme person får tilbake sitt opprinnelige nummer — kortet er allerede delt ut.
         oppmøte(treff, første, møtt = true)
         assertThat(deltakernummer(treff)[første.somString]).isEqualTo(1)
+    }
+
+    @Test
+    fun `alle hendelser for treffet tar med detaljene for jobbsøkerhendelser`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff, "11111111111")
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        interesse(treff, person, ag, interessert = true)
+        assertThat(
+            vurderingFor(treff, person, ag, ""","vurderingsstatus":"AKTUELL","vurderingsnotat":["AG_GODT_INNTRYKK"]""").statusCode()
+        ).isEqualTo(200)
+
+        val respons = send(HttpRequest.newBuilder().GET(), "/api/rekrutteringstreff/${treff.somString}/allehendelser", eier, listOf(arbeidsgiverrettet))
+        assertThat(respons.statusCode()).isEqualTo(200)
+        val hendelser = mapper.readTree(respons.body())
+        fun data(type: String) = hendelser.single { it["hendelsestype"].asText() == type }["hendelseData"]
+
+        assertThat(data("REGISTRERT_OPPMØTE")["deltakernummer"].asInt()).isEqualTo(1)
+        assertThat(data("VURDERT")["vurdering"].asText()).isEqualTo("AKTUELL")
+        assertThat(data("VURDERT")["arbeidsgiverTreffId"].asText()).isEqualTo(ag.somString)
+        assertThat(data("NOTAT_LAGT_TIL")["notat"].asText()).isEqualTo("AG_GODT_INNTRYKK")
+        assertThat(hendelser.filter { it["ressurs"].asText() != "JOBBSØKER" })
+            .allSatisfy { assertThat(it["hendelseData"]?.isNull ?: true).isTrue() }
+    }
+
+    @Test
+    fun `alle hendelser for vanlige treff er uendret og har ingen detaljer`() {
+        val treff = vanligTreff()
+        val person = jobbsøker(treff, "11111111111")
+        oppmøte(treff, person, møtt = true)
+
+        val respons = send(HttpRequest.newBuilder().GET(), "/api/rekrutteringstreff/${treff.somString}/allehendelser", eier, listOf(arbeidsgiverrettet))
+        assertThat(respons.statusCode()).isEqualTo(200)
+        val hendelser = mapper.readTree(respons.body())
+        assertThat(hendelser.map { it["hendelsestype"].asText() }).contains("REGISTRERT_OPPMØTE")
+        assertThat(hendelser).allSatisfy { assertThat(it["hendelseData"]?.isNull ?: true).isTrue() }
     }
 
     @Test
@@ -331,6 +380,21 @@ class TreffgjennomføringKomponentTest {
         val treff = workOpTreff()
 
         assertThat(møteoppsett(treff).statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `møteoppsett krever minst én arbeidsgiver, og én arbeidsgiver gir ett rom`() {
+        val treff = workOpTreff(antallArbeidsgivere = 0)
+        oppmøte(treff, jobbsøker(treff), møtt = true)
+
+        assertThat(møteoppsett(treff).statusCode()).isEqualTo(400)
+        assertThat(aggregat(treff)["rom"]).isEmpty()
+
+        arbeidsgiver(treff)
+        assertThat(møteoppsett(treff).statusCode()).isEqualTo(200)
+        val svar = aggregat(treff)
+        assertThat(svar["antallRom"].asInt()).isEqualTo(1)
+        assertThat(svar["arbeidsgiverRekkefølge"]).hasSize(1)
     }
 
     @Test
@@ -516,6 +580,47 @@ class TreffgjennomføringKomponentTest {
         val fordelingerEtterFjernet = aggregat(treff)["intervjufordelinger"]
         val ag2FordelingEtterFjernet = fordelingerEtterFjernet.firstOrNull { it["arbeidsgiverTreffId"].asText() == ag2.somString }
         assertThat(ag2FordelingEtterFjernet?.get("inkludertePersonTreffIder")).isNullOrEmpty()
+    }
+
+    @Test
+    fun `interesse for arbeidsgiver lagt til etter fordelingen speiles inn i fordelingen`() {
+        // Som i testkjøringen: fem arbeidsgivere er fordelt før den sjette legges til.
+        val treff = workOpTreff(antallArbeidsgivere = 5)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        listOf(p1, p2).forEach { oppmøte(treff, it, møtt = true) }
+        møteoppsett(treff)
+        aktiveArbeidsgivere(treff).forEach { interesse(treff, p1, it, interessert = true) }
+        assertThat(post(treff, "/treffgjennomforing/intervjufordeling/fordel").statusCode()).isEqualTo(200)
+
+        val ny = opprettArbeidsgiverViaApi(treff, "000000001")
+        assertThat(interesse(treff, p2, ny, interessert = true).statusCode()).isEqualTo(200)
+
+        val nyFordeling = aggregat(treff)["intervjufordelinger"]
+            .single { it["arbeidsgiverTreffId"].asText() == ny.somString }
+        assertThat(nyFordeling["inkludertePersonTreffIder"].map { it.asText() }).containsExactly(p2.somString)
+    }
+
+    @Test
+    fun `interesse for gjeninnlagt arbeidsgiver speiles inn i fordelingen`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        val (ag1, ag2) = aktiveArbeidsgivere(treff)
+        listOf(p1, p2).forEach { oppmøte(treff, it, møtt = true) }
+        interesse(treff, p1, ag1, interessert = true)
+        assertThat(post(treff, "/treffgjennomforing/intervjufordeling/fordel").statusCode()).isEqualTo(200)
+        // Klienten kan ha lagret en tom fordeling for arbeidsgiveren før den ble fjernet.
+        assertThat(intervjufordeling(treff, ag2).statusCode()).isEqualTo(200)
+        assertThat(slettArbeidsgiver(treff, ag2).statusCode()).isEqualTo(204)
+        val gjeninnlagt = opprettArbeidsgiverViaApi(treff, "999999992", true)
+        assertThat(gjeninnlagt).isEqualTo(ag2)
+
+        assertThat(interesse(treff, p2, gjeninnlagt, interessert = true).statusCode()).isEqualTo(200)
+
+        val fordeling = aggregat(treff)["intervjufordelinger"]
+            .single { it["arbeidsgiverTreffId"].asText() == gjeninnlagt.somString }
+        assertThat(fordeling["inkludertePersonTreffIder"].map { it.asText() }).containsExactly(p2.somString)
     }
 
     @Test
@@ -1112,7 +1217,7 @@ class TreffgjennomføringKomponentTest {
 
     @Test
     fun `sletting venter på trefflåsen og ser interessen som ble lagret mens den ventet`() {
-        val treff = workOpTreff()
+        val treff = workOpTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
@@ -1134,7 +1239,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(respons.statusCode()).isEqualTo(409)
         assertThat(mapper.readTree(respons.body())["hint"].asText()).isEqualTo("Fjern registrerte interesser først.")
         assertThat(aggregat(treff)["interesser"]).hasSize(1)
-        assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(1)
+        assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(2)
     }
 
     @Test
@@ -1170,8 +1275,27 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `siste arbeidsgiver kan fjernes fra tom møteplan og reaktiveres med rom igjen`() {
+    fun `siste arbeidsgiver kan ikke fjernes, heller ikke fra tom møteplan`() {
         val treff = workOpTreff(antallArbeidsgivere = 0)
+        val ag = opprettArbeidsgiverViaApi(treff, "000000001", true)
+        val person = jobbsøker(treff)
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+        oppmøte(treff, person, møtt = false)
+        val før = aggregat(treff)
+
+        val respons = slettArbeidsgiver(treff, ag)
+
+        assertThat(respons.statusCode()).isEqualTo(409)
+        assertThat(mapper.readTree(respons.body())["feil"].asText())
+            .isEqualTo("Treffet må alltid ha en arbeidsgiver som deltar. Legg til en ny arbeidsgiver først.")
+        assertThat(lagretRotasjon(treff)).containsExactlyEntriesOf(mapOf(ag.somString to 1))
+        assertThat(aggregat(treff)).isEqualTo(før)
+    }
+
+    @Test
+    fun `arbeidsgiver kan fjernes fra tom møteplan og reaktiveres med rom igjen`() {
+        val treff = workOpTreff(antallArbeidsgivere = 1)
         val ag = opprettArbeidsgiverViaApi(treff, "000000001", true)
         val person = jobbsøker(treff)
         oppmøte(treff, person, møtt = true)
@@ -1179,11 +1303,11 @@ class TreffgjennomføringKomponentTest {
         oppmøte(treff, person, møtt = false)
 
         assertThat(slettArbeidsgiver(treff, ag).statusCode()).isEqualTo(204)
-        assertThat(lagretRotasjon(treff)).isEmpty()
+        assertThat(lagretRotasjon(treff)).doesNotContainKey(ag.somString)
         val reaktivert = opprettArbeidsgiverViaApi(treff, "000000001", true)
         assertThat(reaktivert).isEqualTo(ag)
-        assertThat(lagretRotasjon(treff)).containsExactlyEntriesOf(mapOf(ag.somString to 1))
-        assertThat(aggregat(treff)["rom"].single()["jobbsøkere"]).isEmpty()
+        assertThat(lagretRotasjon(treff)).containsEntry(ag.somString, 2)
+        assertThat(aggregat(treff)["rom"].last()["jobbsøkere"]).isEmpty()
     }
 
     @Test
@@ -1229,7 +1353,7 @@ class TreffgjennomføringKomponentTest {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `registreringer blokkerer sletting på vanlig treff uten møteplan`(medVurdering: Boolean) {
-        val treff = vanligTreff()
+        val treff = vanligTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff, "00000000000")
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
@@ -1246,7 +1370,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(respons.statusCode()).isEqualTo(409)
         val forventetHint = if (medVurdering) "Nullstill registrerte vurderinger først." else "Fjern registrerte interesser først."
         assertThat(mapper.readTree(respons.body())["hint"].asText()).isEqualTo(forventetHint)
-        assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(1)
+        assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(2)
     }
 
     @ParameterizedTest
@@ -1281,7 +1405,7 @@ class TreffgjennomføringKomponentTest {
         inkludert: Boolean,
         medInteresse: Boolean,
     ) {
-        val treff = workOpTreff()
+        val treff = workOpTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff, "00000000000")
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)

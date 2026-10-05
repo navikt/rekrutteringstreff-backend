@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.dto
 
+import no.nav.toi.jobbsoker.dto.HendelseDataDto
 import no.nav.toi.rekrutteringstreff.HendelseRessurs
 import java.time.ZonedDateTime
 
@@ -12,4 +13,5 @@ data class FellesHendelseOutboundDto(
     val aktørIdentifikasjon: String?,
     val subjektId: String? = null,
     val subjektNavn: String? = null,
+    val hendelseData: HendelseDataDto? = null,
 )

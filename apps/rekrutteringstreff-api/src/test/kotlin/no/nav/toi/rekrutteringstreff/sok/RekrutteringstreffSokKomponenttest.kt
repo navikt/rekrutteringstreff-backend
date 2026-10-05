@@ -713,21 +713,18 @@ class RekrutteringstreffSokKomponenttest {
             PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678901"),
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.INVITERT,
-            null
         )
 
         val jobbsøkerSlettet = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
             Fornavn("Ola 2"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.SLETTET,
-            null
         )
 
         val jobbsøkerSvartJaIkkeSynlig = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
             Fornavn("Ola 3"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.SVART_JA,
-            null
         )
 
         db.leggTilJobbsøkere(listOf(jobbsøkerInvitert, jobbsøkerSlettet, jobbsøkerSvartJaIkkeSynlig))
@@ -763,21 +760,18 @@ class RekrutteringstreffSokKomponenttest {
             PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678901"),
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.INVITERT,
-            null
         )
 
         val jobbsøkerSvartJa = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
             Fornavn("Ola 2"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.SVART_JA,
-            null
         )
 
         val jobbsøkerSvartJaIkkeSynlig = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
             Fornavn("Ola 3"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.SVART_JA,
-            null
         )
 
         db.leggTilJobbsøkere(listOf(jobbsøkerInvitert, jobbsøkerSvartJa, jobbsøkerSvartJaIkkeSynlig))

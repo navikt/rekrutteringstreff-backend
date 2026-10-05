@@ -121,7 +121,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             SELECT v.aktuell_for_treff_status, COUNT(*) AS antall
             FROM jobbsoker_sok_view v
             $where
-              AND v.aktuell_for_treff_status IS NOT NULL
             GROUP BY v.aktuell_for_treff_status
         """.trimIndent()
         return conn.prepareStatement(sql).use { stmt ->
@@ -325,8 +324,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         lagtTilAvNavn = getString("lagt_til_av_navn"),
         alder = getInt("alder"),
         kontornummer = getString("kontornummer"),
-        aktuellForTreffStatus = getString("aktuell_for_treff_status")?.let(AktuellForTreffStatus::valueOf),
-    )
+        aktuellForTreffStatus = AktuellForTreffStatus.valueOf(getString("aktuell_for_treff_status")),
+        )
 
     private fun hentMinsideHendelser(
         conn: Connection,

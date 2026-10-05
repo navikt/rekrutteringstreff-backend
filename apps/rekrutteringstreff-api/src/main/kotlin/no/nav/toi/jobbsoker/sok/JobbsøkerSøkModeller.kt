@@ -82,9 +82,7 @@ enum class JobbsøkerSorteringsfelt {
             .mapIndexed { index, status -> "WHEN '${status.name}' THEN ${index + 1}" }
             .joinToString(" ")
 
-        return "v.aktuell_for_treff_status IS NULL, " +
-                "CASE v.aktuell_for_treff_status $caseSql ELSE 999 END ${retning.sql}, " +
-                "v.jobbsoker_id ${retning.sql}"
+        return "CASE v.aktuell_for_treff_status $caseSql ELSE 999 END ${retning.sql}, v.jobbsoker_id ${retning.sql}"
     }
 
     fun sql(retning: JobbsøkerSorteringsretning): String =
@@ -163,7 +161,7 @@ data class JobbsøkerSøkTreff(
     val fornavn: String?,
     val etternavn: String?,
     val status: JobbsøkerStatus,
-    val aktuellForTreffStatus: AktuellForTreffStatus? = null,
+    val aktuellForTreffStatus: AktuellForTreffStatus,
     val lagtTilDato: Instant?,
     val lagtTilAv: String?,
     val lagtTilAvNavn: String?,

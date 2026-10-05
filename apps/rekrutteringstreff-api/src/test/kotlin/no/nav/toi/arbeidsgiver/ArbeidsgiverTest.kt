@@ -400,8 +400,15 @@ class ArbeidsgiverTest {
 
         val opprettArbeidsgiverResponse = httpPost("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver", requestBody, token.serialize())
         assertThat(opprettArbeidsgiverResponse.statusCode()).isEqualTo(HTTP_CREATED)
+        val id = db.hentAlleArbeidsgivere().single().arbeidsgiverTreffId.somUuid
 
-        val id = db.hentAlleArbeidsgivere().first().arbeidsgiverTreffId.somUuid
+        val sisteArbeidsgiverResponse = httpDelete("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/$id", token.serialize())
+        assertThat(sisteArbeidsgiverResponse.statusCode()).isEqualTo(HTTP_CONFLICT)
+        assertThat(sisteArbeidsgiverResponse.body()).contains("Treffet må alltid ha en arbeidsgiver som deltar")
+
+        val ekstraArbeidsgiver = """{ "organisasjonsnummer": "000000002", "navn": "Fiktiv ekstrabedrift" }"""
+        assertThat(httpPost("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver", ekstraArbeidsgiver, token.serialize()).statusCode())
+            .isEqualTo(HTTP_CREATED)
 
         val slettArbeidsgiverResponse = httpDelete("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/$id", token.serialize())
         assertThat(slettArbeidsgiverResponse.statusCode()).isEqualTo(HTTP_NO_CONTENT)
@@ -415,7 +422,7 @@ class ArbeidsgiverTest {
         val mapper = JacksonConfig.mapper
         val type = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverOutboundDto::class.java)
         val arbeidsgivereEtterSlett: List<ArbeidsgiverOutboundDto> = mapper.readValue(hentArbeidsgivereResponse.body(), type)
-        assertThat(arbeidsgivereEtterSlett).isEmpty()
+        assertThat(arbeidsgivereEtterSlett.map { it.organisasjonsnummer }).containsExactly("000000002")
 
         // Hendelser skal inneholde SLETTET
         val hentHendelserResponse = httpGet("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser", token.serialize())

@@ -177,6 +177,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             stillingId = stillingId.toString(),
             tittel = "Test Stilling",
             opprettetAv = "Z123456",
+            messageId = UUID.randomUUID(),
         )
         val melding = samtykkeBesvartMelding(
             fnr = fnr,
@@ -206,6 +207,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             stillingId = stillingId.toString(),
             tittel = "Test Stilling",
             opprettetAv = navIdent,
+            messageId = UUID.randomUUID(),
         )
 
         rapid.sendTestMessage(
@@ -522,6 +524,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             stillingId = stillingId.toString(),
             tittel = "Test Stilling",
             opprettetAv = "Z123456",
+            messageId = UUID.randomUUID(),
         )
         if (aktivitetsStatus != AktivitetsStatus.FORSLAG) {
             repository.oppdaterAktivitetsstatus(
