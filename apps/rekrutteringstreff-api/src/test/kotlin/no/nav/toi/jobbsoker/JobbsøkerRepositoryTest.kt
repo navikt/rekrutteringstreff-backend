@@ -313,7 +313,8 @@ class JobbsøkerRepositoryTest {
         assertThat(workop.antallArbeidsgivere).isZero()
         val kunLagtTil = resultat.single { it.tittel == "Kun lagt til" }
         assertThat(kunLagtTil.status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
-        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000"))).hasSize(3)
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000")).map { it.tittel })
+            .containsExactlyInAnyOrder("Invitert treff", "WorkOp")
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("9999"))).isEmpty()
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, emptyList())).isEmpty()
     }
