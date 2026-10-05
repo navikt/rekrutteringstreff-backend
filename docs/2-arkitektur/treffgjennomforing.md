@@ -119,7 +119,7 @@ Oppmøte og status:
 - Statusen utledes fra hendelsene i `Jobbsøkerstatusregler`. Gjelder flere tilstander
   samtidig, vinner den øverste: slettet, fått jobb, møtt opp, gyldig svar, invitert og
   lagt til. Gyldig svar er ett nivå: det nyeste svaret gir `SVART_JA` eller `SVART_NEI`.
-- Svaret leses med `Jobbsøkerstatusregler.sisteSvar`, og det nyeste svaret gjelder. Svarer
+- Svaret leses med `Jobbsøkerstatusregler.gjeldendeSvar`, og det nyeste svaret gjelder. Svarer
   jobbsøkeren etter oppmøtet, endres svaret, men statusen er fortsatt `MØTT_OPP`.
 - Angres oppmøtet eller formidlingen, blir statusen den neste i prioriteten, for eksempel
   det nyeste svaret.

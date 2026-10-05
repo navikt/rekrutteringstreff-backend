@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test
 class JobbsøkerstatusreglerTest {
 
     private fun status(vararg hendelser: JobbsøkerHendelsestype) = Jobbsøkerstatusregler.utledStatus(hendelser.toList())
-    private fun svar(vararg hendelser: JobbsøkerHendelsestype) = Jobbsøkerstatusregler.sisteSvar(hendelser.toList())
+    private fun svar(vararg hendelser: JobbsøkerHendelsestype) = Jobbsøkerstatusregler.gjeldendeSvar(hendelser.toList())
 
     @Test
     fun `alle statusene kan utledes`() {

@@ -125,12 +125,10 @@ data class Jobbsøker(
 
     fun harSvartJa(): Boolean = gjeldendeSvar() == true
 
-    fun gjeldendeSvar(): Boolean? = Jobbsøkerstatusregler.sisteSvar(hendelsestyperKronologisk())
+    fun gjeldendeSvar(): Boolean? = Jobbsøkerstatusregler.gjeldendeSvar(hendelsestyperEldsteFørst())
 
-    // Repositoryet leverer nyeste først, sortert på tidspunkt og løpenummer. Reverseringen
-    // beholder rekkefølgen når to hendelser har samme tidspunkt.
-    private fun hendelsestyperKronologisk(): List<JobbsøkerHendelsestype> =
-        hendelser.reversed().sortedBy { it.tidspunkt }.map { it.hendelsestype }
+    private fun hendelsestyperEldsteFørst(): List<JobbsøkerHendelsestype> =
+        hendelser.asReversed().map { it.hendelsestype }
 }
 
 data class PersonTreffId(private val id: UUID) {

@@ -115,7 +115,7 @@ class JobbsøkerService(
                     listOf(personTreffId),
                     navIdent
                 )
-                oppdaterStatus(connection, personTreffId)
+                oppdaterStatusFraHendelser(connection, personTreffId)
             }
         }
     }
@@ -132,58 +132,59 @@ class JobbsøkerService(
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
-
-            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
-            if (erSynlig == false) {
-                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+            val hendelsestype = when (svar) {
+                true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
+                false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
             }
-
-            if (hentSisteSvarForOppdatering(connection, personTreffId) == svar) {
-                logger.info("Jobbsøker har allerede svart ${if (svar) "JA" else "NEI"}, ignorerer duplikat kall")
-                return@executeInTransaction
-            }
-
-            val hendelsestype =
-                if (svar) JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON else JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
-            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, hendelsestype, AktørType.JOBBSØKER, navIdent)
-            oppdaterStatus(connection, personTreffId)
+            registrerSvar(connection, personTreffId, svar, hendelsestype, AktørType.JOBBSØKER, navIdent)
         }
     }
 
     fun svarPåVegneAvJobbsøker(personTreffId: PersonTreffId, navIdent: String, svar: Boolean?) {
         dataSource.executeInTransaction { connection ->
-            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
-            if (erSynlig == false) {
-                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
-            }
-
-            if (hentSisteSvarForOppdatering(connection, personTreffId) == svar) {
-                logger.info("Jobbsøker har allerede svaret $svar, ignorerer duplikat kall")
-                return@executeInTransaction
-            }
-
-            val hendelsesType = when (svar) {
+            val hendelsestype = when (svar) {
                 true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER
                 false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER
                 null -> JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER
             }
-
-            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, hendelsesType, AktørType.ARRANGØR, navIdent)
-            oppdaterStatus(connection, personTreffId)
+            registrerSvar(connection, personTreffId, svar, hendelsestype, AktørType.ARRANGØR, navIdent)
         }
     }
 
-    /** Låser jobbsøkerraden før svaret leses, slik at samtidige svar ikke overlapper. */
-    private fun hentSisteSvarForOppdatering(connection: Connection, personTreffId: PersonTreffId): Boolean? {
-        jobbsøkerRepository.hentStatus(connection, personTreffId)
-        return Jobbsøkerstatusregler.sisteSvar(jobbsøkerRepository.hentHendelsestyper(connection, personTreffId))
+    private fun registrerSvar(
+        connection: Connection,
+        personTreffId: PersonTreffId,
+        svar: Boolean?,
+        hendelsestype: JobbsøkerHendelsestype,
+        aktørType: AktørType,
+        navIdent: String,
+    ) {
+        krevSynligJobbsøker(connection, personTreffId)
+        jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
+        if (hentGjeldendeSvar(connection, personTreffId) == svar) {
+            logger.info("Jobbsøker har allerede ${svarSomLoggtekst(svar)}, ignorerer duplikat kall")
+            return
+        }
+        jobbsøkerRepository.leggTilHendelse(connection, personTreffId, hendelsestype, aktørType, navIdent)
+        oppdaterStatusFraHendelser(connection, personTreffId)
     }
 
-    /**
-     * Setter statusen ut fra hendelsene etter [Jobbsøkerstatusregler.utledStatus]. Kalles etter at
-     * en hendelse som påvirker statusen er lagt til, i samme transaksjon.
-     */
-    fun oppdaterStatus(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
+    private fun krevSynligJobbsøker(connection: Connection, personTreffId: PersonTreffId) {
+        if (jobbsøkerRepository.erSynlig(connection, personTreffId) == false) {
+            throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+        }
+    }
+
+    private fun hentGjeldendeSvar(connection: Connection, personTreffId: PersonTreffId): Boolean? =
+        Jobbsøkerstatusregler.gjeldendeSvar(jobbsøkerRepository.hentHendelsestyper(connection, personTreffId))
+
+    private fun svarSomLoggtekst(svar: Boolean?): String = when (svar) {
+        true -> "svart JA"
+        false -> "svart NEI"
+        null -> "ingen svar"
+    }
+
+    fun oppdaterStatusFraHendelser(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
         val status = Jobbsøkerstatusregler.utledStatus(jobbsøkerRepository.hentHendelsestyper(connection, personTreffId))
         jobbsøkerRepository.endreStatus(connection, personTreffId, status)
         return status
@@ -196,7 +197,7 @@ class JobbsøkerService(
             return
         }
         jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
-        oppdaterStatus(connection, personTreffId)
+        oppdaterStatusFraHendelser(connection, personTreffId)
     }
 
     fun angreFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
@@ -206,7 +207,7 @@ class JobbsøkerService(
             return
         }
         jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
-        val nyStatus = oppdaterStatus(connection, personTreffId)
+        val nyStatus = oppdaterStatusFraHendelser(connection, personTreffId)
         logger.info("Tilbakestilte jobbsøker $personTreffId fra FÅTT_JOBB til $nyStatus ved angring av formidling")
     }
 
@@ -246,7 +247,7 @@ class JobbsøkerService(
                 listOf(personTreffId),
                 navIdent
             )
-            oppdaterStatus(connection, personTreffId)
+            oppdaterStatusFraHendelser(connection, personTreffId)
             MarkerSlettetResultat.OK
         }
 

@@ -54,7 +54,7 @@ class OppmøteService(
             connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, navIdent,
             deltakernummer?.let { mapOf("deltakernummer" to it) } ?: emptyMap(),
         )
-        jobbsøkerService.oppdaterStatus(connection, personTreffId)
+        jobbsøkerService.oppdaterStatusFraHendelser(connection, personTreffId)
     }
 
     private fun fjernOppmøte(
@@ -70,6 +70,6 @@ class OppmøteService(
         hendelseWriter.forJobbsøker(
             connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET, navIdent,
         )
-        jobbsøkerService.oppdaterStatus(connection, personTreffId)
+        jobbsøkerService.oppdaterStatusFraHendelser(connection, personTreffId)
     }
 }

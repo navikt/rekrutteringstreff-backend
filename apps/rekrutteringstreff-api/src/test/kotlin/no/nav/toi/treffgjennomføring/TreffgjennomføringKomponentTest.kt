@@ -1551,7 +1551,7 @@ class TreffgjennomføringKomponentTest {
 
         val svar = medVentendeOperasjon(treff, { slettJobbsøker(treff, person) }) { connection ->
             ctx.hendelseWriter.forJobbsøker(connection, person, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, eier)
-            ctx.jobbsøkerService.oppdaterStatus(connection, person)
+            ctx.jobbsøkerService.oppdaterStatusFraHendelser(connection, person)
         }
 
         assertThat(svar.statusCode()).isEqualTo(422)
