@@ -320,6 +320,35 @@ class JobbsøkerServiceTest {
     }
 
     @Test
+    fun `det siste svaret gjelder når jobbsøkeren eller eieren endrer svaret`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = Fødselsnummer("12345678901")
+        jobbsøkerService.leggTilJobbsøkere(
+            listOf(LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Testesen"), null, null, null)), treffId, "testperson"
+        )
+        val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).single().personTreffId
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, "testperson")
+
+        fun gjeldende() = jobbsøkerService.hentJobbsøker(treffId, fnr)!!.let { it.status to it.gjeldendeSvar() }
+
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, fnr.asString)
+        assertThat(gjeldende()).isEqualTo(JobbsøkerStatus.SVART_JA to true)
+
+        jobbsøkerService.svarNeiTilInvitasjon(fnr, treffId, fnr.asString)
+        assertThat(gjeldende()).isEqualTo(JobbsøkerStatus.SVART_NEI to false)
+
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, "testperson", true)
+        assertThat(gjeldende()).isEqualTo(JobbsøkerStatus.SVART_JA to true)
+
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, "testperson", false)
+        assertThat(gjeldende()).isEqualTo(JobbsøkerStatus.SVART_NEI to false)
+
+        val alleJobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkerService.finnJobbsøkereMedAktivtSvarJa(alleJobbsøkere)).isEmpty()
+        assertThat(jobbsøkerService.skalVarslesOmEndringer(alleJobbsøkere.single())).isFalse()
+    }
+
+    @Test
     fun `finnJobbsøkereSomIkkeSvart skal filtrere jobbsøkere som er invitert men ikke har svart`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr1 = Fødselsnummer("12345678901")

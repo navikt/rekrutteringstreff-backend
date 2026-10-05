@@ -22,17 +22,25 @@ class JobbsøkerstatusreglerTest {
     private fun svar(vararg hendelser: JobbsøkerHendelsestype) = Jobbsøkerstatusregler.sisteSvar(hendelser.toList())
 
     @Test
-    fun `prioriteten er slettet, fått jobb, møtt opp, svar, invitert og lagt til`() {
-        assertThat(Jobbsøkerstatusregler.prioritet).containsExactly(
-            JobbsøkerStatus.SLETTET,
-            JobbsøkerStatus.FÅTT_JOBB,
-            JobbsøkerStatus.MØTT_OPP,
-            JobbsøkerStatus.SVART_JA,
-            JobbsøkerStatus.SVART_NEI,
-            JobbsøkerStatus.INVITERT,
-            JobbsøkerStatus.LAGT_TIL,
+    fun `alle statusene kan utledes`() {
+        val utledet = setOf(
+            status(),
+            status(OPPRETTET, INVITERT),
+            status(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON),
+            status(OPPRETTET, INVITERT, SVART_NEI_TIL_INVITASJON),
+            status(OPPRETTET, REGISTRERT_OPPMØTE),
+            status(OPPRETTET, JobbsøkerHendelsestype.FÅTT_JOBB),
+            status(OPPRETTET, JobbsøkerHendelsestype.SLETTET),
         )
-        assertThat(Jobbsøkerstatusregler.prioritet).containsExactlyInAnyOrder(*JobbsøkerStatus.entries.toTypedArray())
+
+        assertThat(utledet).containsExactlyInAnyOrder(*JobbsøkerStatus.entries.toTypedArray())
+    }
+
+    @Test
+    fun `slettet går foran fått jobb, møtt opp og svar`() {
+        assertThat(
+            status(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON, REGISTRERT_OPPMØTE, JobbsøkerHendelsestype.FÅTT_JOBB, JobbsøkerHendelsestype.SLETTET)
+        ).isEqualTo(JobbsøkerStatus.SLETTET)
     }
 
     @Test

@@ -12,21 +12,6 @@ import no.nav.toi.JobbsøkerHendelsestype
 object Jobbsøkerstatusregler {
 
     /**
-     * Høyeste prioritet først. Når flere tilstander gjelder samtidig, er det den øverste som blir
-     * statusen. En jobbsøker som har møtt opp og deretter svart nei, har altså status MØTT_OPP,
-     * mens [sisteSvar] gir nei.
-     */
-    val prioritet: List<JobbsøkerStatus> = listOf(
-        JobbsøkerStatus.SLETTET,
-        JobbsøkerStatus.FÅTT_JOBB,
-        JobbsøkerStatus.MØTT_OPP,
-        JobbsøkerStatus.SVART_JA,
-        JobbsøkerStatus.SVART_NEI,
-        JobbsøkerStatus.INVITERT,
-        JobbsøkerStatus.LAGT_TIL,
-    )
-
-    /**
      * Det gjeldende svaret: true for ja, false for nei og null hvis jobbsøkeren ikke har svart,
      * eller svaret er fjernet. Det nyeste svaret gjelder, uavhengig av status.
      *
@@ -36,29 +21,42 @@ object Jobbsøkerstatusregler {
         hendelser.lastOrNull { it in svarhendelser }?.let(::svarFra)
 
     /**
+     * Statusen er den første gruppen ovenfra som gjelder. Svaret er én gruppe: det nyeste svaret
+     * gir SVART_JA eller SVART_NEI. En jobbsøker som har møtt opp og deretter svart nei, har altså
+     * status MØTT_OPP, mens [sisteSvar] gir nei.
+     *
      * @param hendelser hendelsestypene i kronologisk rekkefølge, eldste først
      */
     fun utledStatus(hendelser: List<JobbsøkerHendelsestype>): JobbsøkerStatus {
-        val gjeldende = buildSet {
-            add(JobbsøkerStatus.LAGT_TIL)
-            if (JobbsøkerHendelsestype.INVITERT in hendelser) add(JobbsøkerStatus.INVITERT)
-            when (sisteSvar(hendelser)) {
-                true -> add(JobbsøkerStatus.SVART_JA)
-                false -> add(JobbsøkerStatus.SVART_NEI)
-                null -> Unit
-            }
-            if (erGjeldende(hendelser, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET)) {
-                add(JobbsøkerStatus.MØTT_OPP)
-            }
-            if (erGjeldende(hendelser, JobbsøkerHendelsestype.FÅTT_JOBB, JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB)) {
-                add(JobbsøkerStatus.FÅTT_JOBB)
-            }
-            if (erGjeldende(hendelser, JobbsøkerHendelsestype.SLETTET, JobbsøkerHendelsestype.OPPRETTET)) {
-                add(JobbsøkerStatus.SLETTET)
-            }
+        val gyldigSvar = gyldigSvarstatus(hendelser)
+        return when {
+            erSlettet(hendelser) -> JobbsøkerStatus.SLETTET
+            harFåttJobb(hendelser) -> JobbsøkerStatus.FÅTT_JOBB
+            harMøttOpp(hendelser) -> JobbsøkerStatus.MØTT_OPP
+            gyldigSvar != null -> gyldigSvar
+            erInvitert(hendelser) -> JobbsøkerStatus.INVITERT
+            else -> JobbsøkerStatus.LAGT_TIL
         }
-        return prioritet.first { it in gjeldende }
     }
+
+    private fun erSlettet(hendelser: List<JobbsøkerHendelsestype>) =
+        erGjeldende(hendelser, JobbsøkerHendelsestype.SLETTET, JobbsøkerHendelsestype.OPPRETTET)
+
+    private fun harFåttJobb(hendelser: List<JobbsøkerHendelsestype>) =
+        erGjeldende(hendelser, JobbsøkerHendelsestype.FÅTT_JOBB, JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB)
+
+    private fun harMøttOpp(hendelser: List<JobbsøkerHendelsestype>) =
+        erGjeldende(hendelser, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET)
+
+    private fun gyldigSvarstatus(hendelser: List<JobbsøkerHendelsestype>): JobbsøkerStatus? =
+        when (sisteSvar(hendelser)) {
+            true -> JobbsøkerStatus.SVART_JA
+            false -> JobbsøkerStatus.SVART_NEI
+            null -> null
+        }
+
+    private fun erInvitert(hendelser: List<JobbsøkerHendelsestype>) =
+        JobbsøkerHendelsestype.INVITERT in hendelser
 
     private fun erGjeldende(
         hendelser: List<JobbsøkerHendelsestype>,
