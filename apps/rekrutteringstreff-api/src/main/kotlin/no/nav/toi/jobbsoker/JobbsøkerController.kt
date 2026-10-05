@@ -68,7 +68,7 @@ class JobbsøkerController(
 
     @OpenApi(
         summary = "Hent rekrutteringstreff for en jobbsøker",
-        description = "Søker på tvers av alle treff. Returnerer bare synlige jobbsøkere med status ulik LAGT_TIL og SLETTET. " +
+        description = "Søker på tvers av alle treff. Returnerer synlige jobbsøkere. " +
             "Responsen inneholder kategori REKRUTTERINGSTREFF eller WORKOP og antall ikke-slettede arbeidsgivere. " +
             "id er UUID-en for rekrutteringstreff og er null for WORKOP. " +
             "status er jobbsøkerens status på treffet. " +

@@ -204,7 +204,7 @@ class JobbsøkerRepositoryTest {
     }
 
     @Test
-    fun `henter treff for jobbsøker med status unntatt lagt til og slettet`() {
+    fun `henter treff for jobbsøker med alle statuser unntatt slettet`() {
         val fødselsnummer = Fødselsnummer("12345678901")
         val starttidspunkt = java.time.ZonedDateTime.parse("2026-10-10T09:00:00+02:00")
         val treff = db.opprettRekrutteringstreffMedAlleFelter(
@@ -299,7 +299,7 @@ class JobbsøkerRepositoryTest {
 
         val resultat = repository.hentRekrutteringstreffForJobbsøker(fødselsnummer)
 
-        assertThat(resultat).hasSize(2)
+        assertThat(resultat).hasSize(3)
         val rekrutteringstreff = resultat.single { it.tittel == "Invitert treff" }
         assertThat(rekrutteringstreff.id).isEqualTo(treff.somUuid)
         assertThat(rekrutteringstreff.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
@@ -314,7 +314,9 @@ class JobbsøkerRepositoryTest {
         assertThat(workop.kategori).isEqualTo(RekrutteringstreffKategori.WORKOP)
         assertThat(workop.status).isEqualTo(JobbsøkerStatus.INVITERT)
         assertThat(workop.antallArbeidsgivere).isZero()
-        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000"))).hasSize(2)
+        val kunLagtTil = resultat.single { it.tittel == "Kun lagt til" }
+        assertThat(kunLagtTil.status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000"))).hasSize(3)
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("9999"))).isEmpty()
         assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, emptyList())).isEmpty()
     }

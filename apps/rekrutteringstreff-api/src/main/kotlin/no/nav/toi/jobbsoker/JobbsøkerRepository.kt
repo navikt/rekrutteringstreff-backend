@@ -254,7 +254,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     LIMIT 1
                 ) opprettet ON TRUE
                 WHERE j.fodselsnummer = ?
-                  AND j.status NOT IN ('LAGT_TIL', 'SLETTET')
+                  AND j.status != 'SLETTET'
                   AND j.er_synlig = TRUE
                   AND rt.status != 'SLETTET'
                   $kontorFilter
