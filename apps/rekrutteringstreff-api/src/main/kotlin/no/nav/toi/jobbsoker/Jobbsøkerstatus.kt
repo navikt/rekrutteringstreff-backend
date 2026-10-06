@@ -2,6 +2,11 @@ package no.nav.toi.jobbsoker
 
 import no.nav.toi.JobbsøkerHendelsestype
 
+/** Prioriteringen mellom statusene står i [Jobbsøkerstatusregler.utledStatus]. */
+enum class JobbsøkerStatus {
+    LAGT_TIL, INVITERT, SVART_JA, SVART_NEI, MØTT_OPP, FÅTT_JOBB, SLETTET
+}
+
 /**
  * Felles regler for jobbsøkerstatus og svar. Begge utledes fra hendelsesloggen, slik at svar,
  * oppmøte og formidling kan registreres og angres i hvilken som helst rekkefølge.

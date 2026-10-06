@@ -91,10 +91,6 @@ data class LeggTilJobbsøker(
     val innsatsgruppe: Innsatsgruppe? = null,
 )
 
-enum class JobbsøkerStatus {
-    LAGT_TIL, INVITERT, SVART_JA, SVART_NEI, MØTT_OPP, FÅTT_JOBB, SLETTET
-}
-
 enum class AktuellForTreffStatus {
     VURDERES,
     KONTAKTET,
