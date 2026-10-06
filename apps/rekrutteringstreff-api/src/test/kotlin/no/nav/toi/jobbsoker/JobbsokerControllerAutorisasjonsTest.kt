@@ -209,10 +209,10 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
-        Arguments.of(Endepunkt.hentTreffForJobbsøker, Gruppe.Utvikler, HTTP_OK),
-        Arguments.of(Endepunkt.hentTreffForJobbsøker, Gruppe.Arbeidsgiverrettet, HTTP_OK),
-        Arguments.of(Endepunkt.hentTreffForJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_OK),
-        Arguments.of(Endepunkt.hentTreffForJobbsøker, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.hentRekrutteringstreffForJobbsøker, Gruppe.Utvikler, HTTP_OK),
+        Arguments.of(Endepunkt.hentRekrutteringstreffForJobbsøker, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.hentRekrutteringstreffForJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_OK),
+        Arguments.of(Endepunkt.hentRekrutteringstreffForJobbsøker, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Arbeidsgiverrettet, HTTP_OK),
