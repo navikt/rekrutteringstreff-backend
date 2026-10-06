@@ -3,6 +3,10 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -194,6 +198,125 @@ class JobbsøkerRepositoryTest {
 
         val ikkeEksisterendeJobbsøker = repository.hentJobbsøker(treffId, Fødselsnummer("99999999999"))
         assertThat(ikkeEksisterendeJobbsøker).isNull()
+    }
+
+    @Test
+    fun `henter treff for jobbsøker med alle statuser unntatt slettet`() {
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val starttidspunkt = java.time.ZonedDateTime.parse("2026-10-10T09:00:00+02:00")
+        val treff = db.opprettRekrutteringstreffMedAlleFelter(
+            tittel = "Invitert treff",
+            fraTid = starttidspunkt,
+        )
+        val invitert = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer,
+                    Fornavn("Kari"),
+                    Etternavn("Nordmann"),
+                    Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
+                )
+            ),
+            treff,
+            opprettetAv = "NAV123",
+            lagtTilAvNavn = "Navn på veileder",
+        ).single()
+        db.inviterJobbsøkere(listOf(invitert), treff)
+        listOf("123456780", "123456781").forEachIndexed { index, orgnr ->
+            db.leggTilArbeidsgiverMedHendelse(
+                LeggTilArbeidsgiver(
+                    orgnr = Orgnr(orgnr),
+                    orgnavn = Orgnavn("Arbeidsgiver $index"),
+                    gateadresse = null,
+                    postnummer = null,
+                    poststed = null,
+                ),
+                treff,
+            )
+        }
+        val slettetArbeidsgiver = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(
+                orgnr = Orgnr("876543210"),
+                orgnavn = Orgnavn("Slettet arbeidsgiver"),
+                gateadresse = null,
+                postnummer = null,
+                poststed = null,
+            ),
+            treff,
+        )
+        db.markerArbeidsgiverSlettet(slettetArbeidsgiver.somUuid, treff)
+
+        val workopTreff = db.opprettRekrutteringstreffMedAlleFelter(
+            tittel = "WorkOp",
+            kategori = RekrutteringstreffKategori.WORKOP,
+            fraTid = starttidspunkt.plusDays(1),
+        )
+        val workopJobbsøker = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer,
+                    Fornavn("Kari"),
+                    Etternavn("Nordmann"),
+                    Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
+                )
+            ),
+            workopTreff,
+        ).single()
+        db.inviterJobbsøkere(listOf(workopJobbsøker), workopTreff)
+
+        val lagtTilTreff = db.opprettRekrutteringstreffMedAlleFelter(tittel = "Kun lagt til")
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(fødselsnummer, Fornavn("Kari"), Etternavn("Nordmann"))),
+            lagtTilTreff,
+        )
+
+        val slettetRekrutteringstreff = db.opprettRekrutteringstreffMedAlleFelter(tittel = "Slettet rekrutteringstreff")
+        val jobbsøkerPåSlettetRekrutteringstreff = db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(fødselsnummer, Fornavn("Kari"), Etternavn("Nordmann"))),
+            slettetRekrutteringstreff,
+        ).single()
+        db.inviterJobbsøkere(listOf(jobbsøkerPåSlettetRekrutteringstreff), slettetRekrutteringstreff)
+        db.dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                "UPDATE rekrutteringstreff SET status = 'SLETTET' WHERE id = ?"
+            ).use { statement ->
+                statement.setObject(1, slettetRekrutteringstreff.somUuid)
+                statement.executeUpdate()
+            }
+        }
+
+        val slettetTreff = db.opprettRekrutteringstreffMedAlleFelter(tittel = "Slettet treff")
+        val slettet = db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(fødselsnummer, Fornavn("Kari"), Etternavn("Nordmann"))),
+            slettetTreff,
+        ).single()
+        db.dataSource.connection.use { connection ->
+            repository.endreStatus(connection, slettet, JobbsøkerStatus.SLETTET)
+        }
+
+        val resultat = repository.hentRekrutteringstreffForJobbsøker(fødselsnummer)
+
+        assertThat(resultat).hasSize(3)
+        val rekrutteringstreff = resultat.single { it.tittel == "Invitert treff" }
+        assertThat(rekrutteringstreff.id).isEqualTo(treff.somUuid)
+        assertThat(rekrutteringstreff.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        assertThat(rekrutteringstreff.status).isEqualTo(JobbsøkerStatus.INVITERT)
+        assertThat(rekrutteringstreff.antallArbeidsgivere).isEqualTo(2)
+        assertThat(rekrutteringstreff.treffStartTidspunkt).isEqualTo(starttidspunkt.toInstant())
+        assertThat(rekrutteringstreff.lagtTilTidspunkt).isNotNull()
+        assertThat(rekrutteringstreff.lagtTilAvNavn).isEqualTo("Navn på veileder")
+        assertThat(rekrutteringstreff.lagtTilAvIdent).isEqualTo("NAV123")
+        val workop = resultat.single { it.tittel == "WorkOp" }
+        assertThat(workop.id).isNull()
+        assertThat(workop.kategori).isEqualTo(RekrutteringstreffKategori.WORKOP)
+        assertThat(workop.status).isEqualTo(JobbsøkerStatus.INVITERT)
+        assertThat(workop.antallArbeidsgivere).isZero()
+        val kunLagtTil = resultat.single { it.tittel == "Kun lagt til" }
+        assertThat(kunLagtTil.status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("1000")).map { it.tittel })
+            .containsExactlyInAnyOrder("Invitert treff", "WorkOp")
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, listOf("9999"))).isEmpty()
+        assertThat(repository.hentRekrutteringstreffForJobbsøker(fødselsnummer, emptyList())).isEmpty()
     }
 
     @Test

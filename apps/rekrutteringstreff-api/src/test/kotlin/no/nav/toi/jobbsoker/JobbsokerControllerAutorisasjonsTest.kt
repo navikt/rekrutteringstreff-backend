@@ -78,6 +78,15 @@ class JobbsokerControllerAutorisasjonsTest {
                         )
                 )
         )
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"enheter":[{"enhetId":"1000"}]}""")
+                )
+        )
     }
 
     @AfterAll
@@ -137,6 +146,14 @@ class JobbsokerControllerAutorisasjonsTest {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
         }),
+        hentRekrutteringstreffForJobbsøker(
+            { "http://localhost:$appPort/api/rekrutteringstreff/jobbsoker/treff" },
+            {
+                HttpRequest.newBuilder()
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString("""{"fødselsnummer":"12345678902"}"""))
+            }
+        ),
         hentJobbsøkerMedHendelser({ "http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker/hendelser"}, {
             HttpRequest.newBuilder().GET()
         }),
@@ -191,6 +208,11 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Arbeidsgiverrettet, HTTP_OK),
         Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+
+        Arguments.of(Endepunkt.hentRekrutteringstreffForJobbsøker, Gruppe.Utvikler, HTTP_OK),
+        Arguments.of(Endepunkt.hentRekrutteringstreffForJobbsøker, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.hentRekrutteringstreffForJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_OK),
+        Arguments.of(Endepunkt.hentRekrutteringstreffForJobbsøker, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Arbeidsgiverrettet, HTTP_OK),
