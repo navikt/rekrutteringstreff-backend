@@ -283,11 +283,17 @@ class FormidlingService(
         sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
 
         dataSource.executeInTransaction { connection ->
+            // Låser jobbsøkeren først, så to samtidige slettinger ser hverandres formidlinger.
+            jobbsøkerService.låsJobbsøker(connection, formidling.jobbsøkerPersonTreffId)
             val slettet = formidlingRepository.markerSlettet(connection, formidling.formidlingId)
             if (slettet) {
-                jobbsøkerService.angreFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
+                if (formidlingRepository.harAktivFormidlingMedUtfall(connection, formidling.jobbsøkerPersonTreffId)) {
+                    logger.info("Jobbsøkeren har fortsatt en aktiv formidling, beholder status FÅTT_JOBB")
+                } else {
+                    jobbsøkerService.angreFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
+                }
                 leggTilHendelseForFormidling(connection, formidling.formidlingId, FormidlingHendelsestype.SLETTET, navIdent)
-                logger.info("Markert formidling ${formidling.formidlingId} som slettet og tilbakestilt jobbsøkerstatus til statusen før FÅTT_JOBB")
+                logger.info("Markert formidling ${formidling.formidlingId} som slettet")
             } else {
                 logger.info("Formidling ${formidling.formidlingId} var allerede slettet")
             }

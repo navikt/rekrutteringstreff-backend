@@ -1,0 +1,146 @@
+# Jobbsøkerstatus: regler og overganger
+
+**Status:** Implementert på `refactor-status`  
+**Fasit:** `JobbsøkerstatusPermutasjonKomponentTest` kjører 72 forløp mot ekte database
+gjennom de samme tjenestene som API-et.
+
+Backend utleder statusen fra hendelsesloggen i `Jobbsøkerstatusregler` og lagrer resultatet i
+`jobbsoker.status`. Svar, oppmøte og formidling kan derfor registreres og angres i hvilken som
+helst rekkefølge, og statusen blir den samme som om vi leste loggen på nytt.
+
+## Regelen
+
+Statusen er den første regelen ovenfra som gjelder:
+
+| Prioritet | Status      | Gjelder når                                                           |
+| --------- | ----------- | --------------------------------------------------------------------- |
+| 1         | `SLETTET`   | Siste av `SLETTET`/`OPPRETTET` er `SLETTET`                           |
+| 2         | `FÅTT_JOBB` | Siste av `FÅTT_JOBB`/`ANGRE_FÅTT_JOBB` er `FÅTT_JOBB`                 |
+| 3         | `MØTT_OPP`  | Siste av `REGISTRERT_OPPMØTE`/`REGISTRERT_OPPMØTE_FJERNET` er oppmøte |
+| 4         | `SVART_JA`  | Gjeldende svar er ja                                                  |
+| 4         | `SVART_NEI` | Gjeldende svar er nei                                                 |
+| 5         | `INVITERT`  | Personen har en `INVITERT`-hendelse                                   |
+| 6         | `LAGT_TIL`  | Ellers                                                                |
+
+Gjeldende svar (`Jobbsøkerstatusregler.gjeldendeSvar`) er den nyeste av svarhendelsene, uansett
+status. Ja kommer fra `SVART_JA_TIL_INVITASJON` med eller uten `_AV_EIER`, og nei tilsvarende.
+`INVITERT` og `SVAR_FJERNET_AV_EIER` nullstiller svaret.
+
+Konsekvensen er at svaret er en egen akse. Den som har møtt opp og deretter svarer nei, har status
+`MØTT_OPP` og svar nei. Fjernes oppmøtet, blir statusen `SVART_NEI`, ikke svaret fra før oppmøtet.
+
+## Andre regler i tjenestene
+
+- `inviter` inviterer bare personer med status `LAGT_TIL`. Andre hoppes over uten feilmelding.
+  Den som har svart eller møtt uten invitasjon, kan derfor ikke inviteres etterpå. Det er
+  bevisst, fordi invitasjonen sender SMS.
+- Eieren kan svare for en som ikke er invitert, og en person kan registreres som møtt uten svar
+  eller invitasjon.
+- «Fått jobb» står til siste aktive formidling er angret. `FormidlingService.slett` låser
+  jobbsøkeren og skriver `ANGRE_FÅTT_JOBB` bare når ingen annen formidling med utfall står igjen.
+- Fremmøtt (`OppmøteRepository.hentFremmøtteJobbsøkere`) følger siste oppmøtehendelse, ikke
+  statusen. «Fått jobb» uten registrert oppmøte er ikke fremmøtt, fordi oppmøte ikke er
+  obligatorisk. Et registrert oppmøte står når personen får jobb. Å fjerne et oppmøte som ikke
+  er registrert, gjør ingenting.
+- Bare `LAGT_TIL` uten registreringer kan slettes (422 ellers).
+
+## Overganger
+
+Alle forløp starter med «Legg til». «Ja/Nei» er svar fra eier, «(borger)» er svar fra Min side.
+«Møtt» er avkrysning i oppmøtelisten. «Fått jobb A» og «Fått jobb B» er formidlinger til to
+forskjellige arbeidsgivere, og «Angre A» sletter formidlingen til A. Kolonnen
+«Møtt» viser om personen står som fremmøtt.
+
+### Grunnflyt
+
+| Forløp                    | Status      | Svar | Møtt |
+| ------------------------- | ----------- | ---- | ---- |
+| (bare lagt til)           | `LAGT_TIL`  | –    | nei  |
+| Inviter                   | `INVITERT`  | –    | nei  |
+| Inviter → Ja              | `SVART_JA`  | ja   | nei  |
+| Inviter → Ja (borger)     | `SVART_JA`  | ja   | nei  |
+| Inviter → Ja → Fjern svar | `INVITERT`  | –    | nei  |
+| Inviter → Ja → Nei        | `SVART_NEI` | nei  | nei  |
+| Inviter → Ja → Inviter    | `SVART_JA`  | ja   | nei  |
+
+Den andre invitasjonen hoppes over, fordi statusen ikke er `LAGT_TIL`.
+
+### Svar og oppmøte uten invitasjon
+
+| Forløp                       | Status      | Svar | Møtt |
+| ---------------------------- | ----------- | ---- | ---- |
+| Ja                           | `SVART_JA`  | ja   | nei  |
+| Ja → Fjern svar              | `LAGT_TIL`  | –    | nei  |
+| Ja → Inviter                 | `SVART_JA`  | ja   | nei  |
+| Møtt                         | `MØTT_OPP`  | –    | ja   |
+| Møtt → Fjern møtt            | `LAGT_TIL`  | –    | nei  |
+| Møtt → Inviter               | `MØTT_OPP`  | –    | ja   |
+| Møtt → Fjern møtt → Inviter  | `INVITERT`  | –    | nei  |
+| Møtt → Nei → Fjern møtt      | `SVART_NEI` | nei  | nei  |
+| Ja → Møtt → Nei → Fjern møtt | `SVART_NEI` | nei  | nei  |
+
+### Møtt opp og svar
+
+| Forløp                                          | Status      | Svar | Møtt |
+| ----------------------------------------------- | ----------- | ---- | ---- |
+| Inviter → Ja → Møtt                             | `MØTT_OPP`  | ja   | ja   |
+| Inviter → Ja → Møtt → Nei                       | `MØTT_OPP`  | nei  | ja   |
+| Inviter → Ja → Møtt → Nei → Fjern møtt          | `SVART_NEI` | nei  | nei  |
+| Inviter → Ja → Møtt → Nei (borger) → Fjern møtt | `SVART_NEI` | nei  | nei  |
+| Inviter → Ja → Møtt → Fjern møtt                | `SVART_JA`  | ja   | nei  |
+| Inviter → Nei → Møtt → Ja → Fjern møtt          | `SVART_JA`  | ja   | nei  |
+| Inviter → Møtt → Fjern møtt                     | `INVITERT`  | –    | nei  |
+| Inviter → Ja → Møtt → Fjern svar → Fjern møtt   | `INVITERT`  | –    | nei  |
+| Inviter → Ja → Møtt → Nei → Fjern møtt → Møtt   | `MØTT_OPP`  | nei  | ja   |
+
+### Fått jobb
+
+| Forløp                                                         | Status      | Svar | Møtt |
+| -------------------------------------------------------------- | ----------- | ---- | ---- |
+| Fått jobb A                                                    | `FÅTT_JOBB` | –    | nei  |
+| Fått jobb A → Angre A                                          | `LAGT_TIL`  | –    | nei  |
+| Inviter → Ja → Fått jobb A                                     | `FÅTT_JOBB` | ja   | nei  |
+| Inviter → Ja → Fått jobb A → Angre A                           | `SVART_JA`  | ja   | nei  |
+| Inviter → Ja → Fått jobb A → Nei                               | `FÅTT_JOBB` | nei  | nei  |
+| Inviter → Ja → Fått jobb A → Nei → Angre A                     | `SVART_NEI` | nei  | nei  |
+| Inviter → Ja → Møtt → Fått jobb A                              | `FÅTT_JOBB` | ja   | ja   |
+| Inviter → Ja → Møtt → Fått jobb A → Angre A                    | `MØTT_OPP`  | ja   | ja   |
+| Inviter → Ja → Møtt → Fått jobb A → Nei → Angre A → Fjern møtt | `SVART_NEI` | nei  | nei  |
+| Inviter → Ja → Møtt → Fått jobb A → Fjern møtt → Angre A       | `SVART_JA`  | ja   | nei  |
+| Inviter → Ja → Fått jobb A → Møtt                              | `FÅTT_JOBB` | ja   | ja   |
+| Inviter → Ja → Fått jobb A → Møtt → Angre A                    | `MØTT_OPP`  | ja   | ja   |
+| Inviter → Ja → Fått jobb A → Angre A → Fått jobb A             | `FÅTT_JOBB` | ja   | nei  |
+
+### To formidlinger
+
+| Forløp                                                              | Status      | Svar | Møtt |
+| ------------------------------------------------------------------- | ----------- | ---- | ---- |
+| Inviter → Ja → Fått jobb A → Fått jobb B                            | `FÅTT_JOBB` | ja   | nei  |
+| Inviter → Ja → Fått jobb A → Fått jobb B → Angre A                  | `FÅTT_JOBB` | ja   | nei  |
+| Inviter → Ja → Fått jobb A → Fått jobb B → Angre A → Angre B        | `SVART_JA`  | ja   | nei  |
+| Inviter → Ja → Møtt → Fått jobb A → Fått jobb B → Angre B → Angre A | `MØTT_OPP`  | ja   | ja   |
+| Inviter → Ja → Fått jobb A → Fått jobb B → Angre A → Nei → Angre B  | `SVART_NEI` | nei  | nei  |
+
+### Sletting
+
+| Forløp                        | Status      | Merknad                             |
+| ----------------------------- | ----------- | ----------------------------------- |
+| Slett                         | `SLETTET`   |                                     |
+| Slett → Legg til igjen        | `LAGT_TIL`  | Personen kan legges til på nytt     |
+| Inviter → Slett               | `INVITERT`  | Avvist, bare `LAGT_TIL` kan slettes |
+| Møtt → Slett                  | `MØTT_OPP`  | Avvist                              |
+| Fått jobb A → Slett           | `FÅTT_JOBB` | Avvist                              |
+| Fått jobb A → Angre A → Slett | `SLETTET`   |                                     |
+
+## Frontend
+
+«Endre svar» er sperret for `LAGT_TIL`, `MØTT_OPP` og `SLETTET`. Ved møtt opp må eieren fjerne
+oppmøtet først. Rydding for den som er invitert og har møtt uten å svare, gjøres i
+aktivitetskortløsningen. For `FÅTT_JOBB` er valget åpent, men dialogen leser svaret fra statusen
+og viser derfor «Ikke svart».
+
+## Åpne punkter
+
+- Tellingene for «svart ja» (`hentAntallJobbsøkereSvartJa`, `useInviteringsStatus`) leser
+  statusen. Den som har svart ja og deretter møtt opp eller fått jobb, telles ikke. Endres ikke nå.
+- Invitasjon etter svar eller oppmøte uten invitasjon vurderes på nytt senere.

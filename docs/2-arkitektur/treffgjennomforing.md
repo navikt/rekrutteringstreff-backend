@@ -121,9 +121,15 @@ Oppmøte og status:
   lagt til. Gyldig svar er ett nivå: det nyeste svaret gir `SVART_JA` eller `SVART_NEI`.
 - Svaret leses med `Jobbsøkerstatusregler.gjeldendeSvar`, og det nyeste svaret gjelder. Svarer
   jobbsøkeren etter oppmøtet, endres svaret, men statusen er fortsatt `MØTT_OPP`.
-- Angres oppmøtet eller formidlingen, blir statusen den neste i prioriteten, for eksempel
-  det nyeste svaret.
-- «Fått jobb» regnes også som fremmøtt.
+- Angres oppmøtet, blir statusen den neste i prioriteten, for eksempel det nyeste svaret.
+- «Fått jobb» står til siste aktive formidling er angret. Har personen formidlinger til to
+  arbeidsgivere, gir angring av den ene fortsatt `FÅTT_JOBB`.
+- Fremmøtt følger den siste av hendelsene `REGISTRERT_OPPMØTE` og
+  `REGISTRERT_OPPMØTE_FJERNET`, ikke statusen. «Fått jobb» uten registrert oppmøte regnes
+  ikke som fremmøtt, fordi oppmøte ikke er obligatorisk. Et registrert oppmøte står når
+  personen får jobb.
+- En person kan registreres som møtt uten svar eller invitasjon. Personen kan da ikke
+  inviteres etterpå, fordi invitasjonen sender SMS. Dette vurderes på nytt senere.
 
 Sperrer:
 

@@ -142,6 +142,23 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
+    /** Om jobbsøkeren har en formidling som ikke er slettet, og som har gitt «Fått jobb». */
+    fun harAktivFormidlingMedUtfall(connection: Connection, personTreffId: PersonTreffId): Boolean {
+        val sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM formidling f
+                JOIN jobbsoker j ON j.jobbsoker_id = f.jobbsoker_id
+                WHERE j.id = ? AND f.slettet_tidspunkt IS NULL AND f.utfall_sendt_tidspunkt IS NOT NULL
+            )
+        """.trimIndent()
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
+        }
+    }
+
     fun oppdaterUtfallSendtTidspunkt(connection: Connection, formidlingId: Long): Boolean {
         val sql = """
             UPDATE formidling

@@ -190,6 +190,9 @@ class JobbsøkerService(
         return status
     }
 
+    fun låsJobbsøker(connection: Connection, personTreffId: PersonTreffId) =
+        jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
+
     fun registrerFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
         val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
         if (nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
