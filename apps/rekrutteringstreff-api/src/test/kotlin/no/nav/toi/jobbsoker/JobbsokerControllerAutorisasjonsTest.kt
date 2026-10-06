@@ -146,7 +146,7 @@ class JobbsokerControllerAutorisasjonsTest {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
         }),
-        hentTreffForJobbsøker(
+        hentRekrutteringstreffForJobbsøker(
             { "http://localhost:$appPort/api/rekrutteringstreff/jobbsoker/treff" },
             {
                 HttpRequest.newBuilder()
