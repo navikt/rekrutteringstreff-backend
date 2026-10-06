@@ -10,14 +10,14 @@ under [Bakgrunn](#bakgrunn).
 
 ## Stegene
 
-| Steg                       | WorkOp | Vanlig treff | Lagres i                                                          |
-| -------------------------- | :----: | :----------: | ----------------------------------------------------------------- |
-| 1. Oppmøte                 |   ✅   |      ✅      | `jobbsoker.status = 'MØTT_OPP'`, `deltakernummer` (bare WorkOp)   |
-| 2. Rom og rotasjon         |   ✅   |      –       | `moteoppsett`, `jobbsoker_romtildeling`, `arbeidsgiver_rotasjon`  |
-| 3. Interesse               |   ✅   |      ✅      | `interesse`                                                       |
-| 4. Intervjufordeling       |   ✅   |      –       | `intervjufordeling`                                               |
-| 5. Vurdering og oppfølging |   ✅   |      ✅      | `vurdering`                                                       |
-| 6. Oppsummering            |   ✅   |      ✅      | Ingenting. Steget leser bare.                                     |
+| Steg                       | WorkOp | Vanlig treff | Lagres i                                                         |
+| -------------------------- | :----: | :----------: | ---------------------------------------------------------------- |
+| 1. Oppmøte                 |   ✅   |      ✅      | `jobbsoker.status = 'MØTT_OPP'`, `deltakernummer` (bare WorkOp)  |
+| 2. Rom og rotasjon         |   ✅   |      –       | `moteoppsett`, `jobbsoker_romtildeling`, `arbeidsgiver_rotasjon` |
+| 3. Interesse               |   ✅   |      ✅      | `interesse`                                                      |
+| 4. Intervjufordeling       |   ✅   |      –       | `intervjufordeling`                                              |
+| 5. Vurdering og oppfølging |   ✅   |      ✅      | `vurdering`                                                      |
+| 6. Oppsummering            |   ✅   |      ✅      | Ingenting. Steget leser bare.                                    |
 
 `treffgjennomforing.gjeldende_steg` viser hvor langt arrangøren har kommet. Det går bare
 framover, også når registreringer angres. Arrangøren kan alltid gå tilbake og rette.
@@ -27,11 +27,11 @@ framover, også når registreringer angres. Arrangøren kan alltid gå tilbake o
 Tilgang krever rollen arbeidsgiverrettet, og at brukeren er eier av treffet eller
 utvikler (`krevEierEllerUtvikler`).
 
-| Miljø  | Frontend                         | Backend                                                         |
-| ------ | -------------------------------- | --------------------------------------------------------------- |
-| Prod   | Fanen er skjult, skriving stoppes | Interesse og vurdering avvises. WorkOp kan ikke opprettes.      |
-| Dev    | Bare WorkOp                      | Interesse og vurdering krever WorkOp                            |
-| Lokalt | Alle treff                       | Alle treff                                                      |
+| Miljø  | Frontend                          | Backend                                                    |
+| ------ | --------------------------------- | ---------------------------------------------------------- |
+| Prod   | Fanen er skjult, skriving stoppes | Interesse og vurdering avvises. WorkOp kan ikke opprettes. |
+| Dev    | Bare WorkOp                       | Interesse og vurdering krever WorkOp                       |
+| Lokalt | Alle treff                        | Alle treff                                                 |
 
 Regelen står i `erTreffgjennomføringTilgjengelig` i frontend og i
 `Treffkontekst.krevWorkOpEllerLokalUtvikling` i backend. Rom og intervjufordeling krever
@@ -41,13 +41,13 @@ WorkOp i alle miljøer (`krevWorkOp`).
 
 Backend, `rekrutteringstreff-api`:
 
-| Pakke                         | Ansvar                                                                                  |
-| ----------------------------- | --------------------------------------------------------------------------------------- |
+| Pakke                         | Ansvar                                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------------------------- |
 | `treffgjennomføring`          | Controller, felles skriving (`TreffgjennomføringWriter`) og lesing (`TreffgjennomføringReader`) |
-| `treffgjennomføring/møteplan` | Møteoppsett, romfordeling og rotasjon. `Møteplansynk` holder lagrede plasseringer i takt |
-| `treffgjennomføring/matching` | Interesse og intervjufordeling                                                          |
-| `oppfølging`                  | Vurdering, notater, 2. intervju og jobbtilbud                                           |
-| `jobbsoker/oppmøte`           | Oppmøte og deltakernummer                                                               |
+| `treffgjennomføring/møteplan` | Møteoppsett, romfordeling og rotasjon. `Møteplansynk` holder lagrede plasseringer i takt        |
+| `treffgjennomføring/matching` | Interesse og intervjufordeling                                                                  |
+| `oppfølging`                  | Vurdering, notater, 2. intervju og jobbtilbud                                                   |
+| `jobbsoker/oppmøte`           | Oppmøte og deltakernummer                                                                       |
 
 Frontend, `rekrutteringsbistand-frontend`:
 
@@ -80,19 +80,19 @@ Feiler en lagring, henter frontend bekreftet tilstand før brukeren kan fortsett
 Alle stier starter med `/api/rekrutteringstreff/{id}`. Alle skrivinger svarer med hele
 aggregatet.
 
-| Metode | Sti                                         | Gjør                                                        |
-| ------ | ------------------------------------------- | ----------------------------------------------------------- |
-| GET    | `/treffgjennomforing-og-oppfolging`         | Henter hele aggregatet                                      |
+| Metode | Sti                                            | Gjør                                                                                                     |
+| ------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| GET    | `/treffgjennomforing-og-oppfolging`            | Henter hele aggregatet                                                                                   |
 | POST   | `/treffgjennomforing-og-oppfolging/jobbsokere` | Henter jobbsøkerne med id, navn, status og fødselsnummer. Usynlige tas med på WorkOp, uten fødselsnummer |
-| PUT    | `/treffgjennomforing/oppmote`               | Registrerer eller angrer oppmøte                            |
-| PUT    | `/treffgjennomforing/moteoppsett`           | Setter tidene. Første kall oppretter rom og rotasjon        |
-| PUT    | `/treffgjennomforing/romfordeling/{person}` | Flytter én person til et rom                                |
-| POST   | `/treffgjennomforing/romfordeling/fordel`   | Fordeler alle fremmøtte på nytt                             |
-| PUT    | `/treffgjennomforing/interesse`             | Setter eller fjerner én interesse                           |
-| PUT    | `/treffgjennomforing/intervjufordeling`     | Lagrer rekkefølgen hos én arbeidsgiver                      |
-| POST   | `/treffgjennomforing/intervjufordeling/fordel` | Fordeler intervjuene på nytt                             |
-| PUT    | `/treffgjennomforing/steg`                  | Flytter gjeldende steg framover                             |
-| PUT    | `/oppfolging/vurderinger`                   | Setter eller fjerner vurderingen for én jobbsøker hos én arbeidsgiver |
+| PUT    | `/treffgjennomforing/oppmote`                  | Registrerer eller angrer oppmøte                                                                         |
+| PUT    | `/treffgjennomforing/moteoppsett`              | Setter tidene. Første kall oppretter rom og rotasjon                                                     |
+| PUT    | `/treffgjennomforing/romfordeling/{person}`    | Flytter én person til et rom                                                                             |
+| POST   | `/treffgjennomforing/romfordeling/fordel`      | Fordeler alle fremmøtte på nytt                                                                          |
+| PUT    | `/treffgjennomforing/interesse`                | Setter eller fjerner én interesse                                                                        |
+| PUT    | `/treffgjennomforing/intervjufordeling`        | Lagrer rekkefølgen hos én arbeidsgiver                                                                   |
+| POST   | `/treffgjennomforing/intervjufordeling/fordel` | Fordeler intervjuene på nytt                                                                             |
+| PUT    | `/treffgjennomforing/steg`                     | Flytter gjeldende steg framover                                                                          |
+| PUT    | `/oppfolging/vurderinger`                      | Setter eller fjerner vurderingen for én jobbsøker hos én arbeidsgiver                                    |
 
 ## Regler
 
@@ -117,8 +117,9 @@ Interesse, intervjufordeling og vurdering:
 Oppmøte og status:
 
 - Statusen utledes fra hendelsene i `Jobbsøkerstatusregler`. Gjelder flere tilstander
-  samtidig, vinner den øverste: slettet, fått jobb, møtt opp, gyldig svar, invitert og
-  lagt til. Gyldig svar er ett nivå: det nyeste svaret gir `SVART_JA` eller `SVART_NEI`.
+  samtidig, vinner den øverste: fått jobb, møtt opp, gyldig svar, invitert, slettet og
+  lagt til. Slettet er likevel en endestasjon, fordi bare `LAGT_TIL` kan slettes og tjenestene
+  avviser hendelser for slettede personer. Gyldig svar er ett nivå: det nyeste svaret gir `SVART_JA` eller `SVART_NEI`.
 - Svaret leses med `Jobbsøkerstatusregler.gjeldendeSvar`, og det nyeste svaret gjelder. Svarer
   jobbsøkeren etter oppmøtet, endres svaret, men statusen er fortsatt `MØTT_OPP`.
 - Angres oppmøtet, blir statusen den neste i prioriteten, for eksempel det nyeste svaret.
@@ -148,16 +149,16 @@ ryddes. Skjermbildene viser egne tekster.
 Hendelsene skrives bare på jobbsøkeren. Arbeidsgiveren ligger i `hendelse_data`, og
 frontend viser navnet i detaljteksten.
 
-| Hendelse                                         | Skrives når                                   | `hendelse_data`                                     |
-| ------------------------------------------------ | --------------------------------------------- | --------------------------------------------------- |
-| `REGISTRERT_OPPMØTE`                             | Oppmøtet registreres                          | `deltakernummer` (bare WorkOp)                      |
-| `REGISTRERT_OPPMØTE_FJERNET`                     | Oppmøtet angres                               | –                                                   |
-| `VURDERT`                                        | Vurderingen endres                            | `arbeidsgiverTreffId`, `vurdering`, `forrigeVurdering` |
-| `NOTAT_LAGT_TIL`, `NOTAT_FJERNET`                | Per notat                                     | `arbeidsgiverTreffId`, `notat`                      |
-| `AVTALT_INTERVJU`                                | 2. intervju krysses av                        | `arbeidsgiverTreffId`, `dato`                       |
-| `AVTALT_INTERVJU_ANGRET`                         | 2. intervju fjernes                           | `arbeidsgiverTreffId`                               |
-| `AVTALT_INTERVJU_DATO_ENDRET`                    | Datoen for 2. intervju settes, flyttes eller fjernes | `arbeidsgiverTreffId`, `dato`                |
-| `JOBBTILBUD_GITT`, `ANGRE_JOBBTILBUD_GITT`       | Jobbtilbud krysses av eller fjernes           | `arbeidsgiverTreffId`                               |
+| Hendelse                                   | Skrives når                                          | `hendelse_data`                                        |
+| ------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------ |
+| `REGISTRERT_OPPMØTE`                       | Oppmøtet registreres                                 | `deltakernummer` (bare WorkOp)                         |
+| `REGISTRERT_OPPMØTE_FJERNET`               | Oppmøtet angres                                      | –                                                      |
+| `VURDERT`                                  | Vurderingen endres                                   | `arbeidsgiverTreffId`, `vurdering`, `forrigeVurdering` |
+| `NOTAT_LAGT_TIL`, `NOTAT_FJERNET`          | Per notat                                            | `arbeidsgiverTreffId`, `notat`                         |
+| `AVTALT_INTERVJU`                          | 2. intervju krysses av                               | `arbeidsgiverTreffId`, `dato`                          |
+| `AVTALT_INTERVJU_ANGRET`                   | 2. intervju fjernes                                  | `arbeidsgiverTreffId`                                  |
+| `AVTALT_INTERVJU_DATO_ENDRET`              | Datoen for 2. intervju settes, flyttes eller fjernes | `arbeidsgiverTreffId`, `dato`                          |
+| `JOBBTILBUD_GITT`, `ANGRE_JOBBTILBUD_GITT` | Jobbtilbud krysses av eller fjernes                  | `arbeidsgiverTreffId`                                  |
 
 På treffet skrives `TREFFGJENNOMFØRING_OPPRETTET`, `TREFFGJENNOMFØRING_OPPSETT_ENDRET` og
 `TREFFGJENNOMFØRING_INTERVJUFORDELING_FORDELT`. Rom, interesse og intervjufordeling

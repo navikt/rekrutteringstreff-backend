@@ -37,10 +37,11 @@ class JobbsøkerstatusreglerTest {
     }
 
     @Test
-    fun `slettet går foran fått jobb, møtt opp og svar`() {
-        assertThat(
-            status(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON, REGISTRERT_OPPMØTE, JobbsøkerHendelsestype.FÅTT_JOBB, JobbsøkerHendelsestype.SLETTET)
-        ).isEqualTo(JobbsøkerStatus.SLETTET)
+    fun `slettet ligger rett over lagt til, og guardene hindrer hendelser etter sletting`() {
+        assertThat(status(OPPRETTET, REGISTRERT_OPPMØTE, REGISTRERT_OPPMØTE_FJERNET, JobbsøkerHendelsestype.SLETTET))
+            .isEqualTo(JobbsøkerStatus.SLETTET)
+        assertThat(status(OPPRETTET, JobbsøkerHendelsestype.SLETTET, REGISTRERT_OPPMØTE))
+            .isEqualTo(JobbsøkerStatus.MØTT_OPP)
     }
 
     @Test

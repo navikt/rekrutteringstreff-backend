@@ -137,6 +137,44 @@ class JobbsøkerstatusPermutasjonKomponentTest {
         }
     }
 
+    @org.junit.jupiter.api.Test
+    fun `svar på slettet jobbsøker avvises, og ny innlegging gjenbruker personTreffId`() {
+        val treff = opprettTreff()
+        val person = leggTil(treff)
+        ctx.jobbsøkerService.markerSlettet(person, treff, eier)
+
+        assertThat(runCatching { ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true) }.exceptionOrNull())
+            .isInstanceOf(no.nav.toi.exception.JobbsøkerIkkeFunnetException::class.java)
+        assertThat(hendelser(person)).containsExactly("OPPRETTET", "SLETTET")
+
+        val igjen = leggTil(treff)
+        assertThat(igjen).isEqualTo(person)
+        assertThat(hendelser(igjen)).containsExactly("OPPRETTET", "SLETTET", "OPPRETTET")
+        assertThat(db.hentJobbsøkerStatus(igjen)).isEqualTo(LAGT_TIL)
+    }
+
+    @org.junit.jupiter.api.Test
+    fun `formidling avvises hvis jobbsøkeren slettes mens stilling og kandidatliste opprettes`() {
+        val treff = opprettTreff()
+        val person = leggTil(treff)
+        every { stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any()) } answers {
+            assertThat(ctx.jobbsøkerService.markerSlettet(person, treff, eier)).isEqualTo(MarkerSlettetResultat.OK)
+            OpprettFormidlingStillingRespons(stillingsId = UUID.randomUUID(), kandidatlisteId = UUID.randomUUID())
+        }
+
+        try {
+            assertThat(runCatching { formidle(treff, orgnrA) }.exceptionOrNull())
+                .isInstanceOf(no.nav.toi.exception.JobbsøkerIkkeFunnetException::class.java)
+        } finally {
+            every { stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any()) } answers {
+                OpprettFormidlingStillingRespons(stillingsId = UUID.randomUUID(), kandidatlisteId = UUID.randomUUID())
+            }
+        }
+
+        assertThat(db.hentJobbsøkerStatus(person)).isEqualTo(SLETTET)
+        assertThat(hendelser(person)).containsExactly("OPPRETTET", "SLETTET")
+    }
+
     private fun opprettTreff(): TreffId {
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = eier)
         ctx.eierRepository.leggTil(treff, eier, "0315")
@@ -291,6 +329,13 @@ class JobbsøkerstatusPermutasjonKomponentTest {
             p(m, Steg.Slett, status = MØTT_OPP),
             p(a, Steg.Slett, status = FÅTT_JOBB),
             p(a, aa, Steg.Slett, status = SLETTET),
+            // Svar på en slettet jobbsøker avvises, så slettet forblir en endestasjon.
+            p(Steg.Slett, ja, status = SLETTET),
+            // Lagt til på nytt etter sletting: gammel historikk påvirker ikke statusen
+            p(m, fm, Steg.Slett, Steg.LeggTilIgjen, status = LAGT_TIL),
+            p(ja, Steg.FjernSvar, Steg.Slett, Steg.LeggTilIgjen, status = LAGT_TIL),
+            p(a, aa, Steg.Slett, Steg.LeggTilIgjen, i, ja, status = SVART_JA, svar = true),
+            p(m, fm, Steg.Slett, Steg.LeggTilIgjen, m, status = MØTT_OPP),
         )
     }
 }

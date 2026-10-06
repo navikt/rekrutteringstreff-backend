@@ -1523,7 +1523,7 @@ class TreffgjennomføringKomponentTest {
         oppmøte(treff, andre, møtt = true)
         møteoppsett(treff)
         val romFør = lagredeRom(treff)
-        db.dataSource.connection.use { ctx.jobbsøkerRepository.endreStatus(it, første, JobbsøkerStatus.LAGT_TIL) }
+        assertThat(oppmøte(treff, første, møtt = false).statusCode()).isEqualTo(200)
 
         assertThat(slettJobbsøker(treff, første).statusCode()).isEqualTo(200)
         assertThat(lagredeRom(treff)).isEqualTo(romFør - første.somString)

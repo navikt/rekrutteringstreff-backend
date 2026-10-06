@@ -13,6 +13,35 @@ import no.nav.toi.JobbsøkerHendelsestype
  */
 object Jobbsøkerstatusregler {
 
+    /**
+     * Den første regelen ovenfra som gjelder, bestemmer statusen. En jobbsøker som har møtt opp
+     * og deretter svart nei, har altså status MØTT_OPP, mens [gjeldendeSvar] gir nei.
+     *
+     * SLETTET ligger rett over LAGT_TIL fordi bare LAGT_TIL kan slettes, så ingen regel over er
+     * aktiv når personen slettes. At slettet er en endestasjon, sikres av guardene hos de som
+     * skriver hendelser: oppmøte, svar, formidling og invitasjon avviser slettede jobbsøkere.
+     * Bare OPPRETTET (personen legges til på nytt) opphever slettingen.
+     */
+    fun utledStatus(hendelser: List<JobbsøkerHendelsestype>): JobbsøkerStatus {
+        val svarstatus = svarstatus(hendelser)
+        return when {
+            harFåttJobb(hendelser) -> JobbsøkerStatus.FÅTT_JOBB
+            harMøttOpp(hendelser) -> JobbsøkerStatus.MØTT_OPP
+            svarstatus != null -> svarstatus
+            erInvitert(hendelser) -> JobbsøkerStatus.INVITERT
+            erSlettet(hendelser) -> JobbsøkerStatus.SLETTET
+            else -> JobbsøkerStatus.LAGT_TIL
+        }
+    }
+
+    /** true for ja, false for nei, null for ingen svar. Det nyeste svaret gjelder, uavhengig av status. */
+    fun gjeldendeSvar(hendelser: List<JobbsøkerHendelsestype>): Boolean? =
+        when (hendelser.lastOrNull { it in jaSvar || it in neiSvar || it in nullstillerSvar }) {
+            in jaSvar -> true
+            in neiSvar -> false
+            else -> null
+        }
+
     private val jaSvar = setOf(
         JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
         JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER,
@@ -28,30 +57,6 @@ object Jobbsøkerstatusregler {
         JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER,
     )
 
-    /** true for ja, false for nei, null for ingen svar. Det nyeste svaret gjelder, uavhengig av status. */
-    fun gjeldendeSvar(hendelser: List<JobbsøkerHendelsestype>): Boolean? =
-        when (hendelser.lastOrNull { it in jaSvar || it in neiSvar || it in nullstillerSvar }) {
-            in jaSvar -> true
-            in neiSvar -> false
-            else -> null
-        }
-
-    /**
-     * Den første regelen ovenfra som gjelder, bestemmer statusen. En jobbsøker som har møtt opp
-     * og deretter svart nei, har altså status MØTT_OPP, mens [gjeldendeSvar] gir nei.
-     */
-    fun utledStatus(hendelser: List<JobbsøkerHendelsestype>): JobbsøkerStatus {
-        val svarstatus = svarstatus(hendelser)
-        return when {
-            erSlettet(hendelser) -> JobbsøkerStatus.SLETTET
-            harFåttJobb(hendelser) -> JobbsøkerStatus.FÅTT_JOBB
-            harMøttOpp(hendelser) -> JobbsøkerStatus.MØTT_OPP
-            svarstatus != null -> svarstatus
-            erInvitert(hendelser) -> JobbsøkerStatus.INVITERT
-            else -> JobbsøkerStatus.LAGT_TIL
-        }
-    }
-
     private fun erSlettet(hendelser: List<JobbsøkerHendelsestype>) =
         erGjeldende(hendelser, JobbsøkerHendelsestype.SLETTET, JobbsøkerHendelsestype.OPPRETTET)
 
@@ -59,7 +64,11 @@ object Jobbsøkerstatusregler {
         erGjeldende(hendelser, JobbsøkerHendelsestype.FÅTT_JOBB, JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB)
 
     private fun harMøttOpp(hendelser: List<JobbsøkerHendelsestype>) =
-        erGjeldende(hendelser, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET)
+        erGjeldende(
+            hendelser,
+            JobbsøkerHendelsestype.REGISTRERT_OPPMØTE,
+            JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET
+        )
 
     private fun svarstatus(hendelser: List<JobbsøkerHendelsestype>): JobbsøkerStatus? =
         when (gjeldendeSvar(hendelser)) {

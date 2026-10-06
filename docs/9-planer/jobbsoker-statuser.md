@@ -1,7 +1,7 @@
 # Jobbsøkerstatus: regler og overganger
 
 **Status:** Implementert på `refactor-status`  
-**Fasit:** `JobbsøkerstatusPermutasjonKomponentTest` kjører 72 forløp mot ekte database
+**Fasit:** `JobbsøkerstatusPermutasjonKomponentTest` kjører 77 forløp mot ekte database
 gjennom de samme tjenestene som API-et.
 
 Backend utleder statusen fra hendelsesloggen i `Jobbsøkerstatusregler` og lagrer resultatet i
@@ -14,12 +14,12 @@ Statusen er den første regelen ovenfra som gjelder:
 
 | Prioritet | Status      | Gjelder når                                                           |
 | --------- | ----------- | --------------------------------------------------------------------- |
-| 1         | `SLETTET`   | Siste av `SLETTET`/`OPPRETTET` er `SLETTET`                           |
-| 2         | `FÅTT_JOBB` | Siste av `FÅTT_JOBB`/`ANGRE_FÅTT_JOBB` er `FÅTT_JOBB`                 |
-| 3         | `MØTT_OPP`  | Siste av `REGISTRERT_OPPMØTE`/`REGISTRERT_OPPMØTE_FJERNET` er oppmøte |
-| 4         | `SVART_JA`  | Gjeldende svar er ja                                                  |
-| 4         | `SVART_NEI` | Gjeldende svar er nei                                                 |
-| 5         | `INVITERT`  | Personen har en `INVITERT`-hendelse                                   |
+| 1         | `FÅTT_JOBB` | Siste av `FÅTT_JOBB`/`ANGRE_FÅTT_JOBB` er `FÅTT_JOBB`                 |
+| 2         | `MØTT_OPP`  | Siste av `REGISTRERT_OPPMØTE`/`REGISTRERT_OPPMØTE_FJERNET` er oppmøte |
+| 3         | `SVART_JA`  | Gjeldende svar er ja                                                  |
+| 3         | `SVART_NEI` | Gjeldende svar er nei                                                 |
+| 4         | `INVITERT`  | Personen har en `INVITERT`-hendelse                                   |
+| 5         | `SLETTET`   | Siste av `SLETTET`/`OPPRETTET` er `SLETTET`                           |
 | 6         | `LAGT_TIL`  | Ellers                                                                |
 
 Gjeldende svar (`Jobbsøkerstatusregler.gjeldendeSvar`) er den nyeste av svarhendelsene, uansett
@@ -28,6 +28,23 @@ status. Ja kommer fra `SVART_JA_TIL_INVITASJON` med eller uten `_AV_EIER`, og ne
 
 Konsekvensen er at svaret er en egen akse. Den som har møtt opp og deretter svarer nei, har status
 `MØTT_OPP` og svar nei. Fjernes oppmøtet, blir statusen `SVART_NEI`, ikke svaret fra før oppmøtet.
+
+`SLETTET` ligger rett over `LAGT_TIL`, fordi bare `LAGT_TIL` uten registreringer kan slettes.
+Ved sletting finnes det derfor ingen gjeldende invitasjon, svar, oppmøte eller formidling som kan
+vinne over. Slettet er en endestasjon fordi tjenestene avviser hendelser for slettede personer.
+Bare `OPPRETTET` (ny innlegging) opphever slettingen. Lekker en hendelse forbi en guard, vil
+statusen endre seg, så nye skrivende tjenester må sjekke `SLETTET`.
+
+| Skriver            | Avviser slettet med                                         | Serialisert mot sletting med     |
+| ------------------ | ----------------------------------------------------------- | -------------------------------- |
+| Svar (eier/borger) | `krevIkkeSlettetJobbsøker` (404)                            | `låsJobbsøker`                   |
+| Fått jobb          | `krevIkkeSlettetJobbsøker` i `registrerFåttJobb` (404)      | `låsJobbsøker`                   |
+| Angre fått jobb    | Skriver bare når status er `FÅTT_JOBB`                      | `låsJobbsøker` i `slett`         |
+| Invitasjon         | Inviterer bare `LAGT_TIL`                                   | `hentStatus` (`FOR UPDATE`)      |
+| Oppmøte            | `Treffkontekst` tar ikke med slettede (400)                 | `medLåstTreff`                   |
+
+Formidling sjekker jobbsøkeren før kallene til stilling- og kandidatliste-API-et, men skriver
+`FÅTT_JOBB` først etterpå. Derfor sjekker `registrerFåttJobb` på nytt under lås.
 
 ## Andre regler i tjenestene
 
@@ -123,14 +140,17 @@ Den andre invitasjonen hoppes over, fordi statusen ikke er `LAGT_TIL`.
 
 ### Sletting
 
-| Forløp                        | Status      | Merknad                             |
-| ----------------------------- | ----------- | ----------------------------------- |
-| Slett                         | `SLETTET`   |                                     |
-| Slett → Legg til igjen        | `LAGT_TIL`  | Personen kan legges til på nytt     |
-| Inviter → Slett               | `INVITERT`  | Avvist, bare `LAGT_TIL` kan slettes |
-| Møtt → Slett                  | `MØTT_OPP`  | Avvist                              |
-| Fått jobb A → Slett           | `FÅTT_JOBB` | Avvist                              |
-| Fått jobb A → Angre A → Slett | `SLETTET`   |                                     |
+| Forløp                                            | Status      | Merknad                                      |
+| ------------------------------------------------- | ----------- | -------------------------------------------- |
+| Slett                                             | `SLETTET`   |                                              |
+| Slett → Legg til igjen                            | `LAGT_TIL`  | Samme `personTreffId`, gammel historikk står |
+| Møtt → Fjern møtt → Slett → Legg til igjen → Møtt | `MØTT_OPP`  |                                              |
+| Inviter → Slett                                   | `INVITERT`  | Avvist, bare `LAGT_TIL` kan slettes          |
+| Møtt → Slett                                      | `MØTT_OPP`  | Avvist                                       |
+| Fått jobb A → Slett                               | `FÅTT_JOBB` | Avvist                                       |
+| Fått jobb A → Angre A → Slett                     | `SLETTET`   |                                              |
+| Slett → Ja                                        | `SLETTET`   | Avvist (404)                                 |
+| Slett under formidling (mellom sjekk og utfall)   | `SLETTET`   | Formidlingen avvises (404)                   |
 
 ## Frontend
 
