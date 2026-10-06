@@ -336,14 +336,6 @@ class JobbsøkerService(
         logger.info("Registrerte hendelse MOTTATT_SVAR_FRA_MINSIDE for rekrutteringstreffId: ${treffId.somString}")
     }
 
-    fun finnJobbsøkereMedAktivtSvarJa(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { it.harSvartJa() }
-    }
-
-    fun finnJobbsøkereSomIkkeSvart(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { it.status == JobbsøkerStatus.INVITERT }
-    }
-
     fun skalVarslesOmEndringer(jobbsøker: Jobbsøker): Boolean =
         jobbsøker.harSvartJa()
 

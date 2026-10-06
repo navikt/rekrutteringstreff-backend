@@ -1,8 +1,8 @@
 # Jobbsøkerstatus: regler og overganger
 
 **Status:** Implementert på `refactor-status`  
-**Fasit:** `JobbsøkerstatusPermutasjonKomponentTest` kjører 77 forløp mot ekte database
-gjennom de samme tjenestene som API-et.
+**Fasit:** `JobbsøkerstatusPermutasjonKomponentTest` kjører 77 statusforløp og 15 forløp for
+avlysning, fullføring og endring mot ekte database gjennom de samme tjenestene som API-et.
 
 Backend utleder statusen fra hendelsesloggen i `Jobbsøkerstatusregler` og lagrer resultatet i
 `jobbsoker.status`. Svar, oppmøte og formidling kan derfor registreres og angres i hvilken som
@@ -151,6 +151,78 @@ Den andre invitasjonen hoppes over, fordi statusen ikke er `LAGT_TIL`.
 | Fått jobb A → Angre A → Slett                     | `SLETTET`   |                                              |
 | Slett → Ja                                        | `SLETTET`   | Avvist (404)                                 |
 | Slett under formidling (mellom sjekk og utfall)   | `SLETTET`   | Formidlingen avvises (404)                   |
+
+## Avlysning, fullføring og endring
+
+`Jobbsøkerstatusregler.hendelseNårTreffetAvlyses` og `hendelseNårTreffetFullføres` avgjør hvilken
+hendelse hver jobbsøker får, og dermed hva som skjer med aktivitetskortet. Ingen hendelse betyr at
+kortet blir stående. Slettede og usynlige jobbsøkere er ikke med i utvalget og får aldri hendelse.
+
+### Avlysning
+
+Avlysning avgjøres først av om det nyeste svaret er ja (`harSvartJa`), uansett status. Statusen
+brukes bare for å finne den som er invitert uten å ha svart.
+
+| Jobbsøker                                               | Hendelse                  | Aktivitetskort     | SMS |
+| ------------------------------------------------------- | ------------------------- | ------------------ | --- |
+| Nyeste svar er ja (`SVART_JA`, `MØTT_OPP`, `FÅTT_JOBB`) | `SVART_JA_TREFF_AVLYST`   | `AVBRUTT`          | Ja  |
+| `INVITERT`                                              | `IKKE_SVART_TREFF_AVLYST` | `AVBRUTT`          | Nei |
+| `SVART_NEI`                                             | –                         | allerede `AVBRUTT` | Nei |
+| `MØTT_OPP` eller `FÅTT_JOBB` uten ja                    | –                         | uendret            | Nei |
+| `LAGT_TIL`                                              | –                         | har ikke kort      | Nei |
+
+Den som har svart ja og møtt opp, får SMS hvis treffet avlyses etterpå. Det skjer sjelden, men
+personen har sagt ja og skal få beskjed.
+
+### Fullføring
+
+Fullføring tar status og om personen er invitert (`erInvitert`). Aktivitetskortet opprettes ved
+invitasjon, så den som ikke er invitert, har ikke kort og får ingen hendelse. Her avgjør statusen, så regelen har én
+`when`-gren per status og ingen `else`. Kommer det en ny status, kompilerer ikke koden før noen har
+bestemt hva den skal gi ved fullføring.
+
+| Status                                   | Hendelse                    | Aktivitetskort     |
+| ---------------------------------------- | --------------------------- | ------------------ |
+| `FÅTT_JOBB`, `MØTT_OPP` eller `SVART_JA` | `SVART_JA_TREFF_FULLFØRT`   | `FULLFORT`         |
+| `INVITERT`                               | `IKKE_SVART_TREFF_FULLFØRT` | `AVBRUTT`          |
+| `SVART_NEI`                              | –                           | allerede `AVBRUTT` |
+| `LAGT_TIL` eller `SLETTET`               | –                           | har ikke kort      |
+| Ikke invitert, uansett status            | –                           | har ikke kort      |
+
+Den som har møtt opp eller fått jobb, får kortet fullført uansett svar, også etter et nei.
+Aktivitetskort-appen setter bare `FULLFORT` når meldingen har `svar=true`, så hendelsen heter
+`SVART_JA_TREFF_FULLFØRT` også for disse.
+
+### Endring
+
+Når et publisert treff endres, får alle med en `INVITERT`-hendelse `TREFF_ENDRET_ETTER_PUBLISERING`,
+som oppdaterer aktivitetskortet. Varselet om endringen
+(`TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON`) går til alle med gjeldende svar ja
+(`skalVarslesOmEndringer`). For alle forløp tjenestene kan lage, er det de samme som får
+`SVART_JA_TREFF_AVLYST`.
+
+### Forløp
+
+`JobbsøkerstatusPermutasjonKomponentTest` kjører hvert forløp under på tre nye, publiserte treff:
+ett avlyses, ett fullføres og ett endres.
+
+| Forløp                      | Status      | Svar | Ved avlysning             | Ved fullføring              |
+| --------------------------- | ----------- | ---- | ------------------------- | --------------------------- |
+| (bare lagt til)             | `LAGT_TIL`  | –    | –                         | –                           |
+| Inviter                     | `INVITERT`  | –    | `IKKE_SVART_TREFF_AVLYST` | `IKKE_SVART_TREFF_FULLFØRT` |
+| Inviter → Ja                | `SVART_JA`  | ja   | `SVART_JA_TREFF_AVLYST`   | `SVART_JA_TREFF_FULLFØRT`   |
+| Inviter → Ja → Fjern svar   | `INVITERT`  | –    | `IKKE_SVART_TREFF_AVLYST` | `IKKE_SVART_TREFF_FULLFØRT` |
+| Inviter → Nei               | `SVART_NEI` | nei  | –                         | –                           |
+| Inviter → Ja → Møtt         | `MØTT_OPP`  | ja   | `SVART_JA_TREFF_AVLYST`   | `SVART_JA_TREFF_FULLFØRT`   |
+| Inviter → Ja → Fått jobb A  | `FÅTT_JOBB` | ja   | `SVART_JA_TREFF_AVLYST`   | `SVART_JA_TREFF_FULLFØRT`   |
+| Inviter → Ja → Møtt → Nei   | `MØTT_OPP`  | nei  | –                         | `SVART_JA_TREFF_FULLFØRT`   |
+| Inviter → Nei → Møtt        | `MØTT_OPP`  | nei  | –                         | `SVART_JA_TREFF_FULLFØRT`   |
+| Inviter → Møtt              | `MØTT_OPP`  | –    | –                         | `SVART_JA_TREFF_FULLFØRT`   |
+| Inviter → Møtt → Fjern møtt | `INVITERT`  | –    | `IKKE_SVART_TREFF_AVLYST` | `IKKE_SVART_TREFF_FULLFØRT` |
+| Inviter → Fått jobb A       | `FÅTT_JOBB` | –    | –                         | `SVART_JA_TREFF_FULLFØRT`   |
+| Ja                          | `SVART_JA`  | ja   | `SVART_JA_TREFF_AVLYST`   | –                           |
+| Møtt                        | `MØTT_OPP`  | –    | –                         | –                           |
+| Slett                       | `SLETTET`   | –    | –                         | –                           |
 
 ## Frontend
 

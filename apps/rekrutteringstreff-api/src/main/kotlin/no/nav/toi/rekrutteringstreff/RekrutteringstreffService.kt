@@ -6,6 +6,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.UlovligOppdateringException
+import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -45,8 +46,7 @@ class RekrutteringstreffService(
             treffId,
             avlystAv,
             RekrutteringstreffHendelsestype.AVLYST,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
-            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST,
+            Jobbsøker::hendelseNårTreffetAvlyses,
             RekrutteringstreffStatus.AVLYST,
         )
     }
@@ -85,8 +85,7 @@ class RekrutteringstreffService(
             treffId,
             fullfortAv,
             RekrutteringstreffHendelsestype.FULLFØRT,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
-            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT,
+            Jobbsøker::hendelseNårTreffetFullføres,
             RekrutteringstreffStatus.FULLFØRT
         )
 
@@ -159,8 +158,7 @@ class RekrutteringstreffService(
         treffId: TreffId,
         ident: String,
         rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
-        jobbsøkerHendelsestypeSvartJa: JobbsøkerHendelsestype,
-        jobbsøkerHendelsestypeIkkeSvart: JobbsøkerHendelsestype,
+        jobbsøkerhendelse: (Jobbsøker) -> JobbsøkerHendelsestype?,
         status: RekrutteringstreffStatus,
     ) {
        dataSource.executeInTransaction { connection ->
@@ -174,27 +172,18 @@ class RekrutteringstreffService(
                ident
            )
 
-           val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
-
-           val jobbsøkereMedAktivtSvarJa = jobbsøkerService.finnJobbsøkereMedAktivtSvarJa(alleJobbsøkere)
-           if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
-               jobbsøkerRepository.leggTilHendelserForJobbsøkere(
-                   connection,
-                   jobbsøkerHendelsestypeSvartJa,
-                   jobbsøkereMedAktivtSvarJa.map { it.personTreffId },
-                   ident
-               )
-           }
-
-           val jobbsøkereSomIkkeSvart = jobbsøkerService.finnJobbsøkereSomIkkeSvart(alleJobbsøkere)
-           if (jobbsøkereSomIkkeSvart.isNotEmpty()) {
-               jobbsøkerRepository.leggTilHendelserForJobbsøkere(
-                   connection,
-                   jobbsøkerHendelsestypeIkkeSvart,
-                   jobbsøkereSomIkkeSvart.map { it.personTreffId },
-                   ident
-               )
-           }
+           jobbsøkerRepository.hentJobbsøkere(connection, treffId)
+               .groupBy(jobbsøkerhendelse)
+               .forEach { (hendelsestype, jobbsøkere) ->
+                   if (hendelsestype != null) {
+                       jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                           connection,
+                           hendelsestype,
+                           jobbsøkere.map { it.personTreffId },
+                           ident
+                       )
+                   }
+               }
 
            rekrutteringstreffRepository.endreStatus(connection, treffId, status)
         }

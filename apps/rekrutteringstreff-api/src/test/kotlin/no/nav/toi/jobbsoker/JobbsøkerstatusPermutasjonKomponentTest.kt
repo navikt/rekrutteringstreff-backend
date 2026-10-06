@@ -4,6 +4,12 @@ import io.mockk.every
 import io.mockk.mockk
 import no.nav.toi.ApplicationContext
 import no.nav.toi.JacksonConfig
+import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST
+import no.nav.toi.JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT
+import no.nav.toi.JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST
+import no.nav.toi.JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT
+import no.nav.toi.JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON
 import no.nav.toi.TestInfrastructureContext
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
@@ -14,6 +20,8 @@ import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.formidling.dto.ArbeidsgiverDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.formidling.dto.StillingDto
+import no.nav.toi.rekrutteringstreff.Endringsfelttype
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
@@ -41,6 +49,11 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
  * - «Fått jobb» står til siste aktive formidling er angret.
  * - «Fått jobb» alene regnes ikke som møtt. Oppmøte registreres uavhengig av formidling.
  * - Den som har svart eller møtt uten invitasjon, inviteres ikke senere (invitasjon sender sms).
+ * - Når treffet avlyses, får den som har svart ja en SVART_JA_TREFF_AVLYST, også etter oppmøte
+ *   eller fått jobb. Den som bare er invitert, får IKKE_SVART_TREFF_AVLYST. Andre får ingen.
+ * - Når treffet fullføres, får invitert jobbsøker som har møtt opp, fått jobb eller svart ja
+ *   SVART_JA_TREFF_FULLFØRT, uansett svar. Den som bare er invitert, får IKKE_SVART_TREFF_FULLFØRT.
+ *   Andre får ingen.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JobbsøkerstatusPermutasjonKomponentTest {
@@ -74,7 +87,7 @@ class JobbsøkerstatusPermutasjonKomponentTest {
     fun rydd() = db.slettAlt()
 
     sealed class Steg(private val navn: String) {
-        override fun toString() = navn
+        final override fun toString() = navn
         data object Inviter : Steg("Inviter")
         data object JaEier : Steg("Ja (eier)")
         data object NeiEier : Steg("Nei (eier)")
@@ -106,25 +119,7 @@ class JobbsøkerstatusPermutasjonKomponentTest {
         val spor = mutableListOf("LAGT_TIL")
 
         permutasjon.steg.forEach { steg ->
-            val feil = runCatching {
-                when (steg) {
-                    Steg.Inviter -> ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
-                    Steg.JaEier -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
-                    Steg.NeiEier -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, false)
-                    Steg.FjernSvar -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, null)
-                    Steg.JaBorger -> ctx.jobbsøkerService.svarJaTilInvitasjon(Fødselsnummer(fnr), treff, fnr)
-                    Steg.NeiBorger -> ctx.jobbsøkerService.svarNeiTilInvitasjon(Fødselsnummer(fnr), treff, fnr)
-                    Steg.Møtt -> oppmøte(treff, person, true)
-                    Steg.FjernMøtt -> oppmøte(treff, person, false)
-                    Steg.FormidleA -> formidlinger[orgnrA] = formidle(treff, orgnrA)
-                    Steg.FormidleB -> formidlinger[orgnrB] = formidle(treff, orgnrB)
-                    Steg.AngreA -> angre(treff, formidlinger.getValue(orgnrA))
-                    Steg.AngreB -> angre(treff, formidlinger.getValue(orgnrB))
-                    Steg.Slett -> ctx.jobbsøkerService.markerSlettet(person, treff, eier)
-                        .also { if (it != MarkerSlettetResultat.OK) error(it.name) }
-                    Steg.LeggTilIgjen -> person = leggTil(treff)
-                }
-            }.exceptionOrNull()
+            val feil = runCatching { person = utfør(steg, treff, person, formidlinger) }.exceptionOrNull()
             spor += db.hentJobbsøkerStatus(person)!!.name + (feil?.let { " (avvist: ${it.message ?: it::class.simpleName})" } ?: "")
         }
 
@@ -135,6 +130,36 @@ class JobbsøkerstatusPermutasjonKomponentTest {
             val fraSøk = ctx.jobbsøkerService.søkJobbsøkere(treff, JobbsøkerSøkRequest()).jobbsøkere.single()
             assertThat(fraSøk.status).isEqualTo(faktisk.status)
         }
+    }
+
+    data class Avslutningsforløp(
+        val nr: Int,
+        val steg: List<Steg>,
+        val vedAvlysning: JobbsøkerHendelsestype?,
+        val vedFullføring: JobbsøkerHendelsestype?,
+    ) {
+        override fun toString() =
+            "#$nr ${steg.joinToString(" → ").ifEmpty { "(kun lagt til)" }} gir " +
+                "${vedAvlysning ?: "ingen hendelse"} / ${vedFullføring ?: "ingen hendelse"}"
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("avslutningsforløp")
+    fun `avlysning, fullføring og endring gir forventet hendelse`(forløp: Avslutningsforløp) {
+        val hendelserVedAvlysning = nyeHendelserEtter(forløp.steg) { treff -> ctx.rekrutteringstreffService.avlys(treff, eier) }
+        val hendelserVedFullføring = nyeHendelserEtter(forløp.steg) { treff ->
+            db.endreTilTidTilPassert(treff, eier)
+            ctx.rekrutteringstreffService.fullfør(treff, eier)
+        }
+        val hendelserVedEndring = nyeHendelserEtter(forløp.steg) { treff ->
+            ctx.rekrutteringstreffService.registrerEndring(treff, Rekrutteringstreffendringer(setOf(Endringsfelttype.NAVN)), eier)
+        }
+
+        assertThat(hendelserVedAvlysning).`as`("hendelser ved avlysning").isEqualTo(listOfNotNull(forløp.vedAvlysning))
+        assertThat(hendelserVedFullføring).`as`("hendelser ved fullføring").isEqualTo(listOfNotNull(forløp.vedFullføring))
+        assertThat(TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON in hendelserVedEndring)
+            .`as`("varsel om endring går til den som har svart ja")
+            .isEqualTo(forløp.vedAvlysning == SVART_JA_TREFF_AVLYST)
     }
 
     @org.junit.jupiter.api.Test
@@ -186,6 +211,39 @@ class JobbsøkerstatusPermutasjonKomponentTest {
         return treff
     }
 
+    private fun utfør(steg: Steg, treff: TreffId, person: PersonTreffId, formidlinger: MutableMap<String, UUID>): PersonTreffId {
+        when (steg) {
+            Steg.Inviter -> ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
+            Steg.JaEier -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+            Steg.NeiEier -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, false)
+            Steg.FjernSvar -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, null)
+            Steg.JaBorger -> ctx.jobbsøkerService.svarJaTilInvitasjon(Fødselsnummer(fnr), treff, fnr)
+            Steg.NeiBorger -> ctx.jobbsøkerService.svarNeiTilInvitasjon(Fødselsnummer(fnr), treff, fnr)
+            Steg.Møtt -> oppmøte(treff, person, true)
+            Steg.FjernMøtt -> oppmøte(treff, person, false)
+            Steg.FormidleA -> formidlinger[orgnrA] = formidle(treff, orgnrA)
+            Steg.FormidleB -> formidlinger[orgnrB] = formidle(treff, orgnrB)
+            Steg.AngreA -> angre(treff, formidlinger.getValue(orgnrA))
+            Steg.AngreB -> angre(treff, formidlinger.getValue(orgnrB))
+            Steg.Slett -> ctx.jobbsøkerService.markerSlettet(person, treff, eier)
+                .also { if (it != MarkerSlettetResultat.OK) error(it.name) }
+            Steg.LeggTilIgjen -> return leggTil(treff)
+        }
+        return person
+    }
+
+    private fun nyeHendelserEtter(steg: List<Steg>, handling: (TreffId) -> Unit): List<JobbsøkerHendelsestype> {
+        val treff = opprettTreff()
+        db.publiser(treff, eier)
+        var person = leggTil(treff)
+        val formidlinger = mutableMapOf<String, UUID>()
+        steg.forEach { person = utfør(it, treff, person, formidlinger) }
+
+        val hendelserFør = hendelsestyper(person)
+        handling(treff)
+        return hendelsestyper(person).drop(hendelserFør.size)
+    }
+
     private fun leggTil(treff: TreffId): PersonTreffId {
         ctx.jobbsøkerService.leggTilJobbsøkere(
             listOf(LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Testesen"))), treff, eier,
@@ -233,9 +291,11 @@ class JobbsøkerstatusPermutasjonKomponentTest {
         return Utfall(db.hentJobbsøkerStatus(person)!!, jobbsøker?.gjeldendeSvar(), iOppmøteliste)
     }
 
-    private fun hendelser(person: PersonTreffId): List<String> = db.dataSource.connection.use { conn ->
-        ctx.jobbsøkerRepository.hentHendelsestyper(conn, person).map { it.name }
+    private fun hendelsestyper(person: PersonTreffId): List<JobbsøkerHendelsestype> = db.dataSource.connection.use { conn ->
+        ctx.jobbsøkerRepository.hentHendelsestyper(conn, person)
     }
+
+    private fun hendelser(person: PersonTreffId): List<String> = hendelsestyper(person).map { it.name }
 
     fun permutasjoner(): List<Permutasjon> {
         var nr = 0
@@ -336,6 +396,36 @@ class JobbsøkerstatusPermutasjonKomponentTest {
             p(ja, Steg.FjernSvar, Steg.Slett, Steg.LeggTilIgjen, status = LAGT_TIL),
             p(a, aa, Steg.Slett, Steg.LeggTilIgjen, i, ja, status = SVART_JA, svar = true),
             p(m, fm, Steg.Slett, Steg.LeggTilIgjen, m, status = MØTT_OPP),
+        )
+    }
+
+    fun avslutningsforløp(): List<Avslutningsforløp> {
+        var nr = 0
+        fun f(vararg steg: Steg, avlysning: JobbsøkerHendelsestype?, fullføring: JobbsøkerHendelsestype?) =
+            Avslutningsforløp(++nr, steg.toList(), vedAvlysning = avlysning, vedFullføring = fullføring)
+        val i = Steg.Inviter
+        val ja = Steg.JaEier
+        val nei = Steg.NeiEier
+        val m = Steg.Møtt
+        return listOf(
+            f(avlysning = null, fullføring = null),
+            f(i, avlysning = IKKE_SVART_TREFF_AVLYST, fullføring = IKKE_SVART_TREFF_FULLFØRT),
+            f(i, ja, avlysning = SVART_JA_TREFF_AVLYST, fullføring = SVART_JA_TREFF_FULLFØRT),
+            f(i, ja, Steg.FjernSvar, avlysning = IKKE_SVART_TREFF_AVLYST, fullføring = IKKE_SVART_TREFF_FULLFØRT),
+            f(i, nei, avlysning = null, fullføring = null),
+            // Ved avlysning avgjør svaret for den som har møtt opp eller fått jobb.
+            // Ved fullføring får de aktivitetskortet fullført uansett svar.
+            f(i, ja, m, avlysning = SVART_JA_TREFF_AVLYST, fullføring = SVART_JA_TREFF_FULLFØRT),
+            f(i, ja, Steg.FormidleA, avlysning = SVART_JA_TREFF_AVLYST, fullføring = SVART_JA_TREFF_FULLFØRT),
+            f(i, ja, m, nei, avlysning = null, fullføring = SVART_JA_TREFF_FULLFØRT),
+            f(i, nei, m, avlysning = null, fullføring = SVART_JA_TREFF_FULLFØRT),
+            f(i, m, avlysning = null, fullføring = SVART_JA_TREFF_FULLFØRT),
+            f(i, m, Steg.FjernMøtt, avlysning = IKKE_SVART_TREFF_AVLYST, fullføring = IKKE_SVART_TREFF_FULLFØRT),
+            f(i, Steg.FormidleA, avlysning = null, fullføring = SVART_JA_TREFF_FULLFØRT),
+            // Uten invitasjon har personen ikke aktivitetskort, men den som har svart ja, varsles om avlysningen
+            f(ja, avlysning = SVART_JA_TREFF_AVLYST, fullføring = null),
+            f(m, avlysning = null, fullføring = null),
+            f(Steg.Slett, avlysning = null, fullføring = null),
         )
     }
 }

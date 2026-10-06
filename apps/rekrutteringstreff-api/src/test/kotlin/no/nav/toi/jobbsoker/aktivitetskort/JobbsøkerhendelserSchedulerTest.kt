@@ -1181,6 +1181,34 @@ class JobbsøkerhendelserSchedulerTest {
     }
 
     @Test
+    fun `skal sende fullført-status for jobbsøker som har svart nei og møtt opp når treff fullføres`() {
+        val fnr = Fødselsnummer("12345678901")
+        val rapid = TestRapid()
+        val scheduler = JobbsøkerhendelserScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            rapid,
+            mapper,
+            LeaderElectionMock(),
+        )
+        val treffId = opprettPersonOgInviter(fnr, rapid, scheduler)
+        jobbsøkerService.svarNeiTilInvitasjon(fnr, treffId, fnr.asString)
+        registrerOppmøte(treffId, fnr)
+        scheduler.wrapJobbkjøring()
+
+        db.endreTilTidTilPassert(treffId, fnr.asString)
+        rekrutteringstreffService.fullfør(treffId, fnr.asString)
+        scheduler.wrapJobbkjøring()
+
+        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar nei + fullført
+        val melding = rapid.inspektør.message(2)
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(melding["svar"].asBoolean()).isTrue
+        assertThat(melding["treffstatus"].asText()).isEqualTo("fullført")
+    }
+
+    @Test
     fun `skal håndtere flere jobbsøkere med kun INVITERT når treff fullføres`() {
         val fnrSvartJa = Fødselsnummer("12345678901")
         val fnrIkkeSvart1 = Fødselsnummer("12345678902")
@@ -1326,5 +1354,15 @@ class JobbsøkerhendelserSchedulerTest {
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerService.inviter(listOf(personTreffId), treffId, "Z123456")
+    }
+
+    private fun registrerOppmøte(treffId: no.nav.toi.rekrutteringstreff.TreffId, fødselsnummer: Fødselsnummer) {
+        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
+        db.dataSource.connection.use { connection ->
+            jobbsøkerRepository.leggTilHendelse(
+                connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, no.nav.toi.AktørType.ARRANGØR, "Z123456",
+            )
+            jobbsøkerService.oppdaterStatusFraHendelser(connection, personTreffId)
+        }
     }
 }

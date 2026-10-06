@@ -127,6 +127,12 @@ data class Jobbsøker(
 
     fun gjeldendeSvar(): Boolean? = Jobbsøkerstatusregler.gjeldendeSvar(hendelsestyperEldsteFørst())
 
+    fun hendelseNårTreffetAvlyses(): JobbsøkerHendelsestype? =
+        Jobbsøkerstatusregler.hendelseNårTreffetAvlyses(status, harSvartJa())
+
+    fun hendelseNårTreffetFullføres(): JobbsøkerHendelsestype? =
+        Jobbsøkerstatusregler.hendelseNårTreffetFullføres(status, erInvitert())
+
     private fun hendelsestyperEldsteFørst(): List<JobbsøkerHendelsestype> =
         hendelser.asReversed().map { it.hendelsestype }
 }

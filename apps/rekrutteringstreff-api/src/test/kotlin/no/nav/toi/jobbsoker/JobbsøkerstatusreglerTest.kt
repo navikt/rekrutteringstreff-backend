@@ -2,6 +2,8 @@ package no.nav.toi.jobbsoker
 
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB
+import no.nav.toi.JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST
+import no.nav.toi.JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT
 import no.nav.toi.JobbsøkerHendelsestype.INVITERT
 import no.nav.toi.JobbsøkerHendelsestype.OPPRETTET
 import no.nav.toi.JobbsøkerHendelsestype.REGISTRERT_OPPMØTE
@@ -9,6 +11,8 @@ import no.nav.toi.JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET
 import no.nav.toi.JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER
 import no.nav.toi.JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
 import no.nav.toi.JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER
+import no.nav.toi.JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST
+import no.nav.toi.JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT
 import no.nav.toi.JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
 import no.nav.toi.JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER
 import no.nav.toi.JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING
@@ -20,6 +24,10 @@ class JobbsøkerstatusreglerTest {
 
     private fun status(vararg hendelser: JobbsøkerHendelsestype) = Jobbsøkerstatusregler.utledStatus(hendelser.toList())
     private fun svar(vararg hendelser: JobbsøkerHendelsestype) = Jobbsøkerstatusregler.gjeldendeSvar(hendelser.toList())
+    private fun vedAvlysning(vararg hendelser: JobbsøkerHendelsestype) =
+        Jobbsøkerstatusregler.hendelseNårTreffetAvlyses(status(*hendelser), harSvartJa = svar(*hendelser) == true)
+    private fun vedFullføring(vararg hendelser: JobbsøkerHendelsestype) =
+        Jobbsøkerstatusregler.hendelseNårTreffetFullføres(status(*hendelser), erInvitert = INVITERT in hendelser)
 
     @Test
     fun `alle statusene kan utledes`() {
@@ -127,5 +135,52 @@ class JobbsøkerstatusreglerTest {
         assertThat(status(OPPRETTET, JobbsøkerHendelsestype.SLETTET)).isEqualTo(JobbsøkerStatus.SLETTET)
         assertThat(status(OPPRETTET, JobbsøkerHendelsestype.SLETTET, OPPRETTET)).isEqualTo(JobbsøkerStatus.LAGT_TIL)
         assertThat(status(OPPRETTET, JobbsøkerHendelsestype.SLETTET, OPPRETTET, INVITERT)).isEqualTo(JobbsøkerStatus.INVITERT)
+    }
+
+    @Test
+    fun `når treffet avlyses, får den som har svart ja og den som bare er invitert hver sin hendelse`() {
+        assertThat(vedAvlysning(OPPRETTET)).isNull()
+        assertThat(vedAvlysning(OPPRETTET, INVITERT)).isEqualTo(IKKE_SVART_TREFF_AVLYST)
+        assertThat(vedAvlysning(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON)).isEqualTo(SVART_JA_TREFF_AVLYST)
+        assertThat(vedAvlysning(OPPRETTET, INVITERT, SVART_NEI_TIL_INVITASJON)).isNull()
+        assertThat(vedAvlysning(OPPRETTET, JobbsøkerHendelsestype.SLETTET)).isNull()
+    }
+
+    @Test
+    fun `når treffet avlyses, avgjør svaret for den som har møtt opp eller fått jobb`() {
+        assertThat(vedAvlysning(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON, REGISTRERT_OPPMØTE))
+            .isEqualTo(SVART_JA_TREFF_AVLYST)
+        assertThat(vedAvlysning(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON, JobbsøkerHendelsestype.FÅTT_JOBB))
+            .isEqualTo(SVART_JA_TREFF_AVLYST)
+        assertThat(vedAvlysning(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON, REGISTRERT_OPPMØTE, SVART_NEI_TIL_INVITASJON))
+            .isNull()
+        assertThat(vedAvlysning(OPPRETTET, INVITERT, REGISTRERT_OPPMØTE)).isNull()
+        assertThat(vedAvlysning(OPPRETTET, INVITERT, JobbsøkerHendelsestype.FÅTT_JOBB)).isNull()
+    }
+
+    @Test
+    fun `når treffet fullføres, får den som har møtt opp, fått jobb eller svart ja aktivitetskortet fullført`() {
+        assertThat(vedFullføring(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON)).isEqualTo(SVART_JA_TREFF_FULLFØRT)
+        assertThat(vedFullføring(OPPRETTET, INVITERT, REGISTRERT_OPPMØTE)).isEqualTo(SVART_JA_TREFF_FULLFØRT)
+        assertThat(vedFullføring(OPPRETTET, INVITERT, JobbsøkerHendelsestype.FÅTT_JOBB)).isEqualTo(SVART_JA_TREFF_FULLFØRT)
+        assertThat(vedFullføring(OPPRETTET, INVITERT, SVART_NEI_TIL_INVITASJON, REGISTRERT_OPPMØTE))
+            .isEqualTo(SVART_JA_TREFF_FULLFØRT)
+        assertThat(vedFullføring(OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON, REGISTRERT_OPPMØTE, SVART_NEI_TIL_INVITASJON))
+            .isEqualTo(SVART_JA_TREFF_FULLFØRT)
+    }
+
+    @Test
+    fun `når treffet fullføres, får den som er invitert uten svar aktivitetskortet avbrutt, og den som svarte nei beholder det avbrutte kortet`() {
+        assertThat(vedFullføring(OPPRETTET, INVITERT)).isEqualTo(IKKE_SVART_TREFF_FULLFØRT)
+        assertThat(vedFullføring(OPPRETTET, INVITERT, SVART_NEI_TIL_INVITASJON)).isNull()
+    }
+
+    @Test
+    fun `når treffet fullføres, får den som ikke er invitert ingen hendelse, fordi personen ikke har aktivitetskort`() {
+        assertThat(vedFullføring(OPPRETTET)).isNull()
+        assertThat(vedFullføring(OPPRETTET, SVART_JA_TIL_INVITASJON_AV_EIER)).isNull()
+        assertThat(vedFullføring(OPPRETTET, REGISTRERT_OPPMØTE)).isNull()
+        assertThat(vedFullføring(OPPRETTET, JobbsøkerHendelsestype.FÅTT_JOBB)).isNull()
+        assertThat(vedFullføring(OPPRETTET, JobbsøkerHendelsestype.SLETTET)).isNull()
     }
 }

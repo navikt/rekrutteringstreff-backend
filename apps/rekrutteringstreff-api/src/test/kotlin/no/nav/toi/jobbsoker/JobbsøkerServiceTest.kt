@@ -297,7 +297,7 @@ class JobbsøkerServiceTest {
     }
 
     @Test
-    fun `finnJobbsøkereMedAktivtSvarJa skal filtrere jobbsøkere som har svart ja og ikke svart nei etterpå`() {
+    fun `den som har svart ja får SVART_JA_TREFF_AVLYST når treffet avlyses`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr1 = Fødselsnummer("12345678901")
         val fnr2 = Fødselsnummer("10987654321")
@@ -312,11 +312,15 @@ class JobbsøkerServiceTest {
         // Kun fnr1 svarer ja
         jobbsøkerService.svarJaTilInvitasjon(fnr1, treffId, fnr1.asString)
 
-        val alleJobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
-        val jobbsøkereMedAktivtSvarJa = jobbsøkerService.finnJobbsøkereMedAktivtSvarJa(alleJobbsøkere)
+        val hendelsePerJobbsøker = jobbsøkerService.hentJobbsøkere(treffId)
+            .associate { it.fødselsnummer to it.hendelseNårTreffetAvlyses() }
 
-        assertThat(jobbsøkereMedAktivtSvarJa).hasSize(1)
-        assertThat(jobbsøkereMedAktivtSvarJa.first().fødselsnummer).isEqualTo(fnr1)
+        assertThat(hendelsePerJobbsøker).isEqualTo(
+            mapOf(
+                fnr1 to JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
+                fnr2 to JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST,
+            )
+        )
     }
 
     @Test
@@ -343,13 +347,13 @@ class JobbsøkerServiceTest {
         jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, "testperson", false)
         assertThat(gjeldende()).isEqualTo(JobbsøkerStatus.SVART_NEI to false)
 
-        val alleJobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
-        assertThat(jobbsøkerService.finnJobbsøkereMedAktivtSvarJa(alleJobbsøkere)).isEmpty()
-        assertThat(jobbsøkerService.skalVarslesOmEndringer(alleJobbsøkere.single())).isFalse()
+        val jobbsøker = jobbsøkerService.hentJobbsøkere(treffId).single()
+        assertThat(jobbsøker.hendelseNårTreffetAvlyses()).isNull()
+        assertThat(jobbsøkerService.skalVarslesOmEndringer(jobbsøker)).isFalse()
     }
 
     @Test
-    fun `finnJobbsøkereSomIkkeSvart skal filtrere jobbsøkere som er invitert men ikke har svart`() {
+    fun `den som er invitert men ikke har svart får IKKE_SVART_TREFF_FULLFØRT når treffet fullføres`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr1 = Fødselsnummer("12345678901")
         val fnr2 = Fødselsnummer("10987654321")
@@ -364,11 +368,15 @@ class JobbsøkerServiceTest {
         // Kun fnr1 svarer
         jobbsøkerService.svarJaTilInvitasjon(fnr1, treffId, fnr1.asString)
 
-        val alleJobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
-        val jobbsøkereSomIkkeSvart = jobbsøkerService.finnJobbsøkereSomIkkeSvart(alleJobbsøkere)
+        val hendelsePerJobbsøker = jobbsøkerService.hentJobbsøkere(treffId)
+            .associate { it.fødselsnummer to it.hendelseNårTreffetFullføres() }
 
-        assertThat(jobbsøkereSomIkkeSvart).hasSize(1)
-        assertThat(jobbsøkereSomIkkeSvart.first().fødselsnummer).isEqualTo(fnr2)
+        assertThat(hendelsePerJobbsøker).isEqualTo(
+            mapOf(
+                fnr1 to JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
+                fnr2 to JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT,
+            )
+        )
     }
 
     @Test

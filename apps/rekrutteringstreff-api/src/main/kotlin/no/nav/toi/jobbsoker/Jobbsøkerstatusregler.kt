@@ -9,7 +9,7 @@ import no.nav.toi.JobbsøkerHendelsestype
  * Statuskolonnen i `jobbsoker` lagrer resultatet av [utledStatus], så søk og filtrering kan
  * fortsatt bruke kolonnen.
  *
- * Alle funksjonene tar hendelsestypene sortert med eldste først.
+ * Funksjonene som tar hendelser, tar hendelsestypene sortert med eldste først.
  */
 object Jobbsøkerstatusregler {
 
@@ -41,6 +41,43 @@ object Jobbsøkerstatusregler {
             in neiSvar -> false
             else -> null
         }
+
+    /**
+     * Den som har svart ja, får aktivitetskortet avbrutt og et varsel om avlysningen, uansett
+     * status. Den som er invitert uten å ha svart, får kortet avbrutt uten varsel. Alle andre får
+     * ingen hendelse, og kortet blir stående: et nei har allerede avbrutt det, og den som ikke er
+     * invitert, har ikke kort.
+     */
+    fun hendelseNårTreffetAvlyses(status: JobbsøkerStatus, harSvartJa: Boolean): JobbsøkerHendelsestype? {
+        val avbrytKortetOgVarsle = JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST
+        val avbrytKortet = JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST
+        return when {
+            harSvartJa -> avbrytKortetOgVarsle
+            status == JobbsøkerStatus.INVITERT -> avbrytKortet
+            else -> null
+        }
+    }
+
+    /**
+     * Den som har møtt opp, fått jobb eller svart ja, får aktivitetskortet fullført, uansett svar.
+     * Den som er invitert uten å ha svart, får kortet avbrutt, som ved et nei. Ingen hendelse
+     * betyr at kortet blir stående: et nei har allerede avbrutt det, og den som ikke er
+     * invitert, har ikke kort.
+     *
+     * Aktivitetskortet fullføres bare med svar ja i meldingen, så hendelsen heter
+     * SVART_JA_TREFF_FULLFØRT også for den som møtte opp uten å svare ja.
+     */
+    fun hendelseNårTreffetFullføres(status: JobbsøkerStatus, erInvitert: Boolean): JobbsøkerHendelsestype? {
+        val fullførKortet = JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT
+        val avbrytKortet = JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT
+        if (!erInvitert) return null
+        return when (status) {
+            JobbsøkerStatus.FÅTT_JOBB, JobbsøkerStatus.MØTT_OPP, JobbsøkerStatus.SVART_JA -> fullførKortet
+            JobbsøkerStatus.INVITERT -> avbrytKortet
+            JobbsøkerStatus.SVART_NEI -> null
+            JobbsøkerStatus.SLETTET, JobbsøkerStatus.LAGT_TIL -> null
+        }
+    }
 
     private val jaSvar = setOf(
         JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
