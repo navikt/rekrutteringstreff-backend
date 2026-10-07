@@ -19,7 +19,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/autobump-docker-baseimage
+      deploy_dev_branch: refs/heads/refactor-status
     permissions:
       contents: read
       id-token: write
