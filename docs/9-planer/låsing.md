@@ -105,6 +105,7 @@ Tester av samtidige kall må bruke `REPEATABLE READ` som standard på poolen. El
 | Aktuell-status (`JobbsøkerService.endreAktuellForTreffStatus`) | `hentAktuellForTreffStatusForOppdatering` | RR | I samme spørring | ✅ Navnet viser låsen. ⚠️ `40001`. |
 | Eiere: legg til og slett (`EierService`) | `EierRepository.hent(forUpdate = true)`: treff, så eiere | RR | Etter lås | ✅ Riktig rekkefølge. ❌ `40001` når to kall endrer samme eierrader. ⚠️ `FOR UPDATE` også i `EierRepository.leggTil`. |
 | Synlighet fra event og need (`oppdaterSynlighetFraEvent`/`FraNeed`) | Ingen eksplisitt lås. `UPDATE` låser radene til commit. | Autocommit | Ikke relevant | ✅ Kort transaksjon. |
+| Avlys og fullfør treff (`RekrutteringstreffService.leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff`) | `medLåstTreff`, deretter alle jobbsøkerne på treffet (`låsJobbsøkereForTreff`, sortert på `id`) | RC | Treffstatus sjekkes og jobbsøkerstatus leses etter låsene. | ✅ |
 
 RC er `READ COMMITTED`, RR er `REPEATABLE READ`.
 
@@ -130,7 +131,7 @@ Disse testene viser derfor oppførselen under `READ COMMITTED`, ikke i produksjo
 - `InvitasjonFeilhåndteringTest`: `samtidige invitasjoner registrerer kun én INVITERT-hendelse`
 - `EierRepositoryTest`: `samtidige tillegg av samme eier ...` og `samtidige slettinger beholder siste eier`
 
-`JobbsøkerstatusSamtidighetTest` kjører svar og oppmøte samtidig på samme person med `REPEATABLE READ` på poolen, som i produksjon.
+`JobbsøkerstatusSamtidighetTest` kjører svar og oppmøte samtidig på samme person, og avlys eller fullfør samtidig med svar, med `REPEATABLE READ` på poolen, som i produksjon.
 
 ### Usikkerhet
 
@@ -144,7 +145,8 @@ Funnene om `40001` er utledet fra PostgreSQL-dokumentasjonen og kodelesing. `Exc
 - `inviter` låser i fast rekkefølge (sortert på id).
 - `OppmøteService` låser jobbsøkeren etter treffet, så oppmøte og svar ikke skriver status samtidig.
 - `registrerFåttJobb` leser statusen én gang.
-- `JobbsøkerstatusSamtidighetTest` dekker samtidig svar og oppmøte.
+- Avlys og fullfør låser treffet og deretter alle jobbsøkerne på treffet, sortert på `id`. Treffstatus sjekkes og jobbsøkerstatus leses etter låsene, så samtidige svar er med når hendelsen velges, og to samtidige avlysninger gir én avlysning.
+- `JobbsøkerstatusSamtidighetTest` dekker samtidig svar og oppmøte, og avlys eller fullfør samtidig med svar.
 
 ## Tiltak
 

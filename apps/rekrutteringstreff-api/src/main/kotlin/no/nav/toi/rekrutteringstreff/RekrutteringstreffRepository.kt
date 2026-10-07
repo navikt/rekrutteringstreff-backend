@@ -182,11 +182,12 @@ class RekrutteringstreffRepository(
         }
 
     fun hent(treff: TreffId): Rekrutteringstreff? =
-        dataSource.connection.use { c ->
-            c.prepareStatement("$selectTreff WHERE $id = ?").use { s ->
-                s.setObject(1, treff.somUuid)
-                s.executeQuery().let { rs -> if (rs.next()) rs.tilRekrutteringstreff() else null }
-            }
+        dataSource.connection.use { c -> hent(c, treff) }
+
+    fun hent(c: Connection, treff: TreffId): Rekrutteringstreff? =
+        c.prepareStatement("$selectTreff WHERE $id = ?").use { s ->
+            s.setObject(1, treff.somUuid)
+            s.executeQuery().use { rs -> if (rs.next()) rs.tilRekrutteringstreff() else null }
         }
 
     /**

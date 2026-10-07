@@ -1,7 +1,9 @@
 package no.nav.toi.jobbsoker
 
 import no.nav.toi.ApplicationContext
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -23,6 +25,9 @@ import javax.sql.DataSource
  * statusen fra hele loggen. Testene kjører de to samtidig på samme person, med samme
  * isolasjonsnivå som produksjonspoolen (`REPEATABLE READ`), og krever at begge kallene lykkes
  * og at den lagrede statusen er den samme som om loggen ble lest på nytt.
+ *
+ * Avlys og fullfør velger én hendelse per jobbsøker ut fra statusen. Testene for dem krever at
+ * valget stemmer med hendelsene som ligger før i loggen, også når jobbsøkerne svarer samtidig.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JobbsøkerstatusSamtidighetTest {
@@ -36,6 +41,16 @@ class JobbsøkerstatusSamtidighetTest {
     private val ctx = ApplicationContext(TestInfrastructureContext(dataSource = dataSourceSomIProduksjon))
     private val navIdent = "Z999999"
     private val antallRunder = 15
+    private val antallTreff = 5
+    private val jobbsøkerePerTreff = 4
+    private val avlysningshendelser = setOf(
+        JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
+        JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST,
+    )
+    private val fullføringshendelser = setOf(
+        JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
+        JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT,
+    )
 
     @BeforeAll
     fun migrer() {
@@ -83,7 +98,92 @@ class JobbsøkerstatusSamtidighetTest {
         }
     }
 
-    /** Kjører begge kallene fra samme startsignal og returnerer feilene i stedet for å kaste dem. */
+    @Test
+    fun `avlys samtidig med svar ja velger hendelse ut fra svaret som kom først`() {
+        repeat(antallTreff) { runde ->
+            val (treffId, personer) = publisertTreffMedInviterte(runde)
+
+            val feil = samtidig(
+                { ctx.rekrutteringstreffService.avlys(treffId, navIdent) },
+                *personer.map { person -> { svar(person, true) } }.toTypedArray(),
+            )
+
+            assertThat(feil).isEmpty()
+            personer.forEach { person ->
+                assertThat(lagretStatus(person)).isEqualTo(utledetStatus(person))
+                assertTreffslutthendelseStemmerMedLoggenFør(person, avslutninger = avlysningshendelser) { før ->
+                    Jobbsøkerstatusregler.hendelseNårTreffetAvlyses(
+                        Jobbsøkerstatusregler.utledStatus(før),
+                        Jobbsøkerstatusregler.gjeldendeSvar(før) == true,
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `fullfør samtidig med svar ja velger hendelse ut fra svaret som kom først`() {
+        repeat(antallTreff) { runde ->
+            val (treffId, personer) = publisertTreffMedInviterte(runde)
+            db.endreTilTidTilPassert(treffId, navIdent)
+
+            val feil = samtidig(
+                { ctx.rekrutteringstreffService.fullfør(treffId, navIdent) },
+                *personer.map { person -> { svar(person, true) } }.toTypedArray(),
+            )
+
+            assertThat(feil).isEmpty()
+            personer.forEach { person ->
+                assertThat(lagretStatus(person)).isEqualTo(utledetStatus(person))
+                assertTreffslutthendelseStemmerMedLoggenFør(person, avslutninger = fullføringshendelser) { før ->
+                    Jobbsøkerstatusregler.hendelseNårTreffetFullføres(
+                        Jobbsøkerstatusregler.utledStatus(før),
+                        JobbsøkerHendelsestype.INVITERT in før,
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `to samtidige avlysninger gir én avlysning`() {
+        repeat(antallTreff) { runde ->
+            val (treffId, personer) = publisertTreffMedInviterte(runde)
+
+            val feil = samtidig(
+                { ctx.rekrutteringstreffService.avlys(treffId, navIdent) },
+                { ctx.rekrutteringstreffService.avlys(treffId, navIdent) },
+            )
+
+            assertThat(feil).hasSize(1)
+            assertThat(feil.single()).isInstanceOf(UlovligOppdateringException::class.java)
+            personer.forEach { person ->
+                assertThat(hendelsestyper(person).filter { it in avlysningshendelser }).hasSize(1)
+            }
+        }
+    }
+
+    private fun publisertTreffMedInviterte(runde: Int): Pair<TreffId, List<PersonTreffId>> {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent)
+        db.publiser(treffId, navIdent)
+        val personer = (1..jobbsøkerePerTreff).map { jobbsøker(treffId, runde * 100 + it) }
+        db.inviterJobbsøkere(personer, treffId, navIdent)
+        return treffId to personer
+    }
+
+    /** Hendelsen avlys eller fullfør skrev, må være den regelen gir for hendelsene før den. */
+    private fun assertTreffslutthendelseStemmerMedLoggenFør(
+        person: PersonTreffId,
+        avslutninger: Set<JobbsøkerHendelsestype>,
+        regel: (List<JobbsøkerHendelsestype>) -> JobbsøkerHendelsestype?,
+    ) {
+        val hendelser = hendelsestyper(person)
+        val indeks = hendelser.indexOfFirst { it in avslutninger }
+        assertThat(indeks).describedAs("avslutningshendelse for $person i $hendelser").isNotNegative()
+        assertThat(hendelser[indeks]).describedAs("hendelser: $hendelser").isEqualTo(regel(hendelser.subList(0, indeks)))
+    }
+
+    /** Kjører alle kallene fra samme startsignal og returnerer feilene i stedet for å kaste dem. */
     private fun samtidig(vararg kall: () -> Unit): List<Throwable> {
         val start = CountDownLatch(1)
         val pool = Executors.newFixedThreadPool(kall.size)
@@ -127,7 +227,8 @@ class JobbsøkerstatusSamtidighetTest {
         db.dataSource.connection.use { ctx.jobbsøkerRepository.hentStatus(it, person) }
 
     private fun utledetStatus(person: PersonTreffId): JobbsøkerStatus =
-        db.dataSource.connection.use {
-            Jobbsøkerstatusregler.utledStatus(ctx.jobbsøkerRepository.hentHendelsestyper(it, person))
-        }
+        Jobbsøkerstatusregler.utledStatus(hendelsestyper(person))
+
+    private fun hendelsestyper(person: PersonTreffId): List<JobbsøkerHendelsestype> =
+        db.dataSource.connection.use { ctx.jobbsøkerRepository.hentHendelsestyper(it, person) }
 }

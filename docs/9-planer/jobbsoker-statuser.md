@@ -42,6 +42,7 @@ statusen endre seg, så nye skrivende tjenester må sjekke `SLETTET`.
 | Angre fått jobb    | Skriver bare når status er `FÅTT_JOBB`                      | `låsJobbsøker` i `slett`         |
 | Invitasjon         | Inviterer bare `LAGT_TIL`                                   | `låsJobbsøker`, sortert på id    |
 | Oppmøte            | `Treffkontekst` tar ikke med slettede (400)                 | `medLåstTreff`, så `låsJobbsøker` |
+| Avlys og fullfør   | Gir ingen hendelse for `SLETTET`                            | `medLåstTreff`, så `låsJobbsøkereForTreff` |
 
 Alle skrivinger som låser jobbsøkeren, kjører med `READ COMMITTED` (`executeInLockingTransaction`
 eller `medLåstTreff`). Da ser spørringene etter låsen det som ble lagret mens vi ventet. Under
