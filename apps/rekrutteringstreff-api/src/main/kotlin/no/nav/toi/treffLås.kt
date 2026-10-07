@@ -6,8 +6,7 @@ import java.sql.Connection
 import javax.sql.DataSource
 
 fun <T> DataSource.medLåstTreff(treffId: TreffId, block: (Connection) -> T): T =
-    // Neste spørring må se endringer fra transaksjonen vi eventuelt ventet på.
-    executeInTransaction(transactionIsolation = Connection.TRANSACTION_READ_COMMITTED) { connection ->
+    executeInLockingTransaction { connection ->
         connection.låsTreff(treffId)
         block(connection)
     }

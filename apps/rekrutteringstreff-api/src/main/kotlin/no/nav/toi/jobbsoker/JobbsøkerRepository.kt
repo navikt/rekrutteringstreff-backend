@@ -867,6 +867,29 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
+    fun låsJobbsøker(connection: Connection, personTreffId: PersonTreffId) {
+        connection.prepareStatement("SELECT 1 FROM jobbsoker WHERE id = ? FOR UPDATE").use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().close()
+        }
+    }
+
+    /** Låser alle jobbsøkerne på treffet sortert på id, samme rekkefølge som `inviter`. Ta trefflåsen først. */
+    fun låsJobbsøkereForTreff(connection: Connection, treffId: TreffId) {
+        connection.prepareStatement(
+            """
+            SELECT 1 FROM jobbsoker j
+            JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
+            WHERE rt.id = ?
+            ORDER BY j.id
+            FOR UPDATE OF j
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.executeQuery().close()
+        }
+    }
+
     /**
      * Henter alle hendelsestyper for en jobbsøker i kronologisk rekkefølge (eldst først).
      * Brukes for å rekonstruere hvilken status jobbsøkeren hadde på et tidligere tidspunkt.

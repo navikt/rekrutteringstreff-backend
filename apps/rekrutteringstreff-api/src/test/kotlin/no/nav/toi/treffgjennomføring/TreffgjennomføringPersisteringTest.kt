@@ -68,17 +68,51 @@ class TreffgjennomføringPersisteringTest {
     }
 
     @Test
-    fun `oppmøtehendelse uten statusendring gir ikke fremmøtt`() {
+    fun `fått jobb uten registrert oppmøte gir ikke fremmøtt`() {
         val treff = opprettTreff()
         val person = jobbsøker(treff)
 
-        leggTilOppmøtehendelse(person, "REGISTRERT_OPPMØTE", Instant.now())
+        settStatus(person, JobbsøkerStatus.FÅTT_JOBB)
 
         assertThat(les(treff).oppmøte).isEmpty()
     }
 
     @Test
-    fun `statusen bestemmer tilstanden, uavhengig av hendelsesrekkefølge`() {
+    fun `registrert oppmøte står når personen får jobb`() {
+        val treff = opprettTreff()
+        val person = jobbsøker(treff)
+
+        registrerOppmøte(person)
+        settStatus(person, JobbsøkerStatus.FÅTT_JOBB)
+
+        assertThat(les(treff).oppmøte).containsExactly(person.somString)
+    }
+
+    @Test
+    fun `siste oppmøtehendelse gjelder, uavhengig av innsettingsrekkefølge`() {
+        val treff = opprettTreff()
+        val person = jobbsøker(treff)
+        val nå = Instant.now()
+
+        leggTilOppmøtehendelse(person, "REGISTRERT_OPPMØTE_FJERNET", nå)
+        leggTilOppmøtehendelse(person, "REGISTRERT_OPPMØTE", nå.minusSeconds(60))
+
+        assertThat(les(treff).oppmøte).isEmpty()
+    }
+
+    @Test
+    fun `slettet jobbsøker er ikke fremmøtt`() {
+        val treff = opprettTreff()
+        val person = jobbsøker(treff)
+
+        registrerOppmøte(person)
+        settStatus(person, JobbsøkerStatus.SLETTET)
+
+        assertThat(les(treff).oppmøte).isEmpty()
+    }
+
+    @Test
+    fun `registrering og fjerning av oppmøte veksler tilstanden`() {
         val treff = opprettTreff()
         val person = jobbsøker(treff)
 
@@ -248,6 +282,10 @@ class TreffgjennomføringPersisteringTest {
         val hendelsestype =
             if (status == JobbsøkerStatus.MØTT_OPP) "REGISTRERT_OPPMØTE" else "REGISTRERT_OPPMØTE_FJERNET"
         leggTilOppmøtehendelse(personTreffId, hendelsestype, Instant.now())
+        settStatus(personTreffId, status)
+    }
+
+    private fun settStatus(personTreffId: PersonTreffId, status: JobbsøkerStatus) {
         db.dataSource.connection.use { conn ->
             conn.prepareStatement("UPDATE jobbsoker SET status = ? WHERE id = ?").use { stmt ->
                 stmt.setString(1, status.name)

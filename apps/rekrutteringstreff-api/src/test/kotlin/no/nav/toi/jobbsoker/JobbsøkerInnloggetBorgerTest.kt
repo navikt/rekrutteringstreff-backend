@@ -450,7 +450,28 @@ class JobbsøkerInnloggetBorgerTest {
     }
 
     private fun settStatus(treffId: TreffId, fødselsnummer: Fødselsnummer, status: JobbsøkerStatus) {
+        val hendelsestype = when (status) {
+            JobbsøkerStatus.MØTT_OPP -> JobbsøkerHendelsestype.REGISTRERT_OPPMØTE
+            JobbsøkerStatus.FÅTT_JOBB -> JobbsøkerHendelsestype.FÅTT_JOBB
+            else -> error("Testen støtter bare MØTT_OPP og FÅTT_JOBB")
+        }
         db.dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                INSERT INTO jobbsoker_hendelse
+                  (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+                SELECT gen_random_uuid(), js.jobbsoker_id, ?, ?, 'ARRANGØR', 'A100001'
+                FROM jobbsoker js
+                JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = js.rekrutteringstreff_id
+                WHERE js.fodselsnummer = ? AND rt.id = ?
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setTimestamp(1, java.sql.Timestamp.from(Instant.now()))
+                stmt.setString(2, hendelsestype.name)
+                stmt.setString(3, fødselsnummer.asString)
+                stmt.setObject(4, treffId.somUuid)
+                stmt.executeUpdate()
+            }
             conn.prepareStatement(
                 """
                 UPDATE jobbsoker SET status = ?

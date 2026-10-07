@@ -307,6 +307,9 @@ To ting skjemaet ikke viser av seg selv:
   `jobbsoker.status = 'MØTT_OPP'`. Hendelsene `REGISTRERT_OPPMØTE` og
   `REGISTRERT_OPPMØTE_FJERNET` skrives i samme transaksjon og utgjør
   revisjonssporet, mens leseveien bruker statusen.
+- **`jobbsoker.status` utledes fra hendelsene.** Hver endring legger først til en hendelse,
+  og `Jobbsøkerstatusregler.utledStatus` beregner deretter statusen i samme transaksjon.
+  Svaret har ingen egen kolonne, men leses fra hendelsene med `gjeldendeSvar`.
 - **Antall rom har ingen kolonne.** Det er alltid antall arbeidsgivere på
   treffet (minst 1), og beregnes ved lesing. En lagret kolonne ville vært et
   frosset øyeblikksbilde av noe som endrer seg når en arbeidsgiver legges til.

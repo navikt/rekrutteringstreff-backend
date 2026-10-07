@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.oppmøte
 
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.tilListe
@@ -16,13 +17,23 @@ class OppmøteRepository {
             LEFT JOIN deltakernummer d
                 ON d.jobbsoker_id = j.jobbsoker_id AND d.rekrutteringstreff_id = j.rekrutteringstreff_id
             WHERE j.rekrutteringstreff_id = ?
-              AND j.status IN (?, ?)
+              AND j.status != ?
+              AND (
+                  SELECT jh.hendelsestype
+                  FROM jobbsoker_hendelse jh
+                  WHERE jh.jobbsoker_id = j.jobbsoker_id
+                    AND jh.hendelsestype IN (?, ?)
+                  ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
+                  LIMIT 1
+              ) = ?
             ORDER BY d.deltakernummer NULLS LAST, j.jobbsoker_id
         """.trimIndent()
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
-            stmt.setString(2, JobbsøkerStatus.MØTT_OPP.name)
-            stmt.setString(3, JobbsøkerStatus.FÅTT_JOBB.name)
+            stmt.setString(2, JobbsøkerStatus.SLETTET.name)
+            stmt.setString(3, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE.name)
+            stmt.setString(4, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET.name)
+            stmt.setString(5, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE.name)
             stmt.executeQuery().use { rs -> rs.tilListe { PersonTreffId(it.getString(1)) } }
         }
     }

@@ -82,16 +82,21 @@ graph TB
 
 ## Hendelser og aktivitetskort-status
 
-| Hendelse                           | Rapids event                     | Aktivitetskort-status |
-| ---------------------------------- | -------------------------------- | --------------------- |
-| Inviter jobbsøker                  | `rekrutteringstreffinvitasjon`   | PLANLAGT              |
-| Jobbsøker svarer ja                | `rekrutteringstreffSvarOgStatus` | GJENNOMFORES          |
-| Jobbsøker svarer nei               | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
-| Svart ja → treff fullført          | `rekrutteringstreffSvarOgStatus` | FULLFORT              |
-| Svart ja → treff avlyst            | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
-| Svart nei → treff fullført/avlyst  | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
-| Ikke svart → treff fullført/avlyst | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
-| Treff endret                       | `rekrutteringstreffoppdatering`  | (oppdaterer detaljer) |
+| Hendelse                                            | Rapids event                     | Aktivitetskort-status |
+| --------------------------------------------------- | -------------------------------- | --------------------- |
+| Inviter jobbsøker                                   | `rekrutteringstreffinvitasjon`   | PLANLAGT              |
+| Jobbsøker svarer ja                                 | `rekrutteringstreffSvarOgStatus` | GJENNOMFORES          |
+| Jobbsøker svarer nei                                | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
+| Svart ja, møtt opp eller fått jobb → treff fullført | `rekrutteringstreffSvarOgStatus` | FULLFORT              |
+| Svart ja → treff avlyst                             | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
+| Svart nei → treff fullført/avlyst                   | (ingen melding)                  | (allerede AVBRUTT)    |
+| Ikke svart → treff fullført/avlyst                  | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
+| Treff endret                                        | `rekrutteringstreffoppdatering`  | (oppdaterer detaljer) |
+
+«Svart ja» betyr at det nyeste svaret er ja, også når statusen er `MØTT_OPP` eller `FÅTT_JOBB`.
+«Ikke svart» betyr status `INVITERT`. Ved fullføring får den som har møtt opp eller fått jobb kortet
+fullført uansett svar, også etter et nei. Meldingen har da `svar=true`, fordi aktivitetskort-appen
+bare setter FULLFORT med svar ja. Se [Jobbsøkerstatus](../9-planer/jobbsoker-statuser.md#avlysning-fullføring-og-endring).
 
 ---
 

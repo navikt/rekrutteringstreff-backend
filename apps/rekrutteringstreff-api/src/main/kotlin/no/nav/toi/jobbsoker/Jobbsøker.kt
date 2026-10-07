@@ -91,10 +91,6 @@ data class LeggTilJobbsøker(
     val innsatsgruppe: Innsatsgruppe? = null,
 )
 
-enum class JobbsøkerStatus {
-    LAGT_TIL, INVITERT, SVART_JA, SVART_NEI, MØTT_OPP, FÅTT_JOBB, SLETTET
-}
-
 enum class AktuellForTreffStatus {
     VURDERES,
     KONTAKTET,
@@ -118,9 +114,6 @@ data class Jobbsøker(
     val innsatsgruppe: Innsatsgruppe? = null,
     val sperret: Boolean = false,
 ) {
-    fun harAktivtSvarJa(): Boolean =
-        status == JobbsøkerStatus.SVART_JA
-
     fun erInvitert(): Boolean =
         hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
 
@@ -128,34 +121,16 @@ data class Jobbsøker(
 
     fun harSvartJa(): Boolean = gjeldendeSvar() == true
 
-    fun gjeldendeSvar(): Boolean? = when (status) {
-        JobbsøkerStatus.SVART_JA -> true
-        JobbsøkerStatus.SVART_NEI -> false
-        JobbsøkerStatus.MØTT_OPP, JobbsøkerStatus.FÅTT_JOBB ->
-            hendelser.filter { it.hendelsestype in SVARHENDELSER }
-                .maxByOrNull { it.tidspunkt }
-                ?.hendelsestype
-                ?.let(::svarFraHendelse)
-        else -> null
-    }
+    fun gjeldendeSvar(): Boolean? = Jobbsøkerstatusregler.gjeldendeSvar(hendelsestyperEldsteFørst())
 
-    private companion object {
-        val SVARHENDELSER = setOf(
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER,
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER,
-            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER,
-        )
+    fun hendelseNårTreffetAvlyses(): JobbsøkerHendelsestype? =
+        Jobbsøkerstatusregler.hendelseNårTreffetAvlyses(status, harSvartJa())
 
-        fun svarFraHendelse(hendelsestype: JobbsøkerHendelsestype): Boolean? = when (hendelsestype) {
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> true
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> false
-            else -> null
-        }
-    }
+    fun hendelseNårTreffetFullføres(): JobbsøkerHendelsestype? =
+        Jobbsøkerstatusregler.hendelseNårTreffetFullføres(status, erInvitert())
+
+    private fun hendelsestyperEldsteFørst(): List<JobbsøkerHendelsestype> =
+        hendelser.asReversed().map { it.hendelsestype }
 }
 
 data class PersonTreffId(private val id: UUID) {

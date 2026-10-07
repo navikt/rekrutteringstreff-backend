@@ -5,6 +5,7 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
+import no.nav.toi.executeInLockingTransaction
 import no.nav.toi.executeInTransaction
 import no.nav.toi.medLåstTreff
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
@@ -101,8 +102,10 @@ class JobbsøkerService(
     }
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
-        dataSource.executeInTransaction { connection ->
-            personTreffIds.forEach { personTreffId ->
+        dataSource.executeInLockingTransaction { connection ->
+            // Fast låserekkefølge (samme som ORDER BY id i PostgreSQL), så overlappende invitasjoner ikke gir deadlock.
+            personTreffIds.sortedBy { it.somString }.forEach { personTreffId ->
+                jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
                 val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
                 if (erSynlig == false) {
                     teamLog.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig i rekrutteringstreff - hopper over")
@@ -121,108 +124,102 @@ class JobbsøkerService(
                     listOf(personTreffId),
                     navIdent
                 )
-                jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.INVITERT)
+                oppdaterStatusFraHendelser(connection, personTreffId)
             }
         }
     }
 
     fun svarJaTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
-        dataSource.executeInTransaction { connection ->
-            val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
-                ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
-
-            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
-            if (erSynlig == false) {
-                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
-            }
-
-            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
-            if (nåværendeStatus == JobbsøkerStatus.SVART_JA) {
-                logger.info("Jobbsøker har allerede svart JA, ignorerer duplikat kall")
-                return@executeInTransaction
-            }
-
-            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
-            endreStatusEtterSvar(connection, personTreffId, nåværendeStatus, JobbsøkerStatus.SVART_JA)
-        }
+        svarFraJobbsøker(fnr, treffId, navIdent, svar = true)
     }
 
     fun svarNeiTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
-        dataSource.executeInTransaction { connection ->
+        svarFraJobbsøker(fnr, treffId, navIdent, svar = false)
+    }
+
+    private fun svarFraJobbsøker(fnr: Fødselsnummer, treffId: TreffId, navIdent: String, svar: Boolean) {
+        dataSource.executeInLockingTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
-
-            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
-            if (erSynlig == false) {
-                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+            val hendelsestype = when (svar) {
+                true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
+                false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
             }
-
-            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
-            if (nåværendeStatus == JobbsøkerStatus.SVART_NEI) {
-                logger.info("Jobbsøker har allerede svart NEI, ignorerer duplikat kall")
-                return@executeInTransaction
-            }
-
-            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
-            endreStatusEtterSvar(connection, personTreffId, nåværendeStatus, JobbsøkerStatus.SVART_NEI)
+            registrerSvar(connection, personTreffId, svar, hendelsestype, AktørType.JOBBSØKER, navIdent)
         }
     }
 
     fun svarPåVegneAvJobbsøker(personTreffId: PersonTreffId, navIdent: String, svar: Boolean?) {
-        dataSource.executeInTransaction { connection ->
-            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
-            if (erSynlig == false) {
-                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
-            }
-
-            val nyStatus = when (svar) {
-                true -> JobbsøkerStatus.SVART_JA
-                false -> JobbsøkerStatus.SVART_NEI
-                null -> JobbsøkerStatus.INVITERT
-            }
-
-            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
-            if (nåværendeStatus == nyStatus) {
-                logger.info("Jobbsøker har allerede status ${nyStatus}, ignorerer duplikat kall")
-                return@executeInTransaction
-            }
-
-            val hendelsesType = when (svar) {
+        dataSource.executeInLockingTransaction { connection ->
+            val hendelsestype = when (svar) {
                 true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER
                 false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER
                 null -> JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER
             }
-
-            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, hendelsesType, AktørType.ARRANGØR, navIdent)
-            endreStatusEtterSvar(connection, personTreffId, nåværendeStatus, nyStatus)
+            registrerSvar(connection, personTreffId, svar, hendelsestype, AktørType.ARRANGØR, navIdent)
         }
     }
 
-    /**
-     * Oppmøte og formidling skal ikke overskrives av et svar. Svaret lagres da bare som hendelse,
-     * og leses derfra av [Jobbsøker.gjeldendeSvar].
-     */
-    private fun endreStatusEtterSvar(
+    private fun registrerSvar(
         connection: Connection,
         personTreffId: PersonTreffId,
-        nåværendeStatus: JobbsøkerStatus?,
-        nyStatus: JobbsøkerStatus,
+        svar: Boolean?,
+        hendelsestype: JobbsøkerHendelsestype,
+        aktørType: AktørType,
+        navIdent: String,
     ) {
-        if (nåværendeStatus == JobbsøkerStatus.MØTT_OPP || nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
-            logger.info("Jobbsøker har status $nåværendeStatus, beholder statusen og lagrer bare svaret som hendelse")
+        jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
+        krevSynligJobbsøker(connection, personTreffId)
+        finnStatuskrevIkkeSlettetJobbsøker(connection, personTreffId)
+        if (hentGjeldendeSvar(connection, personTreffId) == svar) {
+            logger.info("Jobbsøker har allerede ${svarSomLoggtekst(svar)}, ignorerer duplikat kall")
             return
         }
-        jobbsøkerRepository.endreStatus(connection, personTreffId, nyStatus)
+        jobbsøkerRepository.leggTilHendelse(connection, personTreffId, hendelsestype, aktørType, navIdent)
+        oppdaterStatusFraHendelser(connection, personTreffId)
     }
 
+    private fun krevSynligJobbsøker(connection: Connection, personTreffId: PersonTreffId) {
+        if (jobbsøkerRepository.erSynlig(connection, personTreffId) == false) {
+            throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+        }
+    }
+
+    private fun finnStatuskrevIkkeSlettetJobbsøker(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
+        val status = jobbsøkerRepository.hentStatus(connection, personTreffId)
+        if (status == null || status == JobbsøkerStatus.SLETTET) {
+            throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
+        }
+        return status
+    }
+
+    private fun hentGjeldendeSvar(connection: Connection, personTreffId: PersonTreffId): Boolean? =
+        Jobbsøkerstatusregler.gjeldendeSvar(jobbsøkerRepository.hentHendelsestyper(connection, personTreffId))
+
+    private fun svarSomLoggtekst(svar: Boolean?): String = when (svar) {
+        true -> "svart JA"
+        false -> "svart NEI"
+        null -> "ingen svar"
+    }
+
+    fun oppdaterStatusFraHendelser(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
+        val status = Jobbsøkerstatusregler.utledStatus(jobbsøkerRepository.hentHendelsestyper(connection, personTreffId))
+        jobbsøkerRepository.endreStatus(connection, personTreffId, status)
+        return status
+    }
+
+    fun låsJobbsøker(connection: Connection, personTreffId: PersonTreffId) =
+        jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
+
     fun registrerFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
-        val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+        jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
+        val nåværendeStatus = finnStatuskrevIkkeSlettetJobbsøker(connection, personTreffId)
         if (nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
             logger.info("Jobbsøker har allerede fått jobb, ignorerer duplikat kall")
             return
         }
         jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
-        jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.FÅTT_JOBB)
+        oppdaterStatusFraHendelser(connection, personTreffId)
     }
 
     fun angreFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
@@ -231,25 +228,9 @@ class JobbsøkerService(
             logger.info("Jobbsøker har ikke status FÅTT_JOBB (er $nåværendeStatus), endrer ikke status ved angring av formidling")
             return
         }
-        val forrigeStatus = finnStatusFør(connection, personTreffId, JobbsøkerHendelsestype.FÅTT_JOBB)
         jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
-        jobbsøkerRepository.endreStatus(connection, personTreffId, forrigeStatus)
-        logger.info("Tilbakestilte jobbsøker $personTreffId fra FÅTT_JOBB til $forrigeStatus ved angring av formidling")
-    }
-
-    fun registrerOppmøte(connection: Connection, personTreffId: PersonTreffId) {
-        jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.MØTT_OPP)
-    }
-
-    fun fjernOppmøte(connection: Connection, personTreffId: PersonTreffId) {
-        val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
-        if (nåværendeStatus != JobbsøkerStatus.MØTT_OPP) {
-            logger.info("Jobbsøker har ikke status MØTT_OPP (er $nåværendeStatus), endrer ikke status ved fjerning av oppmøte")
-            return
-        }
-        val forrigeStatus = finnStatusFør(connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE)
-        jobbsøkerRepository.endreStatus(connection, personTreffId, forrigeStatus)
-        logger.info("Tilbakestilte jobbsøker $personTreffId fra MØTT_OPP til $forrigeStatus ved fjerning av oppmøte")
+        val nyStatus = oppdaterStatusFraHendelser(connection, personTreffId)
+        logger.info("Tilbakestilte jobbsøker $personTreffId fra FÅTT_JOBB til $nyStatus ved angring av formidling")
     }
 
     fun endreAktuellForTreffStatus(
@@ -270,35 +251,6 @@ class JobbsøkerService(
             EndreAktuellForTreffStatusResultat.OK
         }
 
-    private fun finnStatusFør(
-        connection: Connection,
-        personTreffId: PersonTreffId,
-        hendelsestype: JobbsøkerHendelsestype,
-    ): JobbsøkerStatus {
-        val hendelser = jobbsøkerRepository.hentHendelsestyper(connection, personTreffId)
-        val sisteIndex = hendelser.indexOfLast { it == hendelsestype }
-        if (sisteIndex <= 0) return JobbsøkerStatus.SVART_JA
-        val statusFraHendelse = hendelsestype.tilJobbsøkerStatus()
-        return hendelser.take(sisteIndex)
-            .mapNotNull { it.tilJobbsøkerStatus() }
-            .lastOrNull { it != statusFraHendelse }
-            ?: JobbsøkerStatus.SVART_JA
-    }
-
-    private fun JobbsøkerHendelsestype.tilJobbsøkerStatus(): JobbsøkerStatus? = when (this) {
-        JobbsøkerHendelsestype.OPPRETTET -> JobbsøkerStatus.LAGT_TIL
-        JobbsøkerHendelsestype.INVITERT -> JobbsøkerStatus.INVITERT
-        JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER -> JobbsøkerStatus.INVITERT
-        JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-        JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> JobbsøkerStatus.SVART_JA
-        JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
-        JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> JobbsøkerStatus.SVART_NEI
-        JobbsøkerHendelsestype.SLETTET -> JobbsøkerStatus.SLETTET
-        JobbsøkerHendelsestype.FÅTT_JOBB -> JobbsøkerStatus.FÅTT_JOBB
-        JobbsøkerHendelsestype.REGISTRERT_OPPMØTE -> JobbsøkerStatus.MØTT_OPP
-        else -> null
-    }
-
     fun markerSlettet(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): MarkerSlettetResultat {
         val resultat = dataSource.medLåstTreff(treffId) { connection ->
             val jobbsøker = jobbsøkerRepository.hentSlettestatus(connection, treffId, personTreffId)
@@ -317,7 +269,7 @@ class JobbsøkerService(
                 listOf(personTreffId),
                 navIdent
             )
-            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
+            oppdaterStatusFraHendelser(connection, personTreffId)
             MarkerSlettetResultat.OK
         }
 
@@ -392,16 +344,8 @@ class JobbsøkerService(
         logger.info("Registrerte hendelse MOTTATT_SVAR_FRA_MINSIDE for rekrutteringstreffId: ${treffId.somString}")
     }
 
-    fun finnJobbsøkereMedAktivtSvarJa(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { it.harAktivtSvarJa() }
-    }
-
-    fun finnJobbsøkereSomIkkeSvart(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { it.status == JobbsøkerStatus.INVITERT }
-    }
-
     fun skalVarslesOmEndringer(jobbsøker: Jobbsøker): Boolean =
-        jobbsøker.harAktivtSvarJa()
+        jobbsøker.harSvartJa()
 
     fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, sperret: Boolean, meldingTidspunkt: Instant): Int {
         return dataSource.executeInTransaction { connection ->

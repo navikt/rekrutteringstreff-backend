@@ -6,6 +6,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.UlovligOppdateringException
+import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -28,27 +29,23 @@ class RekrutteringstreffService(
     private val logger: Logger = log
 
     fun avlys(treffId: TreffId, avlystAv: String) {
-        val treff = rekrutteringstreffRepository.hent(treffId)
-            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
-
-        if (treff.status == RekrutteringstreffStatus.FULLFØRT) {
-            logger.warn("Forsøk på å avlyse fullført rekrutteringstreff. treffId: $treffId")
-            throw UlovligOppdateringException("Kan ikke avlyse rekrutteringstreff som allerede er fullført")
-        }
-
-        if (treff.status == RekrutteringstreffStatus.AVLYST) {
-            logger.warn("Forsøk på å avlyse allerede avlyst rekrutteringstreff. treffId: $treffId")
-            throw UlovligOppdateringException("Rekrutteringstreff er allerede avlyst")
-        }
-
         leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
             treffId,
             avlystAv,
             RekrutteringstreffHendelsestype.AVLYST,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
-            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST,
+            Jobbsøker::hendelseNårTreffetAvlyses,
             RekrutteringstreffStatus.AVLYST,
-        )
+        ) { treff ->
+            if (treff.status == RekrutteringstreffStatus.FULLFØRT) {
+                logger.warn("Forsøk på å avlyse fullført rekrutteringstreff. treffId: $treffId")
+                throw UlovligOppdateringException("Kan ikke avlyse rekrutteringstreff som allerede er fullført")
+            }
+
+            if (treff.status == RekrutteringstreffStatus.AVLYST) {
+                logger.warn("Forsøk på å avlyse allerede avlyst rekrutteringstreff. treffId: $treffId")
+                throw UlovligOppdateringException("Rekrutteringstreff er allerede avlyst")
+            }
+        }
     }
 
     fun publiser(treffId: TreffId, navIdent: String) {
@@ -68,27 +65,23 @@ class RekrutteringstreffService(
 
     fun fullfør(treffId: TreffId, fullfortAv: String) {
         log.info("Fullfører treff med id $treffId")
-        val treff = rekrutteringstreffRepository.hent(treffId)
-            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
-
-        if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
-            logger.warn("Forsøk på å fullføre rekrutteringstreff som ikke er publisert. treffId: $treffId status: ${treff.status}")
-            throw UlovligOppdateringException("Kan kun fullføre rekrutteringstreff som er i PUBLISERT status")
-        }
-
-        if (treff.tilTid == null || treff.tilTid.isAfter(ZonedDateTime.now(ZoneId.of("Europe/Oslo")))) {
-            logger.warn("Forsøk på å fullføre rekrutteringstreff som fortsatt er i gang. treffId: $treffId")
-            throw UlovligOppdateringException("Rekrutteringstreff med id $treffId er fremdeles i gang og kan ikke fullføres")
-        }
-
         leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
             treffId,
             fullfortAv,
             RekrutteringstreffHendelsestype.FULLFØRT,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
-            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT,
+            Jobbsøker::hendelseNårTreffetFullføres,
             RekrutteringstreffStatus.FULLFØRT
-        )
+        ) { treff ->
+            if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
+                logger.warn("Forsøk på å fullføre rekrutteringstreff som ikke er publisert. treffId: $treffId status: ${treff.status}")
+                throw UlovligOppdateringException("Kan kun fullføre rekrutteringstreff som er i PUBLISERT status")
+            }
+
+            if (treff.tilTid == null || treff.tilTid.isAfter(ZonedDateTime.now(ZoneId.of("Europe/Oslo")))) {
+                logger.warn("Forsøk på å fullføre rekrutteringstreff som fortsatt er i gang. treffId: $treffId")
+                throw UlovligOppdateringException("Rekrutteringstreff med id $treffId er fremdeles i gang og kan ikke fullføres")
+            }
+        }
 
         log.info("Fullførte treff med id $treffId")
     }
@@ -159,11 +152,18 @@ class RekrutteringstreffService(
         treffId: TreffId,
         ident: String,
         rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
-        jobbsøkerHendelsestypeSvartJa: JobbsøkerHendelsestype,
-        jobbsøkerHendelsestypeIkkeSvart: JobbsøkerHendelsestype,
+        jobbsøkerhendelse: (Jobbsøker) -> JobbsøkerHendelsestype?,
         status: RekrutteringstreffStatus,
+        valider: (Rekrutteringstreff) -> Unit,
     ) {
-       dataSource.executeInTransaction { connection ->
+       // Treff før jobbsøkere, som ved oppmøte. Statusene leses etter låsen, så samtidige svar,
+       // oppmøter og formidlinger er med når hendelsen velges.
+       dataSource.medLåstTreff(treffId) { connection ->
+           val treff = rekrutteringstreffRepository.hent(connection, treffId)
+               ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
+           valider(treff)
+           jobbsøkerRepository.låsJobbsøkereForTreff(connection, treffId)
+
            val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
 
            rekrutteringstreffRepository.leggTilHendelse(
@@ -174,27 +174,18 @@ class RekrutteringstreffService(
                ident
            )
 
-           val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
-
-           val jobbsøkereMedAktivtSvarJa = jobbsøkerService.finnJobbsøkereMedAktivtSvarJa(alleJobbsøkere)
-           if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
-               jobbsøkerRepository.leggTilHendelserForJobbsøkere(
-                   connection,
-                   jobbsøkerHendelsestypeSvartJa,
-                   jobbsøkereMedAktivtSvarJa.map { it.personTreffId },
-                   ident
-               )
-           }
-
-           val jobbsøkereSomIkkeSvart = jobbsøkerService.finnJobbsøkereSomIkkeSvart(alleJobbsøkere)
-           if (jobbsøkereSomIkkeSvart.isNotEmpty()) {
-               jobbsøkerRepository.leggTilHendelserForJobbsøkere(
-                   connection,
-                   jobbsøkerHendelsestypeIkkeSvart,
-                   jobbsøkereSomIkkeSvart.map { it.personTreffId },
-                   ident
-               )
-           }
+           jobbsøkerRepository.hentJobbsøkere(connection, treffId)
+               .groupBy(jobbsøkerhendelse)
+               .forEach { (hendelsestype, jobbsøkere) ->
+                   if (hendelsestype != null) {
+                       jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                           connection,
+                           hendelsestype,
+                           jobbsøkere.map { it.personTreffId },
+                           ident
+                       )
+                   }
+               }
 
            rekrutteringstreffRepository.endreStatus(connection, treffId, status)
         }
