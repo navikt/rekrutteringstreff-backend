@@ -25,6 +25,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 
+data class HentRekrutteringstreffForJobbsøkerRequest(val fødselsnummer: String)
+
 class JobbsøkerController(
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
@@ -46,6 +48,7 @@ class JobbsøkerController(
         private const val formidlingMittKontorPath = "$jobbsøkerPath/formidling/mittkontor"
         private const val formidlingAllePath = "$jobbsøkerPath/formidling/alle"
         private const val aktuellForTreffStatusPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/aktuell-for-treff-status"
+        private const val treffForJobbsøkerPath = "$endepunktRekrutteringstreff/jobbsoker/treff"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
@@ -60,6 +63,50 @@ class JobbsøkerController(
         routes.post(formidlingMittKontorPath, hentJobbsøkereForMittKontorForFormidlingHandler())
         routes.post(formidlingAllePath, hentAlleJobbsøkereForFormidlingHandler())
         routes.put(aktuellForTreffStatusPath, endreAktuellForTreffStatusHandler())
+        routes.post(treffForJobbsøkerPath, hentRekrutteringstreffForJobbsøkerHandler())
+    }
+
+    @OpenApi(
+        summary = "Hent rekrutteringstreff for en jobbsøker",
+        description = "Søker på tvers av alle treff. Returnerer synlige jobbsøkere. " +
+            "Responsen inneholder kategori REKRUTTERINGSTREFF eller WORKOP og antall ikke-slettede arbeidsgivere. " +
+            "id er UUID-en for rekrutteringstreff og er null for WORKOP. " +
+            "status er jobbsøkerens status på treffet. " +
+            "Jobbsøkerrettet rolle ser bare treff der jobbsøkerens kontor matcher brukerens Modia-enheter; " +
+            "arbeidsgiverrettet rolle og utvikler kan se alle treff. lagtTilAvNavn kan være null dersom navnet ikke ble lagret da jobbsøkeren ble lagt til.",
+        operationId = "hentRekrutteringstreffForJobbsøker",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        requestBody = OpenApiRequestBody(
+            content = [OpenApiContent(
+                from = HentRekrutteringstreffForJobbsøkerRequest::class,
+                example = """{"fødselsnummer": "12345678901"}"""
+            )]
+        ),
+        responses = [
+            OpenApiResponse(status = "200", content = [OpenApiContent(from = Array<JobbsøkerTreffHistorikk>::class)]),
+            OpenApiResponse(status = "400", description = "Ugyldig fødselsnummer"),
+            OpenApiResponse(status = "403", description = "Krever arbeidsgiverrettet, jobbsøkerrettet eller utviklerrolle"),
+        ],
+        path = treffForJobbsøkerPath,
+        methods = [HttpMethod.POST]
+    )
+    private fun hentRekrutteringstreffForJobbsøkerHandler(): (Context) -> Unit = { ctx ->
+        val innloggetBruker = ctx.authenticatedUser()
+        innloggetBruker.verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+        val request = ctx.bodyAsClass<HentRekrutteringstreffForJobbsøkerRequest>()
+        require(request.fødselsnummer.matches(Regex("""\d{11}"""))) {
+            "Fødselsnummer må bestå av 11 siffer."
+        }
+        val fødselsnummer = Fødselsnummer(request.fødselsnummer)
+        val enheter = if (
+            innloggetBruker.erUtvikler() || innloggetBruker.harRolle(Rolle.ARBEIDSGIVER_RETTET)
+        ) {
+            null
+        } else {
+            modiaKlient.hentMineEnheter(innloggetBruker.innkommendeToken())
+        }
+
+        ctx.status(200).json(jobbsøkerService.hentRekrutteringstreffForJobbsøker(fødselsnummer, enheter))
     }
 
     @OpenApi(

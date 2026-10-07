@@ -36,6 +36,12 @@ class JobbsøkerService(
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val teamLog = TeamLogLogger.teamlog(logger)
 
+    fun hentRekrutteringstreffForJobbsøker(
+        fødselsnummer: Fødselsnummer,
+        tilknyttedeEnheter: List<String>? = null,
+    ): List<JobbsøkerTreffHistorikk> =
+        jobbsøkerRepository.hentRekrutteringstreffForJobbsøker(fødselsnummer, tilknyttedeEnheter)
+
     fun leggTilJobbsøkere(
         jobbsøkere: List<LeggTilJobbsøker>,
         treffId: TreffId,

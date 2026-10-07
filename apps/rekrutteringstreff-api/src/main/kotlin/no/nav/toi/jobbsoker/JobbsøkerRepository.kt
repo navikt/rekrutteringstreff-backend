@@ -6,6 +6,7 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.dto.parseHendelseData
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.*
 import java.time.Instant
@@ -16,6 +17,18 @@ import javax.sql.DataSource
 internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
 
 data class JobbsøkerSlettestatus(val jobbsøkerId: Long, val status: JobbsøkerStatus)
+
+data class JobbsøkerTreffHistorikk(
+    val id: UUID?,
+    val tittel: String,
+    val kategori: RekrutteringstreffKategori,
+    val status: JobbsøkerStatus,
+    val antallArbeidsgivere: Int,
+    val lagtTilTidspunkt: Instant?,
+    val treffStartTidspunkt: Instant?,
+    val lagtTilAvNavn: String?,
+    val lagtTilAvIdent: String?,
+)
 
 class JobbsøkerRepository(private val dataSource: DataSource, private val mapper: ObjectMapper) {
 
@@ -201,6 +214,76 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
     fun hentJobbsøkere(treff: TreffId): List<Jobbsøker> =
         dataSource.connection.use { conn -> hentJobbsøkere(conn, treff) }
+
+    fun hentRekrutteringstreffForJobbsøker(
+        fødselsnummer: Fødselsnummer,
+        tilknyttedeEnheter: List<String>? = null,
+    ): List<JobbsøkerTreffHistorikk> =
+        dataSource.connection.use { connection ->
+            val enheter = tilknyttedeEnheter
+                ?.mapNotNull { it.trim().takeIf(String::isNotEmpty) }
+                ?.distinct()
+            val kontorFilter = if (enheter == null) "" else "AND j.kontornummer = ANY (?::text[])"
+            connection.prepareStatement(
+                """
+                SELECT
+                    CASE WHEN rt.kategori = 'REKRUTTERINGSTREFF' THEN rt.id END AS id,
+                    rt.tittel,
+                    rt.kategori,
+                    j.status AS status,
+                    (
+                        SELECT count(*)
+                        FROM arbeidsgiver a
+                        WHERE a.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                          AND a.status != 'SLETTET'
+                    ) AS antall_arbeidsgivere,
+                    opprettet.tidspunkt AS lagt_til_dato,
+                    rt.fratid AS treff_start,
+                    opprettet.hendelse_data ->> 'lagtTilAvNavn' AS lagt_til_av_navn,
+                    opprettet.aktøridentifikasjon AS lagt_til_av_ident
+                FROM jobbsoker j
+                JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
+                LEFT JOIN LATERAL (
+                    SELECT jh.tidspunkt, jh.hendelse_data, jh.aktøridentifikasjon
+                    FROM jobbsoker_hendelse jh
+                    WHERE jh.jobbsoker_id = j.jobbsoker_id
+                      AND jh.hendelsestype = 'OPPRETTET'
+                    ORDER BY jh.tidspunkt ASC, jh.jobbsoker_hendelse_id ASC
+                    LIMIT 1
+                ) opprettet ON TRUE
+                WHERE j.fodselsnummer = ?
+                  AND j.status != 'SLETTET'
+                  AND j.er_synlig = TRUE
+                  AND rt.status != 'SLETTET'
+                  $kontorFilter
+                ORDER BY rt.fratid DESC NULLS LAST, opprettet.tidspunkt DESC NULLS LAST
+                """.trimIndent()
+            ).use { statement ->
+                statement.setString(1, fødselsnummer.asString)
+                if (enheter != null) {
+                    statement.setArray(2, connection.createArrayOf("text", enheter.toTypedArray()))
+                }
+                statement.executeQuery().use { resultSet ->
+                    buildList {
+                        while (resultSet.next()) {
+                            add(
+                                JobbsøkerTreffHistorikk(
+                                    id = resultSet.getObject("id", UUID::class.java),
+                                    tittel = resultSet.getString("tittel"),
+                                    kategori = RekrutteringstreffKategori.valueOf(resultSet.getString("kategori")),
+                                    status = JobbsøkerStatus.valueOf(resultSet.getString("status")),
+                                    antallArbeidsgivere = resultSet.getInt("antall_arbeidsgivere"),
+                                    lagtTilTidspunkt = resultSet.getTimestamp("lagt_til_dato")?.toInstant(),
+                                    treffStartTidspunkt = resultSet.getTimestamp("treff_start")?.toInstant(),
+                                    lagtTilAvNavn = resultSet.getString("lagt_til_av_navn"),
+                                    lagtTilAvIdent = resultSet.getString("lagt_til_av_ident"),
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
     fun hentSlettedeJobbsøkere(treff: TreffId): List<Jobbsøker> = dataSource.connection.use { conn ->
         conn.prepareStatement(
