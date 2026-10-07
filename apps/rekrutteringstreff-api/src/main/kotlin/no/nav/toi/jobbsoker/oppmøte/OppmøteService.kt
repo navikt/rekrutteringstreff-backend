@@ -28,6 +28,7 @@ class OppmøteService(
         treffgjennomføringWriter.skriv(treffId) { connection, kontekst, _ ->
             val personTreffId = PersonTreffId(oppmøteRequestDto.personTreffId)
             val jobbsøkerId = kontekst.krevJobbsøkerId(personTreffId)
+            jobbsøkerService.låsJobbsøker(connection, personTreffId)
 
             val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             if (oppmøteRequestDto.møtt == harMøtt) return@skriv

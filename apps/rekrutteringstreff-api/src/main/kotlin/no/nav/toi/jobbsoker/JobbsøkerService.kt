@@ -5,6 +5,7 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
+import no.nav.toi.executeInLockingTransaction
 import no.nav.toi.executeInTransaction
 import no.nav.toi.medLåstTreff
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
@@ -95,8 +96,10 @@ class JobbsøkerService(
     }
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
-        dataSource.executeInTransaction { connection ->
-            personTreffIds.forEach { personTreffId ->
+        dataSource.executeInLockingTransaction { connection ->
+            // Fast låserekkefølge (samme som ORDER BY id i PostgreSQL), så overlappende invitasjoner ikke gir deadlock.
+            personTreffIds.sortedBy { it.somString }.forEach { personTreffId ->
+                jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
                 val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
                 if (erSynlig == false) {
                     teamLog.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig i rekrutteringstreff - hopper over")
@@ -129,7 +132,7 @@ class JobbsøkerService(
     }
 
     private fun svarFraJobbsøker(fnr: Fødselsnummer, treffId: TreffId, navIdent: String, svar: Boolean) {
-        dataSource.executeInTransaction { connection ->
+        dataSource.executeInLockingTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
             val hendelsestype = when (svar) {
@@ -141,7 +144,7 @@ class JobbsøkerService(
     }
 
     fun svarPåVegneAvJobbsøker(personTreffId: PersonTreffId, navIdent: String, svar: Boolean?) {
-        dataSource.executeInTransaction { connection ->
+        dataSource.executeInLockingTransaction { connection ->
             val hendelsestype = when (svar) {
                 true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER
                 false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER
@@ -159,8 +162,8 @@ class JobbsøkerService(
         aktørType: AktørType,
         navIdent: String,
     ) {
-        krevSynligJobbsøker(connection, personTreffId)
         jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
+        krevSynligJobbsøker(connection, personTreffId)
         krevIkkeSlettetJobbsøker(connection, personTreffId)
         if (hentGjeldendeSvar(connection, personTreffId) == svar) {
             logger.info("Jobbsøker har allerede ${svarSomLoggtekst(svar)}, ignorerer duplikat kall")
@@ -177,11 +180,12 @@ class JobbsøkerService(
     }
 
     /** Slettet er en endestasjon: bare ny innlegging (OPPRETTET) kan skrive statushendelser igjen. */
-    private fun krevIkkeSlettetJobbsøker(connection: Connection, personTreffId: PersonTreffId) {
+    private fun krevIkkeSlettetJobbsøker(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
         val status = jobbsøkerRepository.hentStatus(connection, personTreffId)
         if (status == null || status == JobbsøkerStatus.SLETTET) {
             throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
         }
+        return status
     }
 
     private fun hentGjeldendeSvar(connection: Connection, personTreffId: PersonTreffId): Boolean? =
@@ -204,8 +208,7 @@ class JobbsøkerService(
 
     fun registrerFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
         jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
-        krevIkkeSlettetJobbsøker(connection, personTreffId)
-        val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+        val nåværendeStatus = krevIkkeSlettetJobbsøker(connection, personTreffId)
         if (nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
             logger.info("Jobbsøker har allerede fått jobb, ignorerer duplikat kall")
             return

@@ -10,11 +10,6 @@ data class Deltakernummer(val personTreffId: PersonTreffId, val deltakernummer: 
 
 class OppmøteRepository {
 
-    /**
-     * Fremmøtte er de som har registrert oppmøte som ikke er fjernet. Det leses fra hendelsene, ikke
-     * statusen, fordi statusen viser «Fått jobb» foran «Møtt opp». «Fått jobb» alene regnes ikke som
-     * fremmøtt, siden oppmøte ikke er obligatorisk.
-     */
     fun hentFremmøtteJobbsøkere(connection: Connection, treffDbId: Long): List<PersonTreffId> {
         val sql = """
             SELECT j.id::text

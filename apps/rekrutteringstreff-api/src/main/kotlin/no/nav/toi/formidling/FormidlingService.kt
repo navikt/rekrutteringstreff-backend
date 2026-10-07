@@ -10,6 +10,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.exception.JobbsøkerSperretException
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
+import no.nav.toi.executeInLockingTransaction
 import no.nav.toi.executeInTransaction
 import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
@@ -105,7 +106,7 @@ class FormidlingService(
                 error("KandidatlisteId mangler for formidling for stilling ${formidling.stillingId}")
             }
             leggKandidatPåListen(formidling.stillingId, formidling.kandidatlisteId, jobbsøker, opprettFormidling.kontornummer, userToken)
-            dataSource.executeInTransaction { connection ->
+            dataSource.executeInLockingTransaction { connection ->
                 endreJobbsøkerStatusOgLeggTilHendelser(connection, formidling.jobbsøkerPersonTreffId, navIdent)
                 formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
             }
@@ -282,8 +283,7 @@ class FormidlingService(
 
         sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
 
-        dataSource.executeInTransaction { connection ->
-            // Låser jobbsøkeren først, så to samtidige slettinger ser hverandres formidlinger.
+        dataSource.executeInLockingTransaction { connection ->
             jobbsøkerService.låsJobbsøker(connection, formidling.jobbsøkerPersonTreffId)
             val slettet = formidlingRepository.markerSlettet(connection, formidling.formidlingId)
             if (slettet) {

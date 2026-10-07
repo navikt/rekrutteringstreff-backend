@@ -40,8 +40,12 @@ statusen endre seg, så nye skrivende tjenester må sjekke `SLETTET`.
 | Svar (eier/borger) | `krevIkkeSlettetJobbsøker` (404)                            | `låsJobbsøker`                   |
 | Fått jobb          | `krevIkkeSlettetJobbsøker` i `registrerFåttJobb` (404)      | `låsJobbsøker`                   |
 | Angre fått jobb    | Skriver bare når status er `FÅTT_JOBB`                      | `låsJobbsøker` i `slett`         |
-| Invitasjon         | Inviterer bare `LAGT_TIL`                                   | `hentStatus` (`FOR UPDATE`)      |
-| Oppmøte            | `Treffkontekst` tar ikke med slettede (400)                 | `medLåstTreff`                   |
+| Invitasjon         | Inviterer bare `LAGT_TIL`                                   | `låsJobbsøker`, sortert på id    |
+| Oppmøte            | `Treffkontekst` tar ikke med slettede (400)                 | `medLåstTreff`, så `låsJobbsøker` |
+
+Alle skrivinger som låser jobbsøkeren, kjører med `READ COMMITTED` (`executeInLockingTransaction`
+eller `medLåstTreff`). Da ser spørringene etter låsen det som ble lagret mens vi ventet. Under
+poolens `REPEATABLE READ` ville PostgreSQL avbrutt med `40001`. Se [låsing.md](låsing.md).
 
 Formidling sjekker jobbsøkeren før kallene til stilling- og kandidatliste-API-et, men skriver
 `FÅTT_JOBB` først etterpå. Derfor sjekker `registrerFåttJobb` på nytt under lås.

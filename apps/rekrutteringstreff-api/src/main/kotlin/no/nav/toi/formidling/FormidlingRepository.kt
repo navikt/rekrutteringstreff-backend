@@ -142,7 +142,6 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    /** Om jobbsøkeren har en formidling som ikke er slettet, og som har gitt «Fått jobb». */
     fun harAktivFormidlingMedUtfall(connection: Connection, personTreffId: PersonTreffId): Boolean {
         val sql = """
             SELECT EXISTS (
