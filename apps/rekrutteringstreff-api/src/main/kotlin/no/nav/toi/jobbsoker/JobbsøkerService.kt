@@ -164,7 +164,7 @@ class JobbsøkerService(
     ) {
         jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
         krevSynligJobbsøker(connection, personTreffId)
-        krevIkkeSlettetJobbsøker(connection, personTreffId)
+        finnStatuskrevIkkeSlettetJobbsøker(connection, personTreffId)
         if (hentGjeldendeSvar(connection, personTreffId) == svar) {
             logger.info("Jobbsøker har allerede ${svarSomLoggtekst(svar)}, ignorerer duplikat kall")
             return
@@ -179,8 +179,7 @@ class JobbsøkerService(
         }
     }
 
-    /** Slettet er en endestasjon: bare ny innlegging (OPPRETTET) kan skrive statushendelser igjen. */
-    private fun krevIkkeSlettetJobbsøker(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
+    private fun finnStatuskrevIkkeSlettetJobbsøker(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
         val status = jobbsøkerRepository.hentStatus(connection, personTreffId)
         if (status == null || status == JobbsøkerStatus.SLETTET) {
             throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
@@ -208,7 +207,7 @@ class JobbsøkerService(
 
     fun registrerFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
         jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
-        val nåværendeStatus = krevIkkeSlettetJobbsøker(connection, personTreffId)
+        val nåværendeStatus = finnStatuskrevIkkeSlettetJobbsøker(connection, personTreffId)
         if (nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
             logger.info("Jobbsøker har allerede fått jobb, ignorerer duplikat kall")
             return
