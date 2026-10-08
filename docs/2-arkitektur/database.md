@@ -334,9 +334,10 @@ lesespørringene før og etter endringen. Sjekken gjøres under trefflåsen og e
 av miljø og funksjonstoggel; kontroll av trefftilhørighet og slettesperrer beholdes.
 
 Disse operasjonene og øvrige skrivinger i treffgjennomføringen bruker
-`medLåstTreff`: radlås på treffet og `READ COMMITTED`. Etter venting på låsen
-må neste spørring se endringene som nettopp ble lagret. GET beholder
-`REPEATABLE READ` og skriver verken romplasseringer eller arbeidsgiverrotasjon.
+`medLåstTreff`, som låser treffraden. Poolen kjører `READ COMMITTED`, så spørringene
+etter låsen ser endringene som ble lagret mens vi ventet. GET bruker
+`executeInReadOnlyTransaction` (`REPEATABLE READ` og `readOnly`) og skriver verken
+romplasseringer eller arbeidsgiverrotasjon. Se [Transaksjoner og låsing](transaksjoner.md).
 
 Arbeidsgiversletting blokkeres av personer i rommet, interesser,
 intervjufordeling og vurderinger. Formidling alene blokkerer ikke sletting.
@@ -400,5 +401,6 @@ Dette diagrammet kan vises i:
 
 ## Relaterte dokumenter
 
+- [Transaksjoner og låsing](transaksjoner.md) - Isolasjonsnivå, radlåser og låserekkefølge
 - [Synlighet](../3-sikkerhet/synlighet.md) - Detaljert beskrivelse av synlighetsintegrasjonen
 - [KI-tekstvalidering](../5-ki/ki-tekstvalidering.md) - Beskrivelse av KI-loggingen

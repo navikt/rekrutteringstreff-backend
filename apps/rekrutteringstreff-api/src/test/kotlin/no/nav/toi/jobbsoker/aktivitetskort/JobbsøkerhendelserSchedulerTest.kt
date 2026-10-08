@@ -207,7 +207,7 @@ class JobbsøkerhendelserSchedulerTest {
         val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
 
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, treffId, arrangørNavIdent, true)
 
         scheduler.wrapJobbkjøring()
 
@@ -242,7 +242,7 @@ class JobbsøkerhendelserSchedulerTest {
         val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
 
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, false)
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, treffId, arrangørNavIdent, false)
 
         scheduler.wrapJobbkjøring()
 
@@ -276,8 +276,8 @@ class JobbsøkerhendelserSchedulerTest {
         val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
 
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
-        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, null)
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, treffId, arrangørNavIdent, true)
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, treffId, arrangørNavIdent, null)
 
         scheduler.wrapJobbkjøring()
 
@@ -311,7 +311,7 @@ class JobbsøkerhendelserSchedulerTest {
         val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
 
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, treffId, arrangørNavIdent, true)
         scheduler.wrapJobbkjøring()
 
         rekrutteringstreffService.avlys(treffId, arrangørNavIdent)

@@ -5,8 +5,8 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
-import no.nav.toi.executeInLockingTransaction
 import no.nav.toi.executeInTransaction
+import no.nav.toi.låsJobbsøkere
 import no.nav.toi.medLåstTreff
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.*
@@ -49,19 +49,21 @@ class JobbsøkerService(
         lagtTilAvNavn: String? = null,
         innkommendeToken: String? = null,
     ): LeggTilJobbsøkereResultat {
-        val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
-        val personTreffIdForGjenoppretting = hentSlettedeJobbsøkereUtenHendelser(treffId)
-            .associate { it.fødselsnummer to it.personTreffId }
-        val jobbsøkereSomSkalLagres = finnJobbsøkereSomSkalLagres(
-            ønskedeJobbsøkere = jobbsøkere,
-            eksisterendeJobbsøkere = eksisterendeJobbsøkere,
-        )
-        val berikedeJobbsøkerBatcher = jobbsøkereSomSkalLagres
+        // Kandidatsøk kalles før låsen, bare for dem som ikke er på treffet. Under låsen sjekker vi på nytt,
+        // så to samtidige kall ikke legger til samme person to ganger.
+        val berikedeJobbsøkere = finnJobbsøkereSomSkalLagres(jobbsøkere, hentJobbsøkere(treffId))
             .chunked(MAKS_ANTALL_JOBBSØKERE_PER_BATCH)
-            .map { batch -> berikJobbsøkerBatch(batch, innkommendeToken) }
+            .flatMap { batch -> berikJobbsøkerBatch(batch, innkommendeToken) }
+        if (berikedeJobbsøkere.isEmpty()) return LeggTilJobbsøkereResultat(antallLagtTil = 0)
 
-        dataSource.executeInTransaction { connection ->
-            berikedeJobbsøkerBatcher.forEach { batch ->
+        val antallLagtTil = dataSource.medLåstTreff(treffId) { connection ->
+            val jobbsøkereSomSkalLagres = finnJobbsøkereSomSkalLagres(
+                ønskedeJobbsøkere = berikedeJobbsøkere,
+                eksisterendeJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId),
+            )
+            val personTreffIdForGjenoppretting = jobbsøkerRepository.hentSlettedeJobbsøkere(connection, treffId)
+                .associate { it.fødselsnummer to it.personTreffId }
+            jobbsøkereSomSkalLagres.chunked(MAKS_ANTALL_JOBBSØKERE_PER_BATCH).forEach { batch ->
                 leggTilJobbsøkerBatch(
                     connection = connection,
                     batch = batch,
@@ -71,11 +73,10 @@ class JobbsøkerService(
                     lagtTilAvNavn = lagtTilAvNavn,
                 )
             }
+            jobbsøkereSomSkalLagres.size
         }
 
-        return LeggTilJobbsøkereResultat(
-            antallLagtTil = jobbsøkereSomSkalLagres.size,
-        )
+        return LeggTilJobbsøkereResultat(antallLagtTil = antallLagtTil)
     }
 
     private fun berikJobbsøkerBatch(
@@ -102,10 +103,9 @@ class JobbsøkerService(
     }
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
-        dataSource.executeInLockingTransaction { connection ->
-            // Fast låserekkefølge (samme som ORDER BY id i PostgreSQL), så overlappende invitasjoner ikke gir deadlock.
-            personTreffIds.sortedBy { it.somString }.forEach { personTreffId ->
-                jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
+        dataSource.executeInTransaction { connection ->
+            connection.låsJobbsøkere(treffId, personTreffIds)
+            personTreffIds.distinct().forEach { personTreffId ->
                 val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
                 if (erSynlig == false) {
                     teamLog.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig i rekrutteringstreff - hopper over")
@@ -113,7 +113,7 @@ class JobbsøkerService(
                 }
 
                 val jobbsøkerstatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
-                if (jobbsøkerstatus != null && jobbsøkerstatus != JobbsøkerStatus.LAGT_TIL) {
+                if (jobbsøkerstatus != JobbsøkerStatus.LAGT_TIL) {
                     logger.info("Jobbsøker $personTreffId har allerede status $jobbsøkerstatus, hopper over invitasjon")
                     return@forEach
                 }
@@ -138,9 +138,10 @@ class JobbsøkerService(
     }
 
     private fun svarFraJobbsøker(fnr: Fødselsnummer, treffId: TreffId, navIdent: String, svar: Boolean) {
-        dataSource.executeInLockingTransaction { connection ->
+        dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
             val hendelsestype = when (svar) {
                 true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
                 false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
@@ -149,8 +150,9 @@ class JobbsøkerService(
         }
     }
 
-    fun svarPåVegneAvJobbsøker(personTreffId: PersonTreffId, navIdent: String, svar: Boolean?) {
-        dataSource.executeInLockingTransaction { connection ->
+    fun svarPåVegneAvJobbsøker(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String, svar: Boolean?) {
+        dataSource.executeInTransaction { connection ->
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
             val hendelsestype = when (svar) {
                 true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER
                 false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER
@@ -160,6 +162,7 @@ class JobbsøkerService(
         }
     }
 
+    /** Kalleren må ha låst jobbsøkeren. */
     private fun registrerSvar(
         connection: Connection,
         personTreffId: PersonTreffId,
@@ -168,9 +171,8 @@ class JobbsøkerService(
         aktørType: AktørType,
         navIdent: String,
     ) {
-        jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
         krevSynligJobbsøker(connection, personTreffId)
-        finnStatuskrevIkkeSlettetJobbsøker(connection, personTreffId)
+        krevIkkeSlettetJobbsøker(connection, personTreffId)
         if (hentGjeldendeSvar(connection, personTreffId) == svar) {
             logger.info("Jobbsøker har allerede ${svarSomLoggtekst(svar)}, ignorerer duplikat kall")
             return
@@ -185,7 +187,7 @@ class JobbsøkerService(
         }
     }
 
-    private fun finnStatuskrevIkkeSlettetJobbsøker(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
+    private fun krevIkkeSlettetJobbsøker(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
         val status = jobbsøkerRepository.hentStatus(connection, personTreffId)
         if (status == null || status == JobbsøkerStatus.SLETTET) {
             throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
@@ -208,12 +210,9 @@ class JobbsøkerService(
         return status
     }
 
-    fun låsJobbsøker(connection: Connection, personTreffId: PersonTreffId) =
-        jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
-
+    /** Kalleren må ha låst jobbsøkeren. */
     fun registrerFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
-        jobbsøkerRepository.låsJobbsøker(connection, personTreffId)
-        val nåværendeStatus = finnStatuskrevIkkeSlettetJobbsøker(connection, personTreffId)
+        val nåværendeStatus = krevIkkeSlettetJobbsøker(connection, personTreffId)
         if (nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
             logger.info("Jobbsøker har allerede fått jobb, ignorerer duplikat kall")
             return
@@ -222,6 +221,7 @@ class JobbsøkerService(
         oppdaterStatusFraHendelser(connection, personTreffId)
     }
 
+    /** Kalleren må ha låst jobbsøkeren. */
     fun angreFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
         val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
         if (nåværendeStatus != JobbsøkerStatus.FÅTT_JOBB) {
@@ -240,7 +240,8 @@ class JobbsøkerService(
         navIdent: String,
     ): EndreAktuellForTreffStatusResultat =
         dataSource.executeInTransaction { connection ->
-            val nåværendeAktuellForTreffStatus = jobbsøkerRepository.hentAktuellForTreffStatusForOppdatering(connection, treffId, personTreffId)
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
+            val nåværendeAktuellForTreffStatus = jobbsøkerRepository.hentAktuellForTreffStatus(connection, treffId, personTreffId)
                 ?: return@executeInTransaction EndreAktuellForTreffStatusResultat.IKKE_FUNNET
             if (nåværendeAktuellForTreffStatus == nyAktuellForTreffStatus) return@executeInTransaction EndreAktuellForTreffStatusResultat.OK
 
@@ -253,6 +254,7 @@ class JobbsøkerService(
 
     fun markerSlettet(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): MarkerSlettetResultat {
         val resultat = dataSource.medLåstTreff(treffId) { connection ->
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
             val jobbsøker = jobbsøkerRepository.hentSlettestatus(connection, treffId, personTreffId)
                 ?: return@medLåstTreff MarkerSlettetResultat.IKKE_FUNNET
             if (jobbsøker.status != JobbsøkerStatus.LAGT_TIL) {
@@ -281,12 +283,12 @@ class JobbsøkerService(
         return jobbsøkerRepository.hentJobbsøkere(treffId)
     }
 
-    fun hentSlettedeJobbsøkereUtenHendelser(treffId: TreffId): List<Jobbsøker> {
-        return jobbsøkerRepository.hentSlettedeJobbsøkere(treffId)
-    }
-
     fun hentJobbsøker(treffId: TreffId, fnr: Fødselsnummer, inkluderUsynlige: Boolean = false): Jobbsøker? {
         return jobbsøkerRepository.hentJobbsøker(treffId, fnr, inkluderUsynlige)
+    }
+
+    fun hentJobbsøker(connection: Connection, treffId: TreffId, fnr: Fødselsnummer, inkluderUsynlige: Boolean = false): Jobbsøker? {
+        return jobbsøkerRepository.hentJobbsøker(connection, treffId, fnr, inkluderUsynlige)
     }
 
     fun hentFødselsnummer(personTreffId: PersonTreffId): Fødselsnummer? {

@@ -10,7 +10,6 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.exception.JobbsøkerSperretException
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
-import no.nav.toi.executeInLockingTransaction
 import no.nav.toi.executeInTransaction
 import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
@@ -18,6 +17,8 @@ import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.låsJobbsøkere
+import no.nav.toi.medLåstTreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.LoggerFactory
@@ -106,8 +107,9 @@ class FormidlingService(
                 error("KandidatlisteId mangler for formidling for stilling ${formidling.stillingId}")
             }
             leggKandidatPåListen(formidling.stillingId, formidling.kandidatlisteId, jobbsøker, opprettFormidling.kontornummer, userToken)
-            dataSource.executeInLockingTransaction { connection ->
-                endreJobbsøkerStatusOgLeggTilHendelser(connection, formidling.jobbsøkerPersonTreffId, navIdent)
+            dataSource.executeInTransaction { connection ->
+                connection.låsJobbsøkere(treffId, listOf(formidling.jobbsøkerPersonTreffId))
+                jobbsøkerService.registrerFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
                 formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
             }
         }
@@ -210,8 +212,17 @@ class FormidlingService(
         opprettetAvNavn: String?,
         opprettetAvNavIdent: String?,
     ): List<Formidling> {
-        val formidlingIder = dataSource.executeInTransaction { connection ->
-            jobbsøkere.map { jobbsøker ->
+        // Stillingen er opprettet før låsen. Derfor sjekker vi arbeidsgiveren og jobbsøkerne på nytt, og hopper
+        // over jobbsøkere som har fått formidling hos arbeidsgiveren i mellomtiden, for eksempel ved dobbel innsending.
+        val formidlingIder = dataSource.medLåstTreff(rekrutteringstreffId) { connection ->
+            arbeidsgiverService.hentArbeidsgiver(connection, rekrutteringstreffId, arbeidsgiver.orgnr)
+                ?: throw ArbeidsgiverIkkeFunnetException("Arbeidsgiver med orgnr ${arbeidsgiver.orgnr.asString} finnes ikke på treffet")
+            connection.låsJobbsøkere(rekrutteringstreffId, jobbsøkere.map { it.personTreffId })
+            krevFormidlbareJobbsøkere(connection, rekrutteringstreffId, jobbsøkere)
+
+            jobbsøkere.filter { jobbsøker ->
+                formidlingRepository.hent(connection, rekrutteringstreffId, jobbsøker.personTreffId, arbeidsgiver.arbeidsgiverTreffId) == null
+            }.map { jobbsøker ->
                 val formidlingId = formidlingRepository.opprett(
                     connection,
                     rekrutteringstreffId,
@@ -231,8 +242,23 @@ class FormidlingService(
                 formidlingId
             }
         }
+        if (formidlingIder.size < jobbsøkere.size) {
+            logger.warn("Stilling $stillingId er opprettet, men ${jobbsøkere.size - formidlingIder.size} av ${jobbsøkere.size} jobbsøkere hadde allerede formidling hos arbeidsgiveren")
+        }
         logger.info("Opprettet ${formidlingIder.size} formidlinger for treff ${rekrutteringstreffId} med arbeidsgiver ${arbeidsgiver.arbeidsgiverTreffId}")
         return formidlingIder.mapNotNull { formidlingRepository.hent(it) }
+    }
+
+    /** Kalleren må ha låst jobbsøkerne. */
+    private fun krevFormidlbareJobbsøkere(connection: Connection, treffId: TreffId, jobbsøkere: List<Jobbsøker>) {
+        val gjeldende = jobbsøkere.map { jobbsøker ->
+            jobbsøkerService.hentJobbsøker(connection, treffId, jobbsøker.fødselsnummer, inkluderUsynlige = true)
+                ?: throw JobbsøkerIkkeFunnetPåTreffException("Jobbsøker finnes ikke på treffet")
+        }
+        if (gjeldende.any { it.sperret }) {
+            logger.warn("Avviser formidling for treff $treffId: jobbsøker har fått adressebeskyttelse etter at formidlingen ble startet")
+            throw JobbsøkerSperretException("Jobbsøker med adressebeskyttelse kan ikke formidles.")
+        }
     }
 
     fun leggTilHendelseForFormidling(
@@ -248,14 +274,6 @@ class FormidlingService(
             opprettetAvAktørType = AktørType.MARKEDSKONTAKT_ELLER_VEILEDER,
             aktøridentifikasjon = navIdent,
         )
-    }
-
-    private fun endreJobbsøkerStatusOgLeggTilHendelser(
-        connection: Connection,
-        jobbsøkerPersonTreffId: PersonTreffId,
-        navIdent: String
-    ) {
-        jobbsøkerService.registrerFåttJobb(connection, jobbsøkerPersonTreffId, navIdent)
     }
 
     fun hent(formidlingId: Long): Formidling? {
@@ -283,8 +301,8 @@ class FormidlingService(
 
         sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
 
-        dataSource.executeInLockingTransaction { connection ->
-            jobbsøkerService.låsJobbsøker(connection, formidling.jobbsøkerPersonTreffId)
+        dataSource.executeInTransaction { connection ->
+            connection.låsJobbsøkere(treffId, listOf(formidling.jobbsøkerPersonTreffId))
             val slettet = formidlingRepository.markerSlettet(connection, formidling.formidlingId)
             if (slettet) {
                 if (formidlingRepository.harAktivFormidlingMedUtfall(connection, formidling.jobbsøkerPersonTreffId)) {

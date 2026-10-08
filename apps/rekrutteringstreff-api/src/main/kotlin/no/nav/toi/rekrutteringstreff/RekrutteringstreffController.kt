@@ -499,7 +499,7 @@ class RekrutteringstreffController(
         ),
         responses = [
             OpenApiResponse(status = "201", description = "Endringer er registrert."),
-            OpenApiResponse(status = "400", description = "Kan kun registrere endringer for treff som har publisert status."),
+            OpenApiResponse(status = "409", description = "Kan kun registrere endringer for treff som har publisert status."),
             OpenApiResponse(status = "403", description = "Bruker har ikke tilgang til å registrere endringer for treffet."),
             OpenApiResponse(status = "404", description = "Rekrutteringstreff ikke funnet.")]
     )
@@ -512,11 +512,6 @@ class RekrutteringstreffController(
             val navIdent = ctx.extractNavIdent()
 
             if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-                val treff = service.hentRekrutteringstreff(treffId) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med id ${treffId.somString} ved registrering av endring")
-                if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
-                    throw BadRequestResponse("Kan kun registrere endringer for treff som har publisert status")
-                }
-
                 val endringer = Rekrutteringstreffendringer(
                     JacksonConfig.mapper.readValue(ctx.body(), Rekrutteringstreffendringer::class.java).endredeFelter.filterNotNull() // endredeFelter kan inneholde null dersom man får ukjent enum fra frontend
                         .toSet())

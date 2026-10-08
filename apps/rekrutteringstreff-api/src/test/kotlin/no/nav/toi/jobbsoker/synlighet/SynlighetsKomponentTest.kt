@@ -15,6 +15,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI

@@ -14,16 +14,14 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.sql.Connection
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import javax.sql.DataSource
 
 /**
- * Oppmøte låser treffet, mens svar låser jobbsøkeren. Begge skriver en hendelse og utleder
- * statusen fra hele loggen. Testene kjører de to samtidig på samme person, med samme
- * isolasjonsnivå som produksjonspoolen (`REPEATABLE READ`), og krever at begge kallene lykkes
+ * Oppmøte låser treffet og så jobbsøkeren, mens svar bare låser jobbsøkeren. Begge skriver en
+ * hendelse og utleder statusen fra hele loggen. Testene kjører de to samtidig på samme person, med
+ * samme isolasjonsnivå som produksjonspoolen (`READ COMMITTED`), og krever at begge kallene lykkes
  * og at den lagrede statusen er den samme som om loggen ble lest på nytt.
  *
  * Avlys og fullfør velger én hendelse per jobbsøker ut fra statusen. Testene for dem krever at
@@ -33,12 +31,7 @@ import javax.sql.DataSource
 class JobbsøkerstatusSamtidighetTest {
 
     private val db = TestDatabase()
-    private val dataSourceSomIProduksjon = object : DataSource by db.dataSource {
-        override fun getConnection(): Connection = db.dataSource.connection.apply {
-            transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
-        }
-    }
-    private val ctx = ApplicationContext(TestInfrastructureContext(dataSource = dataSourceSomIProduksjon))
+    private val ctx = ApplicationContext(TestInfrastructureContext(dataSource = db.dataSource))
     private val navIdent = "Z999999"
     private val antallRunder = 15
     private val antallTreff = 5
@@ -67,12 +60,12 @@ class JobbsøkerstatusSamtidighetTest {
         val treffId = workOpTreff()
         val personer = (1..antallRunder).map { jobbsøker(treffId, it) }
         personer.forEach { person ->
-            svar(person, true)
+            svar(treffId, person, true)
             oppmøte(treffId, person, true)
         }
 
         val feil = personer.flatMap { person ->
-            samtidig({ svar(person, false) }, { oppmøte(treffId, person, false) })
+            samtidig({ svar(treffId, person, false) }, { oppmøte(treffId, person, false) })
         }
 
         assertThat(feil).isEmpty()
@@ -88,7 +81,7 @@ class JobbsøkerstatusSamtidighetTest {
         val personer = (1..antallRunder).map { jobbsøker(treffId, it) }
 
         val feil = personer.flatMap { person ->
-            samtidig({ svar(person, true) }, { oppmøte(treffId, person, true) })
+            samtidig({ svar(treffId, person, true) }, { oppmøte(treffId, person, true) })
         }
 
         assertThat(feil).isEmpty()
@@ -105,7 +98,7 @@ class JobbsøkerstatusSamtidighetTest {
 
             val feil = samtidig(
                 { ctx.rekrutteringstreffService.avlys(treffId, navIdent) },
-                *personer.map { person -> { svar(person, true) } }.toTypedArray(),
+                *personer.map { person -> { svar(treffId, person, true) } }.toTypedArray(),
             )
 
             assertThat(feil).isEmpty()
@@ -129,7 +122,7 @@ class JobbsøkerstatusSamtidighetTest {
 
             val feil = samtidig(
                 { ctx.rekrutteringstreffService.fullfør(treffId, navIdent) },
-                *personer.map { person -> { svar(person, true) } }.toTypedArray(),
+                *personer.map { person -> { svar(treffId, person, true) } }.toTypedArray(),
             )
 
             assertThat(feil).isEmpty()
@@ -216,8 +209,8 @@ class JobbsøkerstatusSamtidighetTest {
             treffId,
         ).first()
 
-    private fun svar(person: PersonTreffId, svar: Boolean) =
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, navIdent, svar)
+    private fun svar(treffId: TreffId, person: PersonTreffId, svar: Boolean) =
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treffId, navIdent, svar)
 
     private fun oppmøte(treffId: TreffId, person: PersonTreffId, møtt: Boolean) {
         ctx.oppmøteService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, møtt), navIdent)

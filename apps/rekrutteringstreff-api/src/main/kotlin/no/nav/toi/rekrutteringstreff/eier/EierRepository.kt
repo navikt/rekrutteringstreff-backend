@@ -1,14 +1,12 @@
 package no.nav.toi.rekrutteringstreff.eier
 
-import io.javalin.http.NotFoundResponse
-import no.nav.toi.executeInTransaction
+import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
 import java.sql.Connection
 import javax.sql.DataSource
 
 class EierRepository(
-    private val dataSource: DataSource,
+    internal val dataSource: DataSource,
 ) {
     companion object {
         private const val rekrutteringstreff = "rekrutteringstreff"
@@ -22,11 +20,9 @@ class EierRepository(
         }
     }
 
-    fun hent(connection: Connection, treff: TreffId, forUpdate: Boolean = false): List<Eier>? {
-        check(!forUpdate || !connection.autoCommit) { "FOR UPDATE krever en transaksjon" }
-        // Treffraden låses først, også uten eierrader
-        val sql = "SELECT rekrutteringstreff_id FROM $rekrutteringstreff WHERE $id = ?" +
-            if (forUpdate) " FOR UPDATE" else ""
+    /** Returnerer null hvis treffet ikke finnes. */
+    fun hent(connection: Connection, treff: TreffId): List<Eier>? {
+        val sql = "SELECT rekrutteringstreff_id FROM $rekrutteringstreff WHERE $id = ?"
         val treffDbId = connection.prepareStatement(sql).use { stmt ->
             stmt.setObject(1, treff.somUuid)
             stmt.executeQuery().use { rs ->
@@ -39,7 +35,7 @@ class EierRepository(
             FROM rekrutteringstreff_eier
             WHERE rekrutteringstreff_id = ?
             ORDER BY rekrutteringstreff_eier_id
-            """.trimIndent() + if (forUpdate) " FOR UPDATE" else ""
+            """.trimIndent()
         ).use { stmt ->
             stmt.setLong(1, treffDbId)
             stmt.executeQuery().use { rs ->
@@ -52,12 +48,6 @@ class EierRepository(
         }
     }
 
-    fun leggTil(treff: TreffId, eierNavIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
-        dataSource.executeInTransaction { connection ->
-            leggTil(connection, treff, eierNavIdent, kontorEnhetId, eierNavn)
-        }
-    }
-
     fun leggTil(connection: Connection, treff: TreffId, eierNavIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
         require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
         require(eierNavIdent.isNotBlank()) { "Eier må ha Nav-ident" }
@@ -67,7 +57,6 @@ class EierRepository(
                     SELECT rekrutteringstreff_id, ?, ?, ?, ?
                     FROM $rekrutteringstreff
                     WHERE $id = ?
-                    FOR UPDATE
                     ON CONFLICT (rekrutteringstreff_id, nav_ident)
                     DO UPDATE SET kontor_enhetid = EXCLUDED.kontor_enhetid,
                                   eier_navn = coalesce(EXCLUDED.eier_navn, rekrutteringstreff_eier.eier_navn)
@@ -79,20 +68,13 @@ class EierRepository(
                 stmt.setString(4, eierNavn)
                 stmt.setObject(5, treff.somUuid)
                 if (stmt.executeUpdate() == 0) {
-                    throw NotFoundResponse("Rekrutteringstreff med id ${treff.somString} finnes ikke")
+                    throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id ${treff.somString} finnes ikke")
                 }
             }
     }
 
-    fun slett(treff: TreffId, eier: String): Boolean {
-        return dataSource.executeInTransaction { connection ->
-            slett(connection, treff, eier)
-        }
-    }
-
+    /** Regelen om at siste eier ikke kan slettes, ligger i [EierService.slettEier]. */
     fun slett(connection: Connection, treff: TreffId, eier: String): Boolean {
-        val gjeldendeEiere = hent(connection, treff, forUpdate = true)?.tilNavIdenter() ?: return false
-        if (gjeldendeEiere.size <= 1 || eier !in gjeldendeEiere) return false
         connection.prepareStatement(
             """
                     DELETE FROM rekrutteringstreff_eier e

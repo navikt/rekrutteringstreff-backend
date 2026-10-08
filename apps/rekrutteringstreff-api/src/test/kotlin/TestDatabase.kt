@@ -12,6 +12,7 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.Connection
@@ -755,6 +756,7 @@ class TestDatabase {
             driverClassName = "org.postgresql.Driver"
             minimumIdle = 1
             maximumPoolSize = 10
+            transactionIsolation = READ_COMMITTED
             initializationFailTimeout = 5_000
             validate()
         }

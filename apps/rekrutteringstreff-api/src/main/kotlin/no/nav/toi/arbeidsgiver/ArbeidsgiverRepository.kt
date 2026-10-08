@@ -266,65 +266,67 @@ class ArbeidsgiverRepository(
         return objectMapper.readValue(json, object : TypeReference<List<BehovTag>>() {})
     }
 
-    fun hentArbeidsgivere(treff: TreffId): List<Arbeidsgiver> {
-        dataSource.connection.use { connection ->
-            if (!finnesIDb(connection, treff))
-                throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
+    fun hentArbeidsgivere(treff: TreffId): List<Arbeidsgiver> =
+        dataSource.connection.use { connection -> hentArbeidsgivere(connection, treff) }
 
-            val sql = """
-                SELECT
-                    ag.id,
-                    ag.orgnr,
-                    ag.orgnavn,
-                    ag.status,
-                    ag.gateadresse,
-                    ag.postnummer,
-                    ag.poststed,
-                    rt.id as treff_id
-                FROM arbeidsgiver ag
-                JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                WHERE rt.id = ?
-                  AND ag.status <> 'SLETTET'
-                GROUP BY ag.id, ag.arbeidsgiver_id, ag.orgnr, ag.orgnavn, rt.id
-                ORDER BY ag.arbeidsgiver_id;
-            """.trimIndent()
+    fun hentArbeidsgivere(connection: Connection, treff: TreffId): List<Arbeidsgiver> {
+        if (!finnesIDb(connection, treff))
+            throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
 
-            connection.prepareStatement(sql).use { preparedStatement ->
-                preparedStatement.setObject(1, treff.somUuid)
-                preparedStatement.executeQuery().use { resultSet ->
-                    return generateSequence { if (resultSet.next()) resultSet.toArbeidsgiver() else null }.toList()
-                }
+        val sql = """
+            SELECT
+                ag.id,
+                ag.orgnr,
+                ag.orgnavn,
+                ag.status,
+                ag.gateadresse,
+                ag.postnummer,
+                ag.poststed,
+                rt.id as treff_id
+            FROM arbeidsgiver ag
+            JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ?
+              AND ag.status <> 'SLETTET'
+            GROUP BY ag.id, ag.arbeidsgiver_id, ag.orgnr, ag.orgnavn, rt.id
+            ORDER BY ag.arbeidsgiver_id;
+        """.trimIndent()
+
+        connection.prepareStatement(sql).use { preparedStatement ->
+            preparedStatement.setObject(1, treff.somUuid)
+            preparedStatement.executeQuery().use { resultSet ->
+                return generateSequence { if (resultSet.next()) resultSet.toArbeidsgiver() else null }.toList()
             }
         }
     }
 
-    fun hentArbeidsgiver(treff: TreffId, orgnr: Orgnr): Arbeidsgiver? {
-        dataSource.connection.use { connection ->
-            if (!finnesIDb(connection, treff))
-                throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
+    fun hentArbeidsgiver(treff: TreffId, orgnr: Orgnr): Arbeidsgiver? =
+        dataSource.connection.use { connection -> hentArbeidsgiver(connection, treff, orgnr) }
 
-            val sql = """
-                SELECT
-                    ag.id,
-                    ag.orgnr,
-                    ag.orgnavn,
-                    ag.status,
-                    ag.gateadresse,
-                    ag.postnummer,
-                    ag.poststed,
-                    rt.id as treff_id
-                FROM arbeidsgiver ag
-                JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                WHERE rt.id = ? and ag.orgnr = ? and ag.status = 'AKTIV'
-                ORDER BY ag.arbeidsgiver_id;
-            """.trimIndent()
+    fun hentArbeidsgiver(connection: Connection, treff: TreffId, orgnr: Orgnr): Arbeidsgiver? {
+        if (!finnesIDb(connection, treff))
+            throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
 
-            connection.prepareStatement(sql).use { preparedStatement ->
-                preparedStatement.setObject(1, treff.somUuid)
-                preparedStatement.setObject(2, orgnr.asString)
-                preparedStatement.executeQuery().use { resultSet ->
-                    return if (resultSet.next()) resultSet.toArbeidsgiver() else null
-                }
+        val sql = """
+            SELECT
+                ag.id,
+                ag.orgnr,
+                ag.orgnavn,
+                ag.status,
+                ag.gateadresse,
+                ag.postnummer,
+                ag.poststed,
+                rt.id as treff_id
+            FROM arbeidsgiver ag
+            JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ? and ag.orgnr = ? and ag.status = 'AKTIV'
+            ORDER BY ag.arbeidsgiver_id;
+        """.trimIndent()
+
+        connection.prepareStatement(sql).use { preparedStatement ->
+            preparedStatement.setObject(1, treff.somUuid)
+            preparedStatement.setObject(2, orgnr.asString)
+            preparedStatement.executeQuery().use { resultSet ->
+                return if (resultSet.next()) resultSet.toArbeidsgiver() else null
             }
         }
     }

@@ -92,6 +92,8 @@ Service-laget er kjernen i forretningslogikken.
 - **Orkestrering**: Koordinering av kall på tvers av repositories og meldinger
 - **Forretningslogikk**: Logikk som ikke hører hjemme i database/SQL eller meldingslyttere
 
+Se [transaksjoner.md](transaksjoner.md) for isolasjonsnivå og radlåser.
+
 ### Repository-laget
 
 **Ansvar:**

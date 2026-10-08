@@ -5,6 +5,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.HttpURLConnection.HTTP_INTERNAL_ERROR

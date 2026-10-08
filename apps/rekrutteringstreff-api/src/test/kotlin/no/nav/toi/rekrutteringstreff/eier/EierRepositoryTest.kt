@@ -5,7 +5,10 @@ import io.javalin.http.NotFoundResponse
 import io.mockk.every
 import io.mockk.spyk
 import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
+import no.nav.toi.låsTreff
+import no.nav.toi.medVentendeOperasjon
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -110,7 +113,7 @@ class EierRepositoryTest {
         val treffId = TreffId("00000000-0000-0000-0000-000000000000")
 
         assertThatThrownBy { repository.leggTil(treffId, "B654321", "0315") }
-            .isInstanceOf(NotFoundResponse::class.java)
+            .isInstanceOf(RekrutteringstreffIkkeFunnetException::class.java)
 
         assertThat(repository.hent(treffId)).isNull()
         assertThat(db.hentEierrader(treffId)).isEmpty()
@@ -198,8 +201,10 @@ class EierRepositoryTest {
     fun `siste eier kan ikke slettes`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
         val før = db.hentEierrader(treffId)
+        val service = EierService(repository, RekrutteringstreffRepository(db.dataSource), db.dataSource)
 
-        assertThat(repository.slett(treffId, "A123456")).isFalse()
+        assertThatThrownBy { service.slettEier(treffId, "A123456", "A123456") }
+            .isInstanceOf(BadRequestResponse::class.java)
 
         assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactly("A123456")
         assertThat(db.hentEierrader(treffId)).isEqualTo(før)
@@ -309,16 +314,12 @@ class EierRepositoryTest {
     }
 
     @Test
-    fun `treff uten eierrader gir tom liste også med låsing`() {
+    fun `treff uten eierrader gir tom liste`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         db.dataSource.connection.use { connection ->
             connection.createStatement().use { it.executeUpdate("DELETE FROM rekrutteringstreff_eier") }
         }
         assertThat(repository.hent(treffId)).isEmpty()
-        db.dataSource.executeInTransaction { connection ->
-            assertThat(repository.hent(connection, treffId, forUpdate = true)).isEmpty()
-            assertThat(repository.hent(connection, TreffId("00000000-0000-0000-0000-000000000000"), forUpdate = true)).isNull()
-        }
     }
 
     @Test
@@ -483,44 +484,20 @@ class EierRepositoryTest {
     }
 
     @Test
-    fun `forUpdate låser både treffraden og eierradene`() {
+    fun `sletting venter på trefflåsen og ser eieren som ble lagt til mens den ventet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        db.dataSource.executeInTransaction { connection ->
-            repository.hent(connection, treffId, forUpdate = true)
-            listOf(
-                "SELECT id FROM rekrutteringstreff WHERE id = ? FOR UPDATE NOWAIT",
-                """
-                SELECT e.id FROM rekrutteringstreff_eier e
-                JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = e.rekrutteringstreff_id
-                WHERE rt.id = ? FOR UPDATE OF e NOWAIT
-                """.trimIndent(),
-            ).forEach { sql ->
-                assertThatThrownBy {
-                    db.dataSource.connection.use { annenConnection ->
-                        annenConnection.prepareStatement(sql).use { stmt ->
-                            stmt.setObject(1, treffId.somUuid)
-                            stmt.executeQuery().close()
-                        }
-                    }
-                }.isInstanceOfSatisfying(SQLException::class.java) {
-                    assertThat(it.sqlState).isEqualTo("55P03")
-                }
-            }
-        }
-    }
+        val treffRepository = RekrutteringstreffRepository(db.dataSource)
+        val service = EierService(repository, treffRepository, db.dataSource)
 
-    @Test
-    fun `sletting med eksplisitt connection krever transaksjon for å beskytte siste eier`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        repository.leggTil(treffId, "B654321", "0315")
-
-        db.dataSource.connection.use { connection ->
-            assertThatThrownBy { repository.slett(connection, treffId, "B654321") }
-                .isInstanceOf(IllegalStateException::class.java)
-                .hasMessage("FOR UPDATE krever en transaksjon")
+        db.dataSource.medVentendeOperasjon(
+            lås = { it.låsTreff(treffId) },
+            operasjon = { service.slettEier(treffId, "A123456", "A123456") },
+        ) { connection ->
+            repository.leggTil(connection, treffId, "B654321", "0315")
         }
 
-        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactlyInAnyOrder("A123456", "B654321")
+        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactly("B654321")
+        assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "EIER_FJERNET" }).hasSize(1)
     }
 
     @Test

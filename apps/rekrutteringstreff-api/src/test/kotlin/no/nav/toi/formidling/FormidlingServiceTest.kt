@@ -9,6 +9,9 @@ import no.nav.toi.formidling.dto.ArbeidsgiverDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.formidling.dto.StillingDto
 import no.nav.toi.executeInTransaction
+import no.nav.toi.låsJobbsøkere
+import no.nav.toi.låsTreff
+import no.nav.toi.medVentendeOperasjon
 import io.mockk.every
 import io.mockk.clearMocks
 import io.mockk.mockk
@@ -310,6 +313,73 @@ class FormidlingServiceTest {
     }
 
     @Test
+    fun `formidling venter på trefflåsen og oppretter ikke formidling som ble opprettet mens den ventet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
+        every {
+            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
+        } returns OpprettFormidlingStillingRespons(stillingsId = UUID.randomUUID(), kandidatlisteId = UUID.randomUUID())
+
+        // Etterligner dobbel innsending: den andre innsendingen lagrer formidlingen mens denne venter på låsen.
+        var formidlingIdFraDenAndre = 0L
+        val opprettede = db.dataSource.medVentendeOperasjon(
+            lås = { it.låsTreff(treffId) },
+            operasjon = {
+                formidlingService.opprettFormidling(
+                    treffId = treffId,
+                    opprettFormidling = opprettFormidlingDto("123456789", "12345678901"),
+                    navIdent = "testperson",
+                    userToken = "test-token",
+                )
+            },
+        ) { connection ->
+            formidlingIdFraDenAndre = formidlingRepository.opprett(
+                connection, treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId,
+            )
+        }
+
+        assertThat(opprettede).isEmpty()
+        assertThat(formidlingService.hent(treffId, personTreffId, arbeidsgiverTreffId)!!.formidlingId)
+            .isEqualTo(formidlingIdFraDenAndre)
+        verify(exactly = 0) {
+            kandidatKlient.leggTilPersonerPåKandidatliste(any(), any(), any(), any(), any())
+        }
+        assertThat(jobbsøkerService.hentJobbsøkere(treffId).single().status).isNotEqualTo(JobbsøkerStatus.FÅTT_JOBB)
+    }
+
+    @Test
+    fun `formidling venter på trefflåsen og avviser jobbsøker som ble slettet mens den ventet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, arbeidsgiverTreffId) = opprettTestdataForFormidling(treffId)
+        every {
+            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
+        } returns OpprettFormidlingStillingRespons(stillingsId = UUID.randomUUID(), kandidatlisteId = UUID.randomUUID())
+
+        val feil = db.dataSource.medVentendeOperasjon(
+            lås = { it.låsTreff(treffId) },
+            operasjon = {
+                runCatching {
+                    formidlingService.opprettFormidling(
+                        treffId = treffId,
+                        opprettFormidling = opprettFormidlingDto("123456789", "12345678901"),
+                        navIdent = "testperson",
+                        userToken = "test-token",
+                    )
+                }.exceptionOrNull()
+            },
+        ) { connection ->
+            JobbsøkerRepository(db.dataSource, mapper).endreStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
+        }
+
+        // Samme unntak som når jobbsøkeren mangler før stillingen opprettes, så controlleren svarer 400 i begge tilfeller.
+        assertThat(feil).isInstanceOf(JobbsøkerIkkeFunnetPåTreffException::class.java)
+        assertThat(formidlingService.hent(treffId, personTreffId, arbeidsgiverTreffId)).isNull()
+        verify(exactly = 0) {
+            kandidatKlient.leggTilPersonerPåKandidatliste(any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
     fun `slett formidling skal markere formidling som slettet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
@@ -355,6 +425,7 @@ class FormidlingServiceTest {
 
         // Simuler at jobbsøkeren har fått jobb (slik opprettelse av formidling gjør)
         db.dataSource.executeInTransaction { connection ->
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
             jobbsøkerService.registrerFåttJobb(connection, personTreffId, "testperson")
         }
         assertThat(jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }.status)
@@ -388,6 +459,7 @@ class FormidlingServiceTest {
         val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         db.dataSource.executeInTransaction { connection ->
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
             jobbsøkerService.registrerFåttJobb(connection, personTreffId, "testperson")
         }
         assertThat(jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }.status)

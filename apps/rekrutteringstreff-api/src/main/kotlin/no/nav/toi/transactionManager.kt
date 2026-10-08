@@ -4,19 +4,28 @@ import java.sql.Connection
 import javax.sql.DataSource
 
 /**
- * Transaksjon for skrivinger som tar radlås. Under poolens REPEATABLE READ avbryter PostgreSQL med
- * 40001 når raden er endret mens vi ventet på låsen. READ COMMITTED lar neste spørring se endringen.
+ * Isolasjonsnivå for både produksjonspoolen og TestDatabase, så testene oppfører seg som produksjon.
+ * Under READ COMMITTED ser transaksjoner endringer som ble committet mens de ventet på låsen.
  */
-fun <T> DataSource.executeInLockingTransaction(block: (Connection) -> T): T =
-    executeInTransaction(transactionIsolation = Connection.TRANSACTION_READ_COMMITTED, block = block)
+const val READ_COMMITTED = "TRANSACTION_READ_COMMITTED"
 
-fun <T> DataSource.executeInTransaction(
-    transactionIsolation: Int? = null,
-    block: (Connection) -> T,
-): T {
+fun <T> DataSource.executeInTransaction(block: (Connection) -> T): T =
+    runInTransaction(readOnly = false, block)
+
+/**
+ * Lesetransaksjon der alle spørringene ser samme øyeblikksbilde, for eksempel totalt antall og én side.
+ * Transaksjonen kan ikke skrive, og får derfor aldri 40001 under REPEATABLE READ.
+ */
+fun <T> DataSource.executeInReadOnlyTransaction(block: (Connection) -> T): T =
+    runInTransaction(readOnly = true, block)
+
+private fun <T> DataSource.runInTransaction(readOnly: Boolean, block: (Connection) -> T): T {
     this.connection.use { c ->
         val originalIsolation = c.transactionIsolation
-        if (transactionIsolation != null) c.transactionIsolation = transactionIsolation
+        if (readOnly) {
+            c.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
+            c.isReadOnly = true
+        }
         c.autoCommit = false
         try {
             val result = block(c)
@@ -27,7 +36,10 @@ fun <T> DataSource.executeInTransaction(
             throw e
         } finally {
             c.autoCommit = true
-            if (transactionIsolation != null) c.transactionIsolation = originalIsolation
+            if (readOnly) {
+                c.isReadOnly = false
+                c.transactionIsolation = originalIsolation
+            }
         }
     }
 }

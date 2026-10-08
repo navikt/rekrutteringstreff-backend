@@ -1,6 +1,6 @@
 package no.nav.toi.jobbsoker.sok
 
-import no.nav.toi.executeInTransaction
+import no.nav.toi.executeInReadOnlyTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -44,7 +44,7 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         where: WhereClause,
         request: JobbsøkerFormidlingRequest,
     ): JobbsøkerFormidlingRespons {
-        return dataSource.executeInTransaction { conn ->
+        return dataSource.executeInReadOnlyTransaction { conn ->
             val totalt = hentTotaltAntallJobbsøkere(conn, where)
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val jobbsøkere = if (totalt == 0L) {

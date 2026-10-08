@@ -3,7 +3,7 @@ package no.nav.toi.formidling
 import no.nav.toi.AktørType
 import no.nav.toi.FormidlingHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
-import no.nav.toi.executeInTransaction
+import no.nav.toi.executeInReadOnlyTransaction
 import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -87,10 +87,13 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun hent(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId): Formidling? = dataSource.connection.use { conn ->
+    fun hent(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId): Formidling? =
+        dataSource.connection.use { conn -> hent(conn, treffId, personTreffId, arbeidsgiverTreffId) }
+
+    fun hent(conn: Connection, treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId): Formidling? {
         val sql = "$HENT_FORMIDLING_BASE WHERE rt.id = ? AND js.id = ? AND ag.id = ? AND f.slettet_tidspunkt IS NULL"
 
-        conn.prepareStatement(sql).use { stmt ->
+        return conn.prepareStatement(sql).use { stmt ->
             stmt.setObject(1, treffId.somUuid)
             stmt.setObject(2, personTreffId.somUuid)
             stmt.setObject(3, arbeidsgiverTreffId.somUuid)
@@ -242,7 +245,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         sortering: FormidlingSortering,
         retning: FormidlingSorteringsretning?,
     ): List<FormidlingDto> =
-        dataSource.executeInTransaction { conn ->
+        dataSource.executeInReadOnlyTransaction { conn ->
             val sql = """
                 SELECT
                     f.id,

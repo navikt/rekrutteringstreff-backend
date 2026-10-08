@@ -27,6 +27,7 @@ import no.nav.toi.oppfølging.Vurderingsvalg
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
@@ -48,7 +49,6 @@ import java.sql.Connection
 import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import javax.sql.DataSource
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -57,12 +57,6 @@ class TreffgjennomføringKomponentTest {
     private val db = TestDatabase()
     private val appPort = ubruktPortnrFra10000.ubruktPortnr()
     private val mapper = JacksonConfig.mapper
-    private val dataSource = object : DataSource by db.dataSource {
-        override fun getConnection(): Connection = db.dataSource.connection.apply {
-            transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
-        }
-    }
-
     private lateinit var infra: TestInfrastructureContext
     private lateinit var ctx: ApplicationContext
     private lateinit var app: App
@@ -73,7 +67,7 @@ class TreffgjennomføringKomponentTest {
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
-        infra = TestInfrastructureContext(dataSource = dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
             .also { it.start() }
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
@@ -222,10 +216,10 @@ class TreffgjennomføringKomponentTest {
         val fnr = "12345678901"
         val person = jobbsøker(treff, fnr)
         ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
 
         oppmøte(treff, person, møtt = true)
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, false)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, false)
 
         assertThat(db.hentJobbsøkerStatus(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
         assertThat(gjeldendeSvar(treff, fnr)).isFalse()
@@ -242,7 +236,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(søkMedStatus(treff, JobbsøkerStatus.SVART_NEI)).containsExactly(person.somString)
         assertThat(søkMedStatus(treff, JobbsøkerStatus.MØTT_OPP)).isEmpty()
 
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
         oppmøte(treff, person, møtt = true)
 
         assertThat(db.hentJobbsøkerStatus(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
@@ -254,10 +248,10 @@ class TreffgjennomføringKomponentTest {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
         oppmøte(treff, person, møtt = true)
 
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
 
         assertThat(antallHendelser(treff, "SVART_JA_TIL_INVITASJON_AV_EIER")).isEqualTo(1)
     }
@@ -1677,39 +1671,8 @@ class TreffgjennomføringKomponentTest {
         }
     }
 
-    private fun <T> medVentendeOperasjon(
-        treff: TreffId,
-        operasjon: () -> T,
-        førFrigivelse: (Connection) -> Unit,
-    ): T = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-        db.dataSource.connection.use { connection ->
-            connection.autoCommit = false
-            connection.låsTreff(treff)
-            val pid = connection.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT pg_backend_pid()").use { it.next(); it.getInt(1) }
-            }
-            val ventende = executor.submit<T> { operasjon() }
-            try {
-                val frist = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-                var venter = false
-                while (!venter && System.nanoTime() < frist) {
-                    venter = db.dataSource.connection.use { sjekk ->
-                        sjekk.prepareStatement("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid)))").use { stmt ->
-                            stmt.setInt(1, pid)
-                            stmt.executeQuery().use { it.next(); it.getBoolean(1) }
-                        }
-                    }
-                    if (!venter) Thread.sleep(10)
-                }
-                assertThat(venter).withFailMessage("Operasjonen tok ikke trefflåsen").isTrue()
-                førFrigivelse(connection)
-                connection.commit()
-            } finally {
-                connection.rollback()
-            }
-            ventende.get(10, TimeUnit.SECONDS)
-        }
-    }
+    private fun <T> medVentendeOperasjon(treff: TreffId, operasjon: () -> T, førFrigivelse: (Connection) -> Unit): T =
+        db.dataSource.medVentendeOperasjon({ it.låsTreff(treff) }, operasjon, førFrigivelse)
 
     private fun aktivArbeidsgiver(treffId: TreffId): ArbeidsgiverTreffId = aktiveArbeidsgivere(treffId).first()
 

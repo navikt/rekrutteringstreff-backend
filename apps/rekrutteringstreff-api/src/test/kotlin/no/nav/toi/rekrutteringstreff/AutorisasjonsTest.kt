@@ -10,6 +10,7 @@ import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals

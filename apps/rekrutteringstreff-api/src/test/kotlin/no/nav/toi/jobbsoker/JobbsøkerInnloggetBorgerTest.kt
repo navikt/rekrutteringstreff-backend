@@ -8,6 +8,7 @@ import no.nav.toi.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
