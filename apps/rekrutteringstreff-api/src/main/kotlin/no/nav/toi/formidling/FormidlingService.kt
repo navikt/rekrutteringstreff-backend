@@ -10,7 +10,6 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.exception.JobbsøkerSperretException
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
-import no.nav.toi.executeInTransaction
 import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.jobbsoker.Fødselsnummer
@@ -19,6 +18,7 @@ import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.låsJobbsøkere
 import no.nav.toi.medLåstTreff
+import no.nav.toi.medLåsteJobbsøkere
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.LoggerFactory
@@ -107,8 +107,7 @@ class FormidlingService(
                 error("KandidatlisteId mangler for formidling for stilling ${formidling.stillingId}")
             }
             leggKandidatPåListen(formidling.stillingId, formidling.kandidatlisteId, jobbsøker, opprettFormidling.kontornummer, userToken)
-            dataSource.executeInTransaction { connection ->
-                connection.låsJobbsøkere(treffId, listOf(formidling.jobbsøkerPersonTreffId))
+            dataSource.medLåsteJobbsøkere(treffId, listOf(formidling.jobbsøkerPersonTreffId)) { connection ->
                 jobbsøkerService.registrerFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
                 formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
             }
@@ -301,8 +300,7 @@ class FormidlingService(
 
         sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
 
-        dataSource.executeInTransaction { connection ->
-            connection.låsJobbsøkere(treffId, listOf(formidling.jobbsøkerPersonTreffId))
+        dataSource.medLåsteJobbsøkere(treffId, listOf(formidling.jobbsøkerPersonTreffId)) { connection ->
             val slettet = formidlingRepository.markerSlettet(connection, formidling.formidlingId)
             if (slettet) {
                 if (formidlingRepository.harAktivFormidlingMedUtfall(connection, formidling.jobbsøkerPersonTreffId)) {

@@ -20,6 +20,7 @@ import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -60,6 +61,20 @@ class LåsingTest {
             .toList()
 
         assertThat(filerMedRadlås).containsExactly(Normalizer.normalize("src/main/kotlin/no/nav/toi/låsing.kt", Normalizer.Form.NFC))
+    }
+
+    @Test
+    fun `transaksjon inne i en annen transaksjon stoppes med en gang`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+
+        assertThatThrownBy {
+            db.dataSource.medLåstTreff(treffId) {
+                db.dataSource.executeInTransaction { }
+            }
+        }.isInstanceOf(IllegalStateException::class.java)
+            .hasMessageContaining("inne i en annen transaksjon")
+
+        assertThat(db.dataSource.executeInReadOnlyTransaction { true }).isTrue()
     }
 
     @Test

@@ -13,6 +13,7 @@ import javax.sql.DataSource
  * - Funksjonen som starter transaksjonen, låser før den leser det den bestemmer ut fra.
  * - Funksjoner som får en Connection, og lesefunksjoner, låser ikke.
  * - Rekkefølgen er treff, så jobbsøkere sortert på id. Da kan ikke to transaksjoner låse hverandre fast.
+ * - medLåstTreff og medLåsteJobbsøkere starter transaksjonen og låser. executeInTransaction låser ikke.
  * - FOR NO KEY UPDATE stopper andre låser og endringer på raden, men ikke FK-sjekkene når andre
  *   legger til rader under den, for eksempel hendelser.
  *
@@ -23,6 +24,20 @@ import javax.sql.DataSource
 fun <T> DataSource.medLåstTreff(treffId: TreffId, block: (Connection) -> T): T =
     executeInTransaction { connection ->
         connection.låsTreff(treffId)
+        block(connection)
+    }
+
+/**
+ * Starter en transaksjon og låser jobbsøkerne før [block] kjører. Se [låsJobbsøkere].
+ * Trenger operasjonen også treffet, bruk [medLåstTreff] og kall [låsJobbsøkere] i blokken.
+ */
+fun <T> DataSource.medLåsteJobbsøkere(
+    treffId: TreffId,
+    personTreffIder: Collection<PersonTreffId>,
+    block: (Connection) -> T,
+): T =
+    executeInTransaction { connection ->
+        connection.låsJobbsøkere(treffId, personTreffIder)
         block(connection)
     }
 

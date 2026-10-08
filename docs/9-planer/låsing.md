@@ -33,13 +33,13 @@
 | Operasjon | Lås | Sjekker under lås | Vurdering |
 | --- | --- | --- | --- |
 | Legg til jobbsøkere (`leggTilJobbsøkere`) | `medLåstTreff` etter kandidatsøk | Eksisterende og slettede jobbsøkere | ✅ Sjekker ikke treffstatus. Se åpent spørsmål 4. |
-| Invitasjon (`inviter`) | `låsJobbsøkere` for hele lista | Synlighet og status | ✅ Sjekker ikke treffstatus. Se åpent spørsmål 3. |
-| Svar fra jobbsøker | Slår opp jobbsøkeren på fødselsnummer, så `låsJobbsøkere` | Synlighet, slettet og gjeldende svar | ✅ Sjekker ikke treffstatus. Se åpent spørsmål 3. |
-| Svar på vegne av jobbsøker | `låsJobbsøkere` med treffet fra stien | Synlighet, slettet og gjeldende svar | ✅ Som svar fra jobbsøker. |
-| Fått jobb og angring (`registrerFåttJobb` og `angreFåttJobb`) | Kalleren låser med `låsJobbsøkere` | Status | ✅ |
+| Invitasjon (`inviter`) | `medLåsteJobbsøkere` for hele lista | Synlighet og status | ✅ Sjekker ikke treffstatus. Se åpent spørsmål 3. |
+| Svar fra jobbsøker | Slår opp jobbsøkeren på fødselsnummer, så `medLåsteJobbsøkere` | Synlighet, slettet og gjeldende svar | ✅ Sjekker ikke treffstatus. Se åpent spørsmål 3. |
+| Svar på vegne av jobbsøker | `medLåsteJobbsøkere` med treffet fra stien | Synlighet, slettet og gjeldende svar | ✅ Som svar fra jobbsøker. |
+| Fått jobb og angring (`registrerFåttJobb` og `angreFåttJobb`) | Kalleren låser med `medLåsteJobbsøkere` | Status | ✅ |
 | Oppmøte (`OppmøteService`) | `medLåstTreff` gjennom `TreffgjennomføringWriter.skriv`, så `låsJobbsøkere` | Gjeldende oppmøte og registreringer | ✅ |
 | Slett jobbsøker (`markerSlettet`) | `medLåstTreff`, så `låsJobbsøkere` | Status `LAGT_TIL` og ingen registreringer | ✅ |
-| Aktuell-status (`endreAktuellForTreffStatus`) | `låsJobbsøkere` | Gjeldende aktuell-status | ✅ |
+| Aktuell-status (`endreAktuellForTreffStatus`) | `medLåsteJobbsøkere` | Gjeldende aktuell-status | ✅ |
 | Synlighet fra Kafka (`oppdaterSynlighetFraEvent` og `oppdaterSynlighetFraNeed`) | Ingen. Regelen står i `WHERE`. | I `UPDATE` | ✅ Venter på låser på samme jobbsøker i stedet for å feile med `40001`. |
 | Hendelser fra Kafka som ikke endrer status (`registrerAktivitetskortOpprettelseFeilet` og `registrerMinsideVarselSvar`) | Ingen | Ikke relevant | ✅ |
 | `JobbsøkerhendelserScheduler` | Ingen | Ikke relevant | ✅ Skriver bare egne pollingrader. |
@@ -52,8 +52,8 @@
 | Arbeidsgiver: legg til, legg til med behov og slett | `medLåstTreff` | Slettet arbeidsgiver som kan reaktiveres, siste arbeidsgiver og registreringer | ✅ |
 | Endre behov (`oppdaterBehov`) | `medLåstTreff` | At arbeidsgiveren ikke er slettet, i upsert-SQL-en | ✅ |
 | Opprett formidling: lagring (`lagreFormidlinger`) | `medLåstTreff`, så `låsJobbsøkere` | Arbeidsgiveren, at jobbsøkerne finnes, adressebeskyttelse og eksisterende formidlinger | ⚠️ Låsingen er riktig. Ved dobbel innsending blir stillingen fra innsendingen som får låsen sist, liggende ubrukt. |
-| Opprett formidling: fått jobb | `låsJobbsøkere`, så `registrerFåttJobb` | Status | ✅ |
-| Slett formidling | `låsJobbsøkere`, så `angreFåttJobb` | Status | ✅ |
+| Opprett formidling: fått jobb | `medLåsteJobbsøkere`, så `registrerFåttJobb` | Status | ✅ |
+| Slett formidling | `medLåsteJobbsøkere`, så `angreFåttJobb` | Status | ✅ |
 
 ## Lesbarhet
 
@@ -104,7 +104,9 @@ Steg 1 til 3 under «Tiltak» er gjort. Dette endrer oppførselen:
 
 Ellers i koden:
 
-- `executeInLockingTransaction` er fjernet. Skrivinger bruker `executeInTransaction` eller `medLåstTreff`, og lesetransaksjoner bruker `executeInReadOnlyTransaction`.
+- `executeInLockingTransaction` er fjernet. Skrivinger bruker `medLåstTreff`, `medLåsteJobbsøkere` eller `executeInTransaction`, og lesetransaksjoner bruker `executeInReadOnlyTransaction`.
+- `medLåsteJobbsøkere` erstatter `executeInTransaction` med `låsJobbsøkere` på første linje. `executeInTransaction` betyr nå at transaksjonen ikke tar eksplisitt lås.
+- Transaksjonsfunksjonene kaster `IllegalStateException` hvis en transaksjon startes inne i en annen. Før ville kallet hengt hvis den indre ventet på en lås den ytre holdt. Ingen kode gjør dette i dag. `LåsingTest` dekker vakten.
 - `låsing.kt` erstatter `treffLås.kt` og låsene i `JobbsøkerRepository` og `EierRepository`.
 - `hentStatus`, `hentSlettestatus`, `hentAktuellForTreffStatus` (før `hentAktuellForTreffStatusForOppdatering`) og `EierRepository.hent` låser ikke lenger.
 - Avlys og fullfør validerer selv og kaller `avsluttTreff`, i stedet for å sende en `valider`-lambda.

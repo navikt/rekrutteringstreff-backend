@@ -37,10 +37,10 @@ statusen endre seg, så nye skrivende tjenester må sjekke `SLETTET`.
 
 | Skriver            | Avviser slettet med                                         | Serialisert mot sletting med                  |
 | ------------------ | ----------------------------------------------------------- | --------------------------------------------- |
-| Svar (eier/borger) | `krevIkkeSlettetJobbsøker` (404)                            | `låsJobbsøkere`                               |
-| Fått jobb          | `krevIkkeSlettetJobbsøker` i `registrerFåttJobb` (404)      | `låsJobbsøkere` hos kalleren                  |
-| Angre fått jobb    | Skriver bare når status er `FÅTT_JOBB`                      | `låsJobbsøkere` i `slett`                     |
-| Invitasjon         | Inviterer bare `LAGT_TIL`                                   | `låsJobbsøkere`, alle i én spørring           |
+| Svar (eier/borger) | `krevIkkeSlettetJobbsøker` (404)                            | `medLåsteJobbsøkere`                          |
+| Fått jobb          | `krevIkkeSlettetJobbsøker` i `registrerFåttJobb` (404)      | `medLåsteJobbsøkere` hos kalleren             |
+| Angre fått jobb    | Skriver bare når status er `FÅTT_JOBB`                      | `medLåsteJobbsøkere` i `slett`                |
+| Invitasjon         | Inviterer bare `LAGT_TIL`                                   | `medLåsteJobbsøkere`, alle i én spørring      |
 | Oppmøte            | `Treffkontekst` tar ikke med slettede (400)                 | `medLåstTreff`, så `låsJobbsøkere`            |
 | Avlys og fullfør   | Gir ingen hendelse for `SLETTET`                            | `medLåstTreff`, så `låsAlleJobbsøkerePåTreff` |
 

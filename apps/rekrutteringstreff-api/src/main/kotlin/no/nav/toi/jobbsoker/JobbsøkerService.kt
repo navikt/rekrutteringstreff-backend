@@ -7,6 +7,7 @@ import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.låsJobbsøkere
+import no.nav.toi.medLåsteJobbsøkere
 import no.nav.toi.medLåstTreff
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.*
@@ -103,8 +104,7 @@ class JobbsøkerService(
     }
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
-        dataSource.executeInTransaction { connection ->
-            connection.låsJobbsøkere(treffId, personTreffIds)
+        dataSource.medLåsteJobbsøkere(treffId, personTreffIds) { connection ->
             personTreffIds.distinct().forEach { personTreffId ->
                 val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
                 if (erSynlig == false) {
@@ -138,10 +138,9 @@ class JobbsøkerService(
     }
 
     private fun svarFraJobbsøker(fnr: Fødselsnummer, treffId: TreffId, navIdent: String, svar: Boolean) {
-        dataSource.executeInTransaction { connection ->
-            val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
-                ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
-            connection.låsJobbsøkere(treffId, listOf(personTreffId))
+        val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
+            ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
+        dataSource.medLåsteJobbsøkere(treffId, listOf(personTreffId)) { connection ->
             val hendelsestype = when (svar) {
                 true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
                 false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
@@ -151,8 +150,7 @@ class JobbsøkerService(
     }
 
     fun svarPåVegneAvJobbsøker(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String, svar: Boolean?) {
-        dataSource.executeInTransaction { connection ->
-            connection.låsJobbsøkere(treffId, listOf(personTreffId))
+        dataSource.medLåsteJobbsøkere(treffId, listOf(personTreffId)) { connection ->
             val hendelsestype = when (svar) {
                 true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER
                 false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER
@@ -239,11 +237,10 @@ class JobbsøkerService(
         nyAktuellForTreffStatus: AktuellForTreffStatus,
         navIdent: String,
     ): EndreAktuellForTreffStatusResultat =
-        dataSource.executeInTransaction { connection ->
-            connection.låsJobbsøkere(treffId, listOf(personTreffId))
+        dataSource.medLåsteJobbsøkere(treffId, listOf(personTreffId)) { connection ->
             val nåværendeAktuellForTreffStatus = jobbsøkerRepository.hentAktuellForTreffStatus(connection, treffId, personTreffId)
-                ?: return@executeInTransaction EndreAktuellForTreffStatusResultat.IKKE_FUNNET
-            if (nåværendeAktuellForTreffStatus == nyAktuellForTreffStatus) return@executeInTransaction EndreAktuellForTreffStatusResultat.OK
+                ?: return@medLåsteJobbsøkere EndreAktuellForTreffStatusResultat.IKKE_FUNNET
+            if (nåværendeAktuellForTreffStatus == nyAktuellForTreffStatus) return@medLåsteJobbsøkere EndreAktuellForTreffStatusResultat.OK
 
             jobbsøkerRepository.endreAktuellForTreffStatus(connection, personTreffId, nyAktuellForTreffStatus)
             jobbsøkerRepository.leggTilAktuellForTreffStatusHendelse(
