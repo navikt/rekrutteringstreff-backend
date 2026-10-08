@@ -24,7 +24,6 @@ spec:
     max: {{ max_replicas }}
   resources:
     limits:
-      cpu: 3000m
       memory: 2048Mi
     requests:
       cpu: 100m
