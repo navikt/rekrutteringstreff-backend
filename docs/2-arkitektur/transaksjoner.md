@@ -2,7 +2,7 @@
 
 Når en operasjon leser data for å avgjøre hva den skal endre, låser vi de aktuelle radene før vi leser dem. Vi bruker isolasjonsnivået `READ COMMITTED`, slik at operasjonen kan lese oppdaterte data etter å ha ventet på en lås.
 
-En transaksjon sørger for at endringene i den enten lagres samlet (`commit`) eller rulles tilbake (`rollback`). En radlås hindrer at andre transaksjoner endrer den låste raden mens vi arbeider med den. Låsen holdes til transaksjonen er ferdig, men hindrer ikke vanlige lesespørringer.
+En transaksjon sørger for at endringene i den enten lagres samlet (`commit`) eller rulles tilbake (`rollback`). Transaksjonshjelperne ruller tilbake ved alle feil, også `Error`. En radlås hindrer at andre transaksjoner endrer den låste raden mens vi arbeider med den. Låsen holdes til transaksjonen er ferdig, men hindrer ikke vanlige lesespørringer.
 
 Reglene gjelder rekrutteringstreff-api. Appen rekrutteringsbistand-aktivitetskort har egen database og er ikke omfattet. [Database](database.md) beskriver tabellene, og [Jobbsøkerstatus](../9-planer/jobbsoker-statuser.md) beskriver statusreglene som låsene beskytter.
 

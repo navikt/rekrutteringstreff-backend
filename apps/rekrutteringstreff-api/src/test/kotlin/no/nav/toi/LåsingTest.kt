@@ -78,6 +78,21 @@ class LåsingTest {
     }
 
     @Test
+    fun `Error i transaksjonen ruller tilbake og slipper låsen`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent)
+
+        assertThatThrownBy {
+            db.dataSource.medLåstTreff(treffId) { connection ->
+                ctx.rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.SLETTET)
+                throw StackOverflowError("Simulert feil")
+            }
+        }.isInstanceOf(StackOverflowError::class.java)
+
+        assertThat(ctx.rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
+        assertThat(db.dataSource.medLåstTreff(treffId) { true }).isTrue()
+    }
+
+    @Test
     fun `publisering venter på trefflåsen og avviser treff som ble slettet mens den ventet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent)
 

@@ -23,21 +23,21 @@ fun <T> DataSource.executeInReadOnlyTransaction(block: (Connection) -> T): T =
  * En transaksjon inne i en annen åpner en ny tilkobling. Venter den indre på en lås som den ytre holder,
  * henger kallet uten at PostgreSQL oppdager det. Vi stopper derfor nestede transaksjoner med en gang.
  */
-private val transaksjonErÅpen = ThreadLocal.withInitial { false }
+private val transactionIsOpen = ThreadLocal.withInitial { false }
 
 private fun <T> DataSource.runInTransaction(readOnly: Boolean, block: (Connection) -> T): T {
-    check(!transaksjonErÅpen.get()) {
+    check(!transactionIsOpen.get()) {
         "Transaksjonen startes inne i en annen transaksjon. Send connection videre i stedet."
     }
-    transaksjonErÅpen.set(true)
+    transactionIsOpen.set(true)
     try {
-        return utførTransaksjon(readOnly, block)
+        return executeTransaction(readOnly, block)
     } finally {
-        transaksjonErÅpen.set(false)
+        transactionIsOpen.set(false)
     }
 }
 
-private fun <T> DataSource.utførTransaksjon(readOnly: Boolean, block: (Connection) -> T): T {
+private fun <T> DataSource.executeTransaction(readOnly: Boolean, block: (Connection) -> T): T {
     this.connection.use { c ->
         val originalIsolation = c.transactionIsolation
         if (readOnly) {
@@ -49,8 +49,12 @@ private fun <T> DataSource.utførTransaksjon(readOnly: Boolean, block: (Connecti
             val result = block(c)
             c.commit()
             return result
-        } catch (e: Exception) {
-            c.rollback()
+        } catch (e: Throwable) {
+            try {
+                c.rollback()
+            } catch (rollbackError: Exception) {
+                e.addSuppressed(rollbackError)
+            }
             throw e
         } finally {
             c.autoCommit = true

@@ -68,7 +68,7 @@ Alle låsene står i `låsing.kt`, og ingen lesefunksjoner låser. To ting gjens
 
 Nye samtidighetstester viser at operasjonen venter på låsen og ser endringen etterpå:
 
-- `LåsingTest`: publiser, slett treff, registrer endring, legg til jobbsøkere, endre behov og aktuell-status
+- `LåsingTest`: publiser, slett treff, registrer endring, legg til jobbsøkere, endre behov og aktuell-status. Den sjekker også at en `Error` i blokken gir rollback og slipper låsen.
 - `FormidlingServiceTest`: dobbel innsending med og uten sendt utfall, en jobbsøker som blir slettet mens formidlingen venter, og en arbeidsgiver- eller jobbsøkerrad som blir byttet ut med en annen rad med samme orgnr eller fødselsnummer
 - `EierRepositoryTest`: sletting av eier mens en annen eier blir lagt til
 
@@ -104,6 +104,7 @@ Steg 1 til 3 under «Tiltak» er gjort. Dette endrer oppførselen:
 - `leggTilJobbsøkere` returnerer hvor mange som faktisk ble lagt til.
 - Låsene kaster domeneunntak. Et treff som ikke finnes, gir `RekrutteringstreffIkkeFunnetException`, også når vi legger til eller sletter eiere. Sletting av en jobbsøker som ikke finnes på treffet, gir `JobbsøkerIkkeFunnetException`. Begge gir 404 som før, men svaret følger nå `ProblemDetails`.
 - `RekrutteringstreffScheduler` fortsetter med neste treff når ett feiler.
+- Transaksjonshjelperne ruller også tilbake ved `Error`, for eksempel `StackOverflowError`. Før committet `autoCommit = true` i `finally` det blokken hadde rukket å skrive.
 
 Ellers i koden:
 
