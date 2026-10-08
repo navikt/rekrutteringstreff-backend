@@ -66,19 +66,30 @@ Alle låsene står i `låsing.kt`, og ingen lesefunksjoner låser. To ting gjens
 
 `TestDatabase` og produksjon bruker samme isolasjonsnivå, og ingen tester overstyrer det.
 
-Nye samtidighetstester viser at operasjonen venter på låsen og ser endringen etterpå:
+`TransaksjonTest` tester mekanismen, ikke hver operasjon som bruker den:
 
-- `LåsingTest`: publiser, slett treff, registrer endring, legg til jobbsøkere, endre behov og aktuell-status. Den sjekker også at en `Error` i blokken gir rollback og slipper låsen.
-- `FormidlingServiceTest`: dobbel innsending med og uten sendt utfall, en jobbsøker som blir slettet mens formidlingen venter, og en arbeidsgiver- eller jobbsøkerrad som blir byttet ut med en annen rad med samme orgnr eller fødselsnummer
-- `EierRepositoryTest`: sletting av eier mens en annen eier blir lagt til
+- at bare `låsing.kt` låser rader
+- at en transaksjon inne i en annen stoppes
+- at en `Error` i blokken gir rollback og slipper låsen
+- at `medLåstTreff` og `medLåsteJobbsøkere` venter på låsen og ser endringen som ble lagret mens de ventet
+- at oppmøte låser jobbsøkeren i tillegg til treffet, siden svar bare låser jobbsøkeren
+- at avlys låser alle jobbsøkerne før den velger hendelse ut fra statusen. Fullfør bruker den samme koden.
+- at oppmøte teller deltakernummer under trefflåsen
+- at to samtidige eierslettinger ikke fjerner begge eierne
 
-For hver av testene har vi fjernet låsen, flyttet den eller fjernet sjekken under den, og sett at testen feiler. Samtidighetstestene fra før ligger i `JobbsøkerstatusSamtidighetTest`, `EierRepositoryTest`, `InvitasjonFeilhåndteringTest`, `JobbsøkerInnloggetBorgerTest` og `OppmøteServiceTest`.
+For alle testene som venter på en lås, har vi fjernet låsen og sett at testen feiler. Alle bruker `medVentendeOperasjon`, så de er deterministiske og trenger ikke flere runder.
 
-`bare låsefila låser rader` i `LåsingTest` leser kildekoden under `src/main/kotlin`. Den feiler hvis `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE` eller `FOR KEY SHARE` står i en annen fil enn `låsing.kt`.
+Vi lager ikke en samtidighetstest for hver operasjon som bruker låsene. Samtidighetstestene som fantes før branchen, er enten skrevet om til testene over eller slettet, fordi testene over dekker det samme. Det gjelder `JobbsøkerstatusSamtidighetTest` og samtidighetstestene i `TreffgjennomføringKomponentTest`, `EierRepositoryTest`, `InvitasjonFeilhåndteringTest`, `JobbsøkerInnloggetBorgerTest` og `OppmøteServiceTest`.
+
+`bare låsefila låser rader` leser kildekoden under `src/main/kotlin`. Den feiler hvis `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE` eller `FOR KEY SHARE` står i en annen fil enn `låsing.kt`.
+
+`FormidlingServiceTest` sjekker sjekkene som gjøres på nytt under låsen, uten tråder. Testene endrer databasen inne i mocken av stilling-API-et, altså mellom første sjekk og lagringen:
+
+- en uferdig formidling fra en annen innsending blir fullført
+- en arbeidsgiverrad som er byttet ut med en annen rad med samme orgnr, blir avvist
+- en slettet jobbsøkerrad blir avvist, også når en annen rad har samme fødselsnummer
 
 `JobbsøkerTest` sjekker at invitasjon og svar på vegne av jobbsøker gir 404 for en jobbsøker fra et annet treff, og ikke skriver noe.
-
-Gjenåpne, avpubliser og oppdater treff har ingen egen samtidighetstest. De bruker samme mønster som publiser.
 
 `RekrutteringstreffSchedulerTest` sjekker at et treff som feiler, ikke stopper fullføringen av de andre treffene.
 
@@ -91,7 +102,7 @@ Dette kom før `fiks-transaksjonslåsing`. Noe av det er endret siden, se neste 
 - `inviter` låser jobbsøkerne i fast rekkefølge.
 - Oppmøte låser jobbsøkeren etter treffet.
 - Avlys og fullfør låser treffet og alle jobbsøkerne, og validerer under lås.
-- `JobbsøkerstatusSamtidighetTest` kjørte med `REPEATABLE READ`, som produksjon gjorde da.
+- `JobbsøkerstatusSamtidighetTest` kjørte med `REPEATABLE READ`, som produksjon gjorde da. Klassen er slettet i `fiks-transaksjonslåsing`, se «Tester».
 
 ## Endret i `fiks-transaksjonslåsing`
 
@@ -110,7 +121,7 @@ Ellers i koden:
 
 - `executeInLockingTransaction` er fjernet. Skrivinger bruker `medLåstTreff`, `medLåsteJobbsøkere` eller `executeInTransaction`, og lesetransaksjoner bruker `executeInReadOnlyTransaction`.
 - `medLåsteJobbsøkere` erstatter `executeInTransaction` med `låsJobbsøkere` på første linje. `executeInTransaction` betyr nå at transaksjonen ikke tar eksplisitt lås.
-- Transaksjonsfunksjonene kaster `IllegalStateException` hvis en transaksjon startes inne i en annen. Før ville kallet hengt hvis den indre ventet på en lås den ytre holdt. Ingen kode gjør dette i dag. `LåsingTest` dekker vakten.
+- Transaksjonsfunksjonene kaster `IllegalStateException` hvis en transaksjon startes inne i en annen. Før ville kallet hengt hvis den indre ventet på en lås den ytre holdt. Ingen kode gjør dette i dag. `TransaksjonTest` dekker vakten.
 - `låsing.kt` erstatter `treffLås.kt` og låsene i `JobbsøkerRepository` og `EierRepository`.
 - `hentStatus`, `hentSlettestatus`, `hentAktuellForTreffStatus` (før `hentAktuellForTreffStatusForOppdatering`) og `EierRepository.hent` låser ikke lenger.
 - Avlys og fullfør validerer selv og kaller `avsluttTreff`, i stedet for å sende en `valider`-lambda.

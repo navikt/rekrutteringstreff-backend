@@ -7,8 +7,6 @@ import io.mockk.spyk
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
-import no.nav.toi.låsTreff
-import no.nav.toi.medVentendeOperasjon
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -23,13 +21,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 import java.sql.SQLException
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class EierRepositoryTest {
@@ -448,88 +441,6 @@ class EierRepositoryTest {
         assertThat(treffRepository.hentAlle().map { it.id }).containsExactly(treffId)
         assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactly("A123456")
         assertThat(db.hentEierrader(treffId)).isEqualTo(før)
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = [false, true])
-    fun `samtidige tillegg av samme eier lager én eierrad og én eierhendelse`(utenEiere: Boolean) {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        if (utenEiere) {
-            db.dataSource.connection.use { connection ->
-                connection.createStatement().use { it.executeUpdate("DELETE FROM rekrutteringstreff_eier") }
-            }
-        }
-        val treffRepository = RekrutteringstreffRepository(db.dataSource)
-        val service = EierService(repository, treffRepository, db.dataSource)
-        val start = CountDownLatch(1)
-        val pool = Executors.newFixedThreadPool(4)
-        try {
-            val kall = (1..4).map {
-                pool.submit {
-                    check(start.await(10, TimeUnit.SECONDS))
-                    service.leggTilEierMedKontor(treffId, "B654321", "0315")
-                }
-            }
-            start.countDown()
-            kall.forEach { it.get(15, TimeUnit.SECONDS) }
-        } finally {
-            pool.shutdownNow()
-        }
-
-        val forventedeEiere = if (utenEiere) listOf("B654321") else listOf("A123456", "B654321")
-        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactlyInAnyOrderElementsOf(forventedeEiere)
-        assertThat(db.hentEierrader(treffId).filter { it.navIdent == "B654321" }).hasSize(1)
-        assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "EIER_LAGT_TIL" }).hasSize(1)
-        assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "KONTOR_LAGT_TIL" }).hasSize(1)
-    }
-
-    @Test
-    fun `sletting venter på trefflåsen og ser eieren som ble lagt til mens den ventet`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        val treffRepository = RekrutteringstreffRepository(db.dataSource)
-        val service = EierService(repository, treffRepository, db.dataSource)
-
-        db.dataSource.medVentendeOperasjon(
-            lås = { it.låsTreff(treffId) },
-            operasjon = { service.slettEier(treffId, "A123456", "A123456") },
-        ) { connection ->
-            repository.leggTil(connection, treffId, "B654321", "0315")
-        }
-
-        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactly("B654321")
-        assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "EIER_FJERNET" }).hasSize(1)
-    }
-
-    @Test
-    fun `samtidige slettinger beholder siste eier`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        repository.leggTil(treffId, "B654321", "0315")
-        val treffRepository = RekrutteringstreffRepository(db.dataSource)
-        val service = EierService(repository, treffRepository, db.dataSource)
-        val start = CountDownLatch(1)
-        val pool = Executors.newFixedThreadPool(2)
-        try {
-            val kall = listOf("A123456", "B654321").map { navIdent ->
-                pool.submit<Boolean> {
-                    check(start.await(10, TimeUnit.SECONDS))
-                    try {
-                        service.slettEier(treffId, navIdent, "A123456")
-                        true
-                    } catch (_: BadRequestResponse) {
-                        false
-                    }
-                }
-            }
-            start.countDown()
-            assertThat(kall.map { it.get(15, TimeUnit.SECONDS) }).containsExactlyInAnyOrder(true, false)
-        } finally {
-            pool.shutdownNow()
-        }
-
-        val gjenværende = repository.hent(treffId)!!.tilNavIdenter()
-        assertThat(gjenværende).hasSize(1)
-        assertThat(db.hentEierrader(treffId).map { it.navIdent }).containsExactlyElementsOf(gjenværende)
-        assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "EIER_FJERNET" }).hasSize(1)
     }
 
     private fun assertEiereOgKontorer(treffId: TreffId, eiere: List<String>, kontorer: List<String>) {

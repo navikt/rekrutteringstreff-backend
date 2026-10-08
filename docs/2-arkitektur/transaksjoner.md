@@ -55,7 +55,7 @@ Med en eksplisitt lås mener vi en lås vi ber om med en egen SQL-spørring. Pos
 - Lesefunksjoner tar ikke eksplisitte låser.
 - Selve låsefunksjonene står i `låsing.kt`. Bare der skriver vi SQL med `FOR NO KEY UPDATE`.
 
-Slik blir det synlig hvor låsene tas. Vi unngår at en hjelpefunksjon tar en lås som kalleren allerede har tatt. `LåsingTest` leser kildekoden og feiler hvis den finner låse-SQL i andre filer.
+Slik blir det synlig hvor låsene tas. Vi unngår at en hjelpefunksjon tar en lås som kalleren allerede har tatt. `TransaksjonTest` leser kildekoden og feiler hvis den finner låse-SQL i andre filer.
 
 Å ta samme lås to ganger i samme transaksjon er ufarlig. PostgreSQL ser at transaksjonen allerede holder låsen. Det farlige er å starte en ny transaksjon inne i en annen. Den indre transaksjonen får en egen tilkobling og venter på låsen som den ytre holder, mens den ytre venter på at den indre skal bli ferdig. PostgreSQL ser ingen deadlock, så kallet henger. Transaksjonsfunksjonene kaster derfor `IllegalStateException` hvis tråden allerede har en åpen transaksjon. Funksjoner som trenger databasen inne i en transaksjon, tar imot `connection` i stedet.
 
@@ -205,7 +205,16 @@ En samtidighetstest bør vise at operasjonen både venter på riktig lås og bru
 2. Den bruker PostgreSQL-funksjonen `pg_blocking_pids` til å sjekke at operasjonen venter på låsen. Testen feiler hvis ventingen ikke er registrert innen fem sekunder.
 3. Den gjør den avtalte endringen og committer. Operasjonen får fortsette, og testen kan kontrollere at resultatet bygger på den nye verdien.
 
-`LåsingTest` har eksempler. Fjern låsen midlertidig og kontroller at testen da feiler. Slik sjekker du at testen faktisk oppdager den manglende låsen.
+`TransaksjonTest` har ett eksempel for hver låsefunksjon og for hver låserekkefølge som må holde:
+
+- Oppmøte låser jobbsøkeren i tillegg til treffet, siden svar bare låser jobbsøkeren.
+- Avlys og fullfør låser alle jobbsøkerne før de velger hendelse ut fra statusen.
+- Oppmøte teller deltakernummer under trefflåsen.
+- Trefflåsen hindrer at to samtidige eierslettinger fjerner begge eierne.
+
+Fjern låsen midlertidig og kontroller at testen da feiler. Slik sjekker du at testen faktisk oppdager den manglende låsen.
+
+Vi tester mekanismen i `TransaksjonTest`, ikke hver operasjon som bruker den. Lag en ny samtidighetstest bare når du innfører en ny type lås eller låserekkefølge. Skal du teste en sjekk som gjøres på nytt etter et eksternt kall, kan du gjøre endringen inne i mocken av det eksterne kallet. Da trenger du verken tråder eller låser i testen.
 
 🔴 Rød sone: samtidighet, isolasjonsnivå og låserekkefølge. Den som endrer låsingen, bør skrive samtidighetstesten selv.
 
