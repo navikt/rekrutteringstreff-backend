@@ -51,7 +51,7 @@
 | Treffgjennomføring (`TreffgjennomføringWriter.skriv`): steg, møteoppsett, rom, interesse, intervjufordeling og vurdering | `medLåstTreff` | Treffkonteksten (`krevKontekst`) | ✅ |
 | Arbeidsgiver: legg til, legg til med behov og slett | `medLåstTreff` | Slettet arbeidsgiver som kan reaktiveres, siste arbeidsgiver og registreringer | ✅ |
 | Endre behov (`oppdaterBehov`) | `medLåstTreff` | At arbeidsgiveren ikke er slettet, i upsert-SQL-en | ✅ |
-| Opprett formidling: lagring (`lagreFormidlinger`) | `medLåstTreff`, så `låsJobbsøkere` | Arbeidsgiveren, at jobbsøkerne finnes, adressebeskyttelse og eksisterende formidlinger | ⚠️ Låsingen er riktig. Ved dobbel innsending blir stillingen fra innsendingen som får låsen sist, liggende ubrukt. |
+| Opprett formidling: lagring (`lagreFormidlinger`) | `medLåstTreff`, så `låsJobbsøkere` | Samme arbeidsgiverrad, at de låste jobbsøkerradene finnes og ikke er slettet, adressebeskyttelse og eksisterende formidlinger | ⚠️ Låsingen er riktig. Ved dobbel innsending blir stillingen fra innsendingen som får låsen sist, liggende ubrukt. |
 | Opprett formidling: fått jobb | `medLåsteJobbsøkere`, så `registrerFåttJobb` | Status | ✅ |
 | Slett formidling | `medLåsteJobbsøkere`, så `angreFåttJobb` | Status | ✅ |
 
@@ -69,7 +69,7 @@ Alle låsene står i `låsing.kt`, og ingen lesefunksjoner låser. To ting gjens
 Nye samtidighetstester viser at operasjonen venter på låsen og ser endringen etterpå:
 
 - `LåsingTest`: publiser, slett treff, registrer endring, legg til jobbsøkere, endre behov og aktuell-status
-- `FormidlingServiceTest`: dobbel innsending, og en jobbsøker som blir slettet mens formidlingen venter
+- `FormidlingServiceTest`: dobbel innsending med og uten sendt utfall, en jobbsøker som blir slettet mens formidlingen venter, og en arbeidsgiver- eller jobbsøkerrad som blir byttet ut med en annen rad med samme orgnr eller fødselsnummer
 - `EierRepositoryTest`: sletting av eier mens en annen eier blir lagt til
 
 For hver av testene har vi fjernet låsen, flyttet den eller fjernet sjekken under den, og sett at testen feiler. Samtidighetstestene fra før ligger i `JobbsøkerstatusSamtidighetTest`, `EierRepositoryTest`, `InvitasjonFeilhåndteringTest`, `JobbsøkerInnloggetBorgerTest` og `OppmøteServiceTest`.
@@ -79,6 +79,8 @@ For hver av testene har vi fjernet låsen, flyttet den eller fjernet sjekken und
 `JobbsøkerTest` sjekker at invitasjon og svar på vegne av jobbsøker gir 404 for en jobbsøker fra et annet treff, og ikke skriver noe.
 
 Gjenåpne, avpubliser og oppdater treff har ingen egen samtidighetstest. De bruker samme mønster som publiser.
+
+`RekrutteringstreffSchedulerTest` sjekker at et treff som feiler, ikke stopper fullføringen av de andre treffene.
 
 ## Innført i #229
 
@@ -97,7 +99,8 @@ Steg 1 til 3 under «Tiltak» er gjort. Dette endrer oppførselen:
 
 - Invitasjon og svar på vegne av jobbsøker gir 404 og skriver ingenting når jobbsøkeren hører til et annet treff. Er én slik jobbsøker med i en invitasjon, blir ingen invitert.
 - Registrer endring på et treff som ikke er publisert, gir 409 i stedet for 400. Sjekken ligger i servicen.
-- Lagring av formidling sjekker arbeidsgiveren og jobbsøkerne på nytt under låsen. Feiler sjekken, gir den samme feilkode som når den feiler før stillingen opprettes. En jobbsøker som blir slettet mens stillingen opprettes, gir derfor 400 i stedet for 404. Jobbsøkere som har fått formidling hos arbeidsgiveren i mellomtiden, hopper den over.
+- Lagring av formidling sjekker arbeidsgiveren og jobbsøkerne på nytt under låsen. Den sjekker de samme radene som ble valgt før stillingen ble opprettet, ikke bare orgnr og fødselsnummer, siden det kan finnes flere rader med samme verdi på et treff. Feiler sjekken, gir den samme feilkode som når den feiler før stillingen opprettes. En jobbsøker som blir slettet mens stillingen opprettes, gir derfor 400 i stedet for 404.
+- Har en jobbsøker fått formidling hos arbeidsgiveren mens stillingen ble opprettet, lager lagringen ingen ny. Er utfallet allerede sendt, hopper den over formidlingen. Mangler utfallet, behandler den formidlingen videre, slik retry gjør. Da svarer ikke kallet OK på en formidling som ikke er ferdig.
 - `leggTilJobbsøkere` returnerer hvor mange som faktisk ble lagt til.
 - Låsene kaster domeneunntak. Et treff som ikke finnes, gir `RekrutteringstreffIkkeFunnetException`, også når vi legger til eller sletter eiere. Sletting av en jobbsøker som ikke finnes på treffet, gir `JobbsøkerIkkeFunnetException`. Begge gir 404 som før, men svaret følger nå `ProblemDetails`.
 - `RekrutteringstreffScheduler` fortsetter med neste treff når ett feiler.

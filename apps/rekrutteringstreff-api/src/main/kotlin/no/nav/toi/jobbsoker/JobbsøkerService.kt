@@ -288,6 +288,12 @@ class JobbsøkerService(
         return jobbsøkerRepository.hentJobbsøker(connection, treffId, fnr, inkluderUsynlige)
     }
 
+    fun hentStatusOgSperret(
+        connection: Connection,
+        personTreffIder: Collection<PersonTreffId>,
+    ): Map<PersonTreffId, JobbsøkerStatusOgSperret> =
+        jobbsøkerRepository.hentStatusOgSperret(connection, personTreffIder)
+
     fun hentFødselsnummer(personTreffId: PersonTreffId): Fødselsnummer? {
         return jobbsøkerRepository.hentFødselsnummer(personTreffId)
     }

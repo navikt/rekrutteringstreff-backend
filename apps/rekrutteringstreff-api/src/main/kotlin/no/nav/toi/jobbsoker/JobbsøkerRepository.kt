@@ -18,6 +18,8 @@ internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
 
 data class JobbsøkerSlettestatus(val jobbsøkerId: Long, val status: JobbsøkerStatus)
 
+data class JobbsøkerStatusOgSperret(val status: JobbsøkerStatus, val sperret: Boolean)
+
 data class JobbsøkerTreffHistorikk(
     val id: UUID?,
     val tittel: String,
@@ -864,6 +866,27 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 if (rs.next()) JobbsøkerStatus.valueOf(rs.getString("status")) else null
             }
         }
+
+    /** Henter status og adressebeskyttelse for jobbsøkerne, også slettede og usynlige. Ukjente id-er er ikke med. */
+    fun hentStatusOgSperret(
+        connection: Connection,
+        personTreffIder: Collection<PersonTreffId>,
+    ): Map<PersonTreffId, JobbsøkerStatusOgSperret> {
+        if (personTreffIder.isEmpty()) return emptyMap()
+        return connection.prepareStatement("SELECT id, status, sperret FROM jobbsoker WHERE id = ANY(?)").use { stmt ->
+            stmt.setArray(1, connection.createArrayOf("uuid", personTreffIder.map { it.somUuid }.toTypedArray()))
+            stmt.executeQuery().use { rs ->
+                buildMap {
+                    while (rs.next()) {
+                        put(
+                            PersonTreffId(UUID.fromString(rs.getString("id"))),
+                            JobbsøkerStatusOgSperret(JobbsøkerStatus.valueOf(rs.getString("status")), rs.getBoolean("sperret")),
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Henter alle hendelsestyper for en jobbsøker i kronologisk rekkefølge (eldst først).

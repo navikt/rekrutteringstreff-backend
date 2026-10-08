@@ -15,6 +15,7 @@ import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.låsJobbsøkere
 import no.nav.toi.medLåstTreff
@@ -211,17 +212,21 @@ class FormidlingService(
         opprettetAvNavn: String?,
         opprettetAvNavIdent: String?,
     ): List<Formidling> {
-        // Stillingen er opprettet før låsen. Derfor sjekker vi arbeidsgiveren og jobbsøkerne på nytt, og hopper
-        // over jobbsøkere som har fått formidling hos arbeidsgiveren i mellomtiden, for eksempel ved dobbel innsending.
+        // Stillingen er opprettet før låsen. Derfor sjekker vi arbeidsgiveren og jobbsøkerne på nytt. Har en jobbsøker
+        // fått formidling hos arbeidsgiveren i mellomtiden, for eksempel ved dobbel innsending, lager vi ikke en ny.
+        // Mangler den utfall, behandler vi den videre, så kallet ikke svarer OK på en formidling som ikke er ferdig.
         val formidlingIder = dataSource.medLåstTreff(rekrutteringstreffId) { connection ->
             arbeidsgiverService.hentArbeidsgiver(connection, rekrutteringstreffId, arbeidsgiver.orgnr)
+                ?.takeIf { it.arbeidsgiverTreffId == arbeidsgiver.arbeidsgiverTreffId }
                 ?: throw ArbeidsgiverIkkeFunnetException("Arbeidsgiver med orgnr ${arbeidsgiver.orgnr.asString} finnes ikke på treffet")
             connection.låsJobbsøkere(rekrutteringstreffId, jobbsøkere.map { it.personTreffId })
             krevFormidlbareJobbsøkere(connection, rekrutteringstreffId, jobbsøkere)
 
-            jobbsøkere.filter { jobbsøker ->
-                formidlingRepository.hent(connection, rekrutteringstreffId, jobbsøker.personTreffId, arbeidsgiver.arbeidsgiverTreffId) == null
-            }.map { jobbsøker ->
+            jobbsøkere.mapNotNull { jobbsøker ->
+                val eksisterende = formidlingRepository.hent(connection, rekrutteringstreffId, jobbsøker.personTreffId, arbeidsgiver.arbeidsgiverTreffId)
+                if (eksisterende != null) {
+                    return@mapNotNull eksisterende.formidlingId.takeIf { eksisterende.utfallSendtTidspunkt == null }
+                }
                 val formidlingId = formidlingRepository.opprett(
                     connection,
                     rekrutteringstreffId,
@@ -242,19 +247,19 @@ class FormidlingService(
             }
         }
         if (formidlingIder.size < jobbsøkere.size) {
-            logger.warn("Stilling $stillingId er opprettet, men ${jobbsøkere.size - formidlingIder.size} av ${jobbsøkere.size} jobbsøkere hadde allerede formidling hos arbeidsgiveren")
+            logger.warn("Stilling $stillingId er opprettet, men ${jobbsøkere.size - formidlingIder.size} av ${jobbsøkere.size} jobbsøkere hadde allerede ferdig formidling hos arbeidsgiveren")
         }
-        logger.info("Opprettet ${formidlingIder.size} formidlinger for treff ${rekrutteringstreffId} med arbeidsgiver ${arbeidsgiver.arbeidsgiverTreffId}")
+        logger.info("Opprettet eller gjenbrukte ${formidlingIder.size} formidlinger for treff ${rekrutteringstreffId} med arbeidsgiver ${arbeidsgiver.arbeidsgiverTreffId}")
         return formidlingIder.mapNotNull { formidlingRepository.hent(it) }
     }
 
-    /** Kalleren må ha låst jobbsøkerne. */
+    /** Kalleren må ha låst jobbsøkerne. Sjekker de låste radene, ikke fødselsnummeret, siden det kan finnes flere rader per person. */
     private fun krevFormidlbareJobbsøkere(connection: Connection, treffId: TreffId, jobbsøkere: List<Jobbsøker>) {
-        val gjeldende = jobbsøkere.map { jobbsøker ->
-            jobbsøkerService.hentJobbsøker(connection, treffId, jobbsøker.fødselsnummer, inkluderUsynlige = true)
-                ?: throw JobbsøkerIkkeFunnetPåTreffException("Jobbsøker finnes ikke på treffet")
+        val gjeldende = jobbsøkerService.hentStatusOgSperret(connection, jobbsøkere.map { it.personTreffId })
+        if (jobbsøkere.any { gjeldende[it.personTreffId]?.status in setOf(null, JobbsøkerStatus.SLETTET) }) {
+            throw JobbsøkerIkkeFunnetPåTreffException("Jobbsøker finnes ikke på treffet")
         }
-        if (gjeldende.any { it.sperret }) {
+        if (gjeldende.values.any { it.sperret }) {
             logger.warn("Avviser formidling for treff $treffId: jobbsøker har fått adressebeskyttelse etter at formidlingen ble startet")
             throw JobbsøkerSperretException("Jobbsøker med adressebeskyttelse kan ikke formidles.")
         }
