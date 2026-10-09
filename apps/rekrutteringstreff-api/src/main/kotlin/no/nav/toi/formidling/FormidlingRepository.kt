@@ -3,7 +3,6 @@ package no.nav.toi.formidling
 import no.nav.toi.AktørType
 import no.nav.toi.FormidlingHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
-import no.nav.toi.executeInReadOnlyTransaction
 import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -245,7 +244,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         sortering: FormidlingSortering,
         retning: FormidlingSorteringsretning?,
     ): List<FormidlingDto> =
-        dataSource.executeInReadOnlyTransaction { conn ->
+        dataSource.connection.use { conn ->
             val sql = """
                 SELECT
                     f.id,
