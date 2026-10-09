@@ -760,12 +760,46 @@ class TreffgjennomføringKomponentTest {
         oppmøte(treff, person, møtt = true)
         interesse(treff, person, ag, interessert = true)
         assertThat(post(treff, "/treffgjennomforing/intervjufordeling/fordel").statusCode()).isEqualTo(200)
-        assertThat(vurderingFor(treff, person, ag, ""","vurderingsnotat":["AG_VIL_MØTE_FLERE"]""").statusCode()).isEqualTo(200)
+        assertThat(vurderingFor(treff, person, ag, ""","vurderingsnotat":["AG_IKKE_RIKTIG_MATCH"]""").statusCode()).isEqualTo(200)
 
         assertThat(intervjufordeling(treff, ag, ekskluderte = listOf(person)).statusCode()).isEqualTo(200)
 
         val vurdering = aggregat(treff)["vurderinger"].single()
-        assertThat(vurdering["vurderingsnotat"].map { it.asText() }).containsExactly("AG_VIL_MØTE_FLERE")
+        assertThat(vurdering["vurderingsnotat"].map { it.asText() }).containsExactly("AG_IKKE_RIKTIG_MATCH")
+    }
+
+    @Test
+    fun `notater som ikke lenger finnes hoppes over ved lesing`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        interesse(treff, person, ag, interessert = true)
+        assertThat(vurderingFor(treff, person, ag, ""","vurderingsnotat":["AG_GODT_INNTRYKK"]""").statusCode()).isEqualTo(200)
+        db.dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                "UPDATE vurdering SET vurderingsnotat = ARRAY['AG_VIL_MØTE_FLERE', 'AG_GODT_INNTRYKK', 'JS_HELSE_KAPASITET']"
+            ).use { it.executeUpdate() }
+        }
+
+        val vurdering = aggregat(treff)["vurderinger"].single()
+        assertThat(vurdering["vurderingsnotat"].map { it.asText() }).containsExactly("AG_GODT_INNTRYKK")
+
+        val førJobbsøker = antallJobbsøkerhendelser(treff)
+        assertThat(vurderingFor(treff, person, ag, ""","vurderingsnotat":["AG_GODT_INNTRYKK"]""").statusCode()).isEqualTo(200)
+        assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(førJobbsøker)
+    }
+
+    @Test
+    fun `fjernede notater avvises ved lagring`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        interesse(treff, person, ag, interessert = true)
+
+        assertThat(vurderingFor(treff, person, ag, ""","vurderingsnotat":["JS_HELSE_KAPASITET"]""").statusCode()).isEqualTo(400)
+        assertThat(aggregat(treff)["vurderinger"]).isEmpty()
     }
 
     @Test
