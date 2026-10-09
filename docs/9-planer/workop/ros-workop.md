@@ -204,13 +204,14 @@ WorkOp.
 
 **Risiko:** Treffgjennomføringen lagrer vurderinger om enkeltpersoner, blant
 annet arbeidsgivers inntrykk, språk, kompetanse og jobbsøkerens begrunnelse.
-Koden `JS_HELSE_KAPASITET` kan innebære behandling av helseopplysninger.
+Koden `JS_INDIVIDUELLE_FORUTSETNINGER` kan brukes om helse og dermed innebære
+behandling av helseopplysninger.
 Opplysningene kan også bli oppfattet som objektive fakta eller brukes utenfor
 formålet de ble samlet inn for.
 
 **Tiltak:**
 
-- Ikke produksjonssett `JS_HELSE_KAPASITET` før behov, behandlingsgrunnlag,
+- Ikke produksjonssett `JS_INDIVIDUELLE_FORUTSETNINGER` før behov, behandlingsgrunnlag,
   tilgang og lagringstid er skriftlig avklart.
 - Bruk bare et faglig og personvernfaglig godkjent, avgrenset kodeverk.
 - Ikke tilby fritekst for vurderinger.
@@ -224,6 +225,12 @@ formålet de ble samlet inn for.
 er merket med om det kommer fra arbeidsgiveren eller jobbsøkeren. Valget
 «Helse eller kapasitet» (`JS_HELSE_KAPASITET`) finnes fortsatt i både backend
 og frontend.
+
+**Status 09.10.26:** Kodeverket har 16 valg. «Helse eller kapasitet» er
+erstattet av «Individuelle forutsetninger eller kapasitet»
+(`JS_INDIVIDUELLE_FORUTSETNINGER`). Valget nevner ikke helse, men kan fortsatt
+brukes om helse, så tiltakene over gjelder fortsatt. Lagrede verdier som er
+fjernet fra kodeverket, vises ikke og avvises ved lagring.
 
 **Restrisiko:** Strukturerte vurderinger vil fortsatt være subjektive og kan
 påvirkes av bevisste eller ubevisste skjevheter.
@@ -651,8 +658,8 @@ gjennomføringsdata som forsvinner fra visningen.
 ### Før produksjonspilot
 
 1. Avklar behandlingsgrunnlag og lagringstid for alle gjennomføringsdata.
-2. Fjern `JS_HELSE_KAPASITET`, eller dokumenter uttrykkelig hvorfor og hvordan
-   opplysningen kan behandles.
+2. Fjern `JS_INDIVIDUELLE_FORUTSETNINGER` (tidligere `JS_HELSE_KAPASITET`), eller
+   dokumenter uttrykkelig hvorfor og hvordan opplysningen kan behandles.
 3. Fastsett tilgangsmodell, kriterier for WorkOp og serversideavgrensning for
    hvem som kan opprette WorkOp i piloten.
 4. Avklar hvem som skal kunne legge seg til som medeier (WO-12).
@@ -725,9 +732,10 @@ Status: på plass.
 Notatlista har ingen valg for diagnose, funksjonsnivå eller annen konkret
 helseinformasjon. Valget «Helse eller kapasitet» fjernes før produksjon, eller
 beholdes bare hvis behandlingsgrunnlag, tilgang og slettefrist er dokumentert.  
-Status: delvis. «Helse eller kapasitet» finnes fortsatt. Også et generelt valg
-om helse er en helseopplysning, så beskrivelsen bør ikke si at løsningen
-hindrer helseopplysninger så lenge valget finnes.
+Status: delvis. «Helse eller kapasitet» er erstattet av «Individuelle
+forutsetninger eller kapasitet» (09.10.26). Valget kan fortsatt brukes om helse,
+så beskrivelsen bør ikke si at løsningen hindrer helseopplysninger så lenge
+valget finnes.
 
 **Tilbakemeldinger (notater) er ikke fritekst**  
 Arrangøren velger tilbakemeldinger fra en fast liste som fag og personvern har

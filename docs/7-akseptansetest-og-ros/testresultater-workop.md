@@ -45,7 +45,7 @@ Avklart 09.10.26.
 | U4 | Gjeninnlagt arbeidsgiver | Godtatt slik det er. | Arbeidsgiveren kan bare fjernes når startrommet er tomt og interesser, intervjufordeling og vurderinger er ryddet. Ved gjeninnlegging med behov reaktiveres samme rad med samme ID og hendelsen `REAKTIVERT`. Behovet fra skjemaet overskriver det gamle. Arbeidsgiveren kommer tilbake i rotasjonen med eget rom. Formidlinger sperrer ikke fjerning og blir synlige igjen. |
 | U5 | Møtetider | Ingen grenser nå. | Backend krever `HH:mm` og minst ett minutt. |
 | U6 | Standardtekst | Tidspunkter for formøte og hovedmøte i innlegget vurderes ikke nå. | Friteksten oppdateres ikke når de strukturerte feltene endres. |
-| U7 | Notatvalget «Helse eller kapasitet» | Følges opp i egen oppgave. | `JS_HELSE_KAPASITET` finnes. Skriving til WorkOp-stegene er sperret i produksjon. |
+| U7 | Notatvalget «Helse eller kapasitet» | Følges opp i egen oppgave. | Erstattet av «Individuelle forutsetninger eller kapasitet» (`JS_INDIVIDUELLE_FORUTSETNINGER`) 09.10.26. Personvernvurderingen gjelder fortsatt. Skriving til WorkOp-stegene er sperret i produksjon. |
 | U8 | Selvinnmelding som medeier | I samsvar med WorkOp-reglene. | Ikke-eier med arbeidsgiverrettet rolle ser forhåndsvisningen via direkte lenke og kan legge seg til (`PUT /eiere/meg`). Jobbsøkerliste, jobbsøkersøk, tillegg av jobbsøkere, arbeidsgiverbehov og gjennomføring krever eierskap eller utviklerrolle. Etter selvinnmelding har personen samme tilgang som andre eiere. Restrisikoen i WO-12 gjelder fortsatt: eierne får ikke beskjed. |
 | U9 | Invitasjon etter oppmøte | Utsatt til etter pilottreffene. | Den som er registrert møtt uten invitasjon, kan ikke inviteres. |
 

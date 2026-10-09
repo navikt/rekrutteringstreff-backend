@@ -274,5 +274,5 @@ Resultatene fra første testrunde står i [testresultater-workop.md](testresulta
 - **Samtidighet:** Alle skriveoperasjoner i gjennomføringen tar trefflåsen og bygger på lagret tilstand, og sletting bruker lagret oppmøtestatus (`TransaksjonTest` og `TreffgjennomføringTransaksjonTest`). En gammel fane kan likevel overskrive samme vurdering eller intervjufordeling, så lenge dataene er gyldige. Siste skriving vinner. Optimistisk låsing er en mulig senere oppgave (09.10.26).
 - **Avlyst WorkOp:** Gjennomføringen har ingen statuskontroll og kan endres etter avlysning og fullføring. Ingen sperre nå (09.10.26).
 - **Standardtekst:** Tidspunkter i fritekst oppdateres ikke med de strukturerte feltene. Tidspunkter for formøte og hovedmøte i innlegget vurderes ikke nå (09.10.26).
-- **Notatvalg:** «Helse eller kapasitet» krever avklart behandlingsgrunnlag og godkjent kodeverk før produksjonsbruk. Følges opp i egen oppgave.
+- **Notatvalg:** «Individuelle forutsetninger eller kapasitet» (tidligere «Helse eller kapasitet») krever avklart behandlingsgrunnlag og godkjent kodeverk før produksjonsbruk. Følges opp i egen oppgave.
 - **Møtetider:** Backend krever `HH:mm` og minst ett minutt. Ingen grenser for lange møter, tider utenfor treffet eller døgnskifte nå (09.10.26).
