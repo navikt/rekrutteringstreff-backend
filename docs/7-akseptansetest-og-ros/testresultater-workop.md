@@ -21,7 +21,7 @@ Feilene og testhullene fra gjennomgangen er fulgt opp 09.10.26 på grenen `worko
 - De uavklarte reglene er avklart 09.10.26. Ingen av dem krever kodeendring før pilot.
 - Den eneste testen merket ❌ (5.2.7) er dekket av ny komponenttest og bør retestes.
 - Alle øvrige avvik og spørsmål fra testrunden er rettet, besvart i testteksten eller avklart.
-- Testene i 13.1.6–13.1.7, 13.2, 13.3 og 14 er ikke kjørt manuelt. Hullene i den automatiske dekningen er tettet, bortsett fra 13.2 og 14.2, som testes best i dev.
+- Testene i 13.1.6–13.1.7, 13.2, 13.3 og 14 er ikke kjørt manuelt. Hullene i den automatiske dekningen er tettet. 13.2 er dekket av Playwright. 14.2.1 bør kjøres én gang ende til ende i dev, fordi flyten går gjennom flere apper.
 
 ## Feil fra testrunden
 
@@ -112,13 +112,13 @@ Testteksten er oppdatert for disse punktene. Ingen kodeendring var nødvendig.
 
 ## Ikke kjørt manuelt
 
-Disse testene er ikke kjørt manuelt. Tabellen viser hva de automatiske testene i backend dekker. Testene merket «ny» er lagt til 09.10.26.
+Disse testene er ikke kjørt manuelt. Tabellen viser hva de automatiske testene i backend og frontend dekker. Testene merket «ny» er lagt til 09.10.26.
 
 | Tester | Automatisk dekning |
 | --- | --- |
-| 13.1.6 | Vurderingshendelser skrives på jobbsøkeren med arbeidsgiver-ID (`OppfølgingService`). |
+| 13.1.6 | `TreffgjennomføringKomponentTest`: `alle hendelser for treffet tar med detaljene for jobbsøkerhendelser` og ny `vurdering skriver hendelser bare på jobbsøkeren, ikke på arbeidsgiveren`. |
 | 13.1.7 | `gjentatt registrering av samme oppmøte gir ingen ny hendelse`, `interesse er idempotent ved gjentakelse` og ny `identisk vurdering sendt på nytt gir ingen nye hendelser` i `TreffgjennomføringKomponentTest`. |
-| 13.2.1–13.2.10 | Frontend: `useBekreftetLagring` og `Autolagringsstatus` venter på serversvar. Testes best manuelt med nettverksforsinkelse i dev. |
+| 13.2.1–13.2.10 | Playwright i `tests/rekrutteringstreff/treffgjennomføring/e2e/` i frontend: `lagringsutfall`, `oppmøte`, `interesse`, `rom-og-rotasjon`, `vurdering-og-oppfølging`, `intervjufordeling` og `datagrunnlag`. Testene dekker ventende lagring, avvist lagring, tapt svar og «Hent på nytt». |
 | 13.3.1 | `TransaksjonTest`: `oppmøte venter på trefflåsen og teller med deltakernummer som ble tildelt mens den ventet`. |
 | 13.3.2–13.3.4 | `TreffgjennomføringTransaksjonTest`, ny: romflytting fra eldre visning, samme person til ulike rom og vurdering av ulike par. |
 | 13.3.5 | `TreffgjennomføringKomponentTest`: operasjoner med id-er fra et annet treff endrer ingen av treffene (ny, se 14.1.2). |
@@ -131,7 +131,7 @@ Disse testene er ikke kjørt manuelt. Tabellen viser hva de automatiske testene 
 | 14.1.11 | `TreffgjennomføringTransaksjonTest`, ny: databasefeil når møteplanen opprettes og når oppmøtet registreres. Hele operasjonen rulles tilbake, og neste forsøk lykkes uten hull i deltakernumrene. |
 | 14.1.12 | `JobbsøkerstatusPermutasjonKomponentTest` og sperretestene. |
 | 14.1.13 | `TreffgjennomføringKomponentTest`, ny: `slettet jobbsøker kan ikke endres eller slettes på nytt via gamle id-er`. |
-| 14.2.1–14.2.2 | Kandidatvarsel-API har egne WorkOp-maler og lyttere. Ende-til-ende må testes i dev. |
+| 14.2.1–14.2.2 | API: `JobbsøkerhendelserSchedulerTest` sender `workopinvitasjon`, `workopoppdatering` og `workopSvarOgStatus`. Aktivitetskort: `RekrutteringstreffInvitasjonTest` og nye WorkOp-tester i `RekrutteringstreffSvarOgStatusLytterTest` og `RekrutteringstreffOppdateringTest` (kortet beholder WorkOp-type og -tekst). Kandidatvarsel-API har egne lyttere og maler med tester. Kjør én gang ende til ende i dev. |
 | 14.2.3 | Kandidatvarsel-API `MainTest`: lyttere av i prod og ukjent miljø, på i dev og lokalt. |
 | 14.2.4 | `RekrutteringstreffServiceTest`: `Skal ikke kunne opprette WorkOp i prod`. |
 

@@ -319,6 +319,24 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `vurdering skriver hendelser bare på jobbsøkeren, ikke på arbeidsgiveren`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        interesse(treff, person, ag, interessert = true)
+        val førJobbsøker = antallJobbsøkerhendelser(treff)
+        val førArbeidsgiver = antallArbeidsgiverhendelser(treff)
+
+        assertThat(
+            vurderingFor(treff, person, ag, ""","vurderingsstatus":"AKTUELL","vurderingsnotat":["AG_GODT_INNTRYKK"]""").statusCode()
+        ).isEqualTo(200)
+
+        assertThat(antallJobbsøkerhendelser(treff)).isGreaterThan(førJobbsøker)
+        assertThat(antallArbeidsgiverhendelser(treff)).isEqualTo(førArbeidsgiver)
+    }
+
+    @Test
     fun `alle hendelser for vanlige treff er uendret og har ingen detaljer`() {
         val treff = vanligTreff()
         val person = jobbsøker(treff, "11111111111")
