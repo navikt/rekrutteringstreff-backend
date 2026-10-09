@@ -6,10 +6,6 @@ import java.time.LocalDate
 
 enum class Vurderingsvalg { AKTUELL, KANSKJE, IKKE_AKTUELL }
 
-/**
- * Notater som ikke lenger finnes her, hoppes over når vurderinger leses fra databasen.
- * Bytt navn på verdien når betydningen endres, i stedet for å gi gammel verdi ny tekst.
- */
 enum class Vurderingsnotat {
     AG_GODT_INNTRYKK,
     AG_AVVENTER_ANNEN_STILLING,
