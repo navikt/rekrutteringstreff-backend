@@ -14,11 +14,12 @@ Reglene gjelder rekrutteringstreff-api. Appen rekrutteringsbistand-aktivitetskor
 - Når vi trenger flere låser, låser vi treffet først, deretter jobbsøkerne sortert på `id`, og til slutt andre rader.
 - Vi gjør ingen HTTP-kall og sender ingenting til Kafka mens vi holder en lås.
 - En transaksjon kan ikke startes inne i en annen. Send `connection` videre i stedet.
+- Servicelaget starter transaksjoner med flere repositorykall eller lås. Et repository kan bruke autocommit for én setning og en lesetransaksjon for søk med flere spørringer.
 - Samtidighetstester skal vise både at operasjonen venter på låsen, og at den bruker oppdaterte data etterpå.
 
 ## Transaksjonsfunksjonene
 
-Servicelaget har ansvaret for å starte transaksjonen (se [Prinsipper](prinsipper.md)). Hjelpefunksjonene står i `transactionManager.kt` og `låsing.kt`. Alle databasekall som skal inngå i transaksjonen, må bruke `Connection`-objektet som blokken får.
+Hjelpefunksjonene står i `transactionManager.kt` og `låsing.kt`. Alle databasekall som skal inngå i transaksjonen, må bruke `Connection`-objektet som blokken får.
 
 | Funksjon | Bruk |
 | --- | --- |
@@ -30,6 +31,17 @@ Servicelaget har ansvaret for å starte transaksjonen (se [Prinsipper](prinsippe
 Når blokken lykkes, committer hjelpefunksjonen transaksjonen. Kaster blokken et unntak, ruller hjelpefunksjonen tilbake og kaster unntaket videre.
 
 Velg funksjon ut fra låsen operasjonen trenger. Da ser du hvilken lås som gjelder, på første linje, og låsen kan ikke havne etter en lesing.
+
+### Hvor transaksjonen startes
+
+Servicelaget starter transaksjoner som omfatter flere repositorykall, og alle transaksjoner som låser. Det er servicen som vet hva som må lykkes samlet, og hvilke rader som må låses (se [Prinsipper](prinsipper.md)).
+
+Repositorylaget kan i to tilfeller hente tilkoblingen selv:
+
+- **Én setning med autocommit** (`dataSource.connection.use`). En enkelt `SELECT`, `INSERT`, `UPDATE` eller `DELETE` er atomisk, og én `SELECT` ser alltid databasen slik den var da spørringen startet. Da trengs ingen transaksjon.
+- **Flere lesespørringer i én repositorymetode** (`executeInReadOnlyTransaction`). Det gjelder søk som teller treff, lager aggregeringer og henter én side, for eksempel `RekrutteringstreffSokRepository`, `JobbsøkerSokRepository` og `JobbsøkerFormidlingSokRepository`. Øyeblikksbildet hører til implementasjonen av søket.
+
+Bruk ikke `executeInReadOnlyTransaction` for én enkelt spørring. Det gir bare ekstra rundturer for å sette isolasjonsnivå, `BEGIN` og `COMMIT`.
 
 Én enkelt SQL-spørring trenger ikke en slik transaksjonsblokk. Med autocommit kjører databasen spørringen i en egen transaksjon. Det gjelder også en `UPDATE` som har hele vilkåret i `WHERE`, slik vi bruker ved oppdatering av synlighet fra Kafka.
 

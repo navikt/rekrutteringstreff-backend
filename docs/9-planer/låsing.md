@@ -60,7 +60,7 @@
 Alle låsene står i `låsing.kt`, og ingen lesefunksjoner låser. To ting gjenstår:
 
 - `EierService`, `FormidlingService.slett` og `RekrutteringstreffRepository` kaster fortsatt Javalins `NotFoundResponse` og `BadRequestResponse`. [Prinsippene](../2-arkitektur/prinsipper.md) sier at vi skal bruke unntak som `ExceptionMapping` håndterer. Vi lot dem stå for ikke å endre HTTP-svarene i denne branchen. «Kan ikke slette siste eier» har heller ikke et domeneunntak som gir 400.
-- `JobbsøkerSokRepository` og `JobbsøkerFormidlingSokRepository` starter egne lesetransaksjoner. Vi kan flytte dem til servicelaget. `FormidlingRepository.hentMedWhere` kjører bare én spørring og bruker derfor autocommit.
+- `JobbsøkerSokRepository`, `JobbsøkerFormidlingSokRepository` og `RekrutteringstreffSokRepository` starter egne lesetransaksjoner, siden søket teller, aggregerer og henter én side i samme øyeblikksbilde. Dette er nå en uttrykt regel i [transaksjoner.md](../2-arkitektur/transaksjoner.md#hvor-transaksjonen-startes). `FormidlingRepository.hentMedWhere` kjører bare én spørring og bruker derfor autocommit.
 
 ## Tester
 

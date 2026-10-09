@@ -780,15 +780,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
      * - Kun hvis nyere tidspunkt når eksisterende kilde er EVENT
      */
     fun oppdaterSynlighetFraEvent(
-        fodselsnummer: String,
-        erSynlig: Boolean,
-        sperret: Boolean,
-        tidspunkt: Instant
-    ): Int = dataSource.connection.use { conn ->
-        oppdaterSynlighetFraEvent(conn, fodselsnummer, erSynlig, sperret, tidspunkt)
-    }
-
-    fun oppdaterSynlighetFraEvent(
         connection: Connection,
         fodselsnummer: String,
         erSynlig: Boolean,
@@ -820,15 +811,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
      * Oppdaterer synlighet fra need-svar (scheduler).
      * Skriver KUN hvis synlighet ikke er satt fra før.
      */
-    fun oppdaterSynlighetFraNeed(
-        fodselsnummer: String,
-        erSynlig: Boolean,
-        sperret: Boolean,
-        tidspunkt: Instant
-    ): Int = dataSource.connection.use { conn ->
-        oppdaterSynlighetFraNeed(conn, fodselsnummer, erSynlig, sperret, tidspunkt)
-    }
-
     fun oppdaterSynlighetFraNeed(
         connection: Connection,
         fodselsnummer: String,
