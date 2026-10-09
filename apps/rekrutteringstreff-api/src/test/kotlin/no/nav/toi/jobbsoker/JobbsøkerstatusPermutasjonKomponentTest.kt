@@ -24,6 +24,7 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
@@ -168,7 +169,7 @@ class JobbsøkerstatusPermutasjonKomponentTest {
         val person = leggTil(treff)
         ctx.jobbsøkerService.markerSlettet(person, treff, eier)
 
-        assertThat(runCatching { ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true) }.exceptionOrNull())
+        assertThat(runCatching { ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true) }.exceptionOrNull())
             .isInstanceOf(no.nav.toi.exception.JobbsøkerIkkeFunnetException::class.java)
         assertThat(hendelser(person)).containsExactly("OPPRETTET", "SLETTET")
 
@@ -189,7 +190,7 @@ class JobbsøkerstatusPermutasjonKomponentTest {
 
         try {
             assertThat(runCatching { formidle(treff, orgnrA) }.exceptionOrNull())
-                .isInstanceOf(no.nav.toi.exception.JobbsøkerIkkeFunnetException::class.java)
+                .isInstanceOf(no.nav.toi.formidling.JobbsøkerIkkeFunnetPåTreffException::class.java)
         } finally {
             every { stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any()) } answers {
                 OpprettFormidlingStillingRespons(stillingsId = UUID.randomUUID(), kandidatlisteId = UUID.randomUUID())
@@ -214,9 +215,9 @@ class JobbsøkerstatusPermutasjonKomponentTest {
     private fun utfør(steg: Steg, treff: TreffId, person: PersonTreffId, formidlinger: MutableMap<String, UUID>): PersonTreffId {
         when (steg) {
             Steg.Inviter -> ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
-            Steg.JaEier -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
-            Steg.NeiEier -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, false)
-            Steg.FjernSvar -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, null)
+            Steg.JaEier -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
+            Steg.NeiEier -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, false)
+            Steg.FjernSvar -> ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, null)
             Steg.JaBorger -> ctx.jobbsøkerService.svarJaTilInvitasjon(Fødselsnummer(fnr), treff, fnr)
             Steg.NeiBorger -> ctx.jobbsøkerService.svarNeiTilInvitasjon(Fødselsnummer(fnr), treff, fnr)
             Steg.Møtt -> oppmøte(treff, person, true)

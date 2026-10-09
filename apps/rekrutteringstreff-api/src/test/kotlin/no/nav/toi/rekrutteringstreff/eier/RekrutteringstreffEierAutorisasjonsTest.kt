@@ -12,6 +12,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals

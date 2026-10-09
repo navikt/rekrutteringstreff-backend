@@ -21,6 +21,7 @@ import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI

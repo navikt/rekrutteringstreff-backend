@@ -2,6 +2,8 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.LeaderElectionInterface
+import io.mockk.every
+import io.mockk.spyk
 import no.nav.toi.LeaderElectionMock
 import no.nav.toi.Miljø
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
@@ -71,6 +73,30 @@ class RekrutteringstreffSchedulerTest {
 
         val treff = rekrutteringstreffRepository.hent(fremtidigTreffId)
         assertThat(treff?.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+    }
+
+    @Test
+    fun `fullførJobbtreff fortsetter med neste treff når ett treff feiler`() {
+        val feilendeTreffId = db.opprettRekrutteringstreffMedAlleFelter(
+            status = RekrutteringstreffStatus.PUBLISERT,
+            tilTid = nowOslo().minusDays(2),
+        )
+        val annetTreffId = db.opprettRekrutteringstreffMedAlleFelter(
+            status = RekrutteringstreffStatus.PUBLISERT,
+            tilTid = nowOslo().minusDays(1),
+        )
+        val service = spyk(rekrutteringstreffService)
+        // Det feilende treffet kommer først, så testen viser at feilen ikke stopper resten av kjøringen.
+        every { service.hentPubliserteTreffHvorTilTidErPassert() } answers {
+            rekrutteringstreffService.hentPubliserteTreffHvorTilTidErPassert().sortedBy { it.id != feilendeTreffId }
+        }
+        every { service.fullfør(feilendeTreffId, any()) } throws IllegalStateException("Simulert feil")
+        val scheduler = RekrutteringstreffScheduler(service, LeaderElectionMock())
+
+        scheduler.kjørJobb()
+
+        assertThat(rekrutteringstreffRepository.hent(feilendeTreffId)?.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        assertThat(rekrutteringstreffRepository.hent(annetTreffId)?.status).isEqualTo(RekrutteringstreffStatus.FULLFØRT)
     }
 
     @Test

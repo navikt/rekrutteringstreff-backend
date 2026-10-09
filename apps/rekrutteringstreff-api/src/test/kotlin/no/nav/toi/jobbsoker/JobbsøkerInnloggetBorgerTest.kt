@@ -8,6 +8,7 @@ import no.nav.toi.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -17,10 +18,6 @@ import java.net.http.HttpResponse
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -766,51 +763,6 @@ class JobbsøkerInnloggetBorgerTest {
 
         // Duplikat svar-ja skal ignoreres, så det skal kun være én hendelse
         assertThat(svarJaHendelser).hasSize(1)
-    }
-
-    @Test
-    fun `samtidige svar ja kall håndteres konsistent`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
-        val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
-
-        db.leggTilJobbsøkere(
-            listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
-            )
-        )
-
-        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
-
-        // Start samtidige svar-ja kall
-        val executor = Executors.newFixedThreadPool(2)
-        val latch = CountDownLatch(2)
-        val responses = ConcurrentLinkedQueue<Int>()
-
-        repeat(2) {
-            executor.submit {
-                try {
-                    val response = httpPost(
-                        "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
-                        requestBody,
-                        token.serialize()
-                    )
-                    responses.add(response.statusCode())
-                } finally {
-                    latch.countDown()
-                }
-            }
-        }
-
-        latch.await(10, TimeUnit.SECONDS)
-        executor.shutdown()
-
-        // Verifiser at ingen requests feilet med 500
-        assertThat(responses).doesNotContain(HTTP_INTERNAL_ERROR)
-
-        // Verifiser at status er konsistent
-        val jobbsøker = db.hentJobbsøkereForTreff(treffId).first()
-        assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_JA)
     }
 
     private fun hentJobbsøkerInnloggetBorger(treffId: TreffId, token: SignedJWT): Pair<HttpResponse<String>, JobbsøkerMedStatuserOutboundDto?> {

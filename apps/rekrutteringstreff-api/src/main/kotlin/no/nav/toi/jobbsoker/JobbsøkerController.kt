@@ -625,7 +625,10 @@ class JobbsøkerController(
                 example = """{ "personTreffIder": ["2d4dcf50-2418-4085-9c5f-1390bc49a97f", "0aff1e80-cc11-4cdc-a495-ada1f0a8b3dd"] }"""
             )]
         ),
-        responses = [OpenApiResponse("200", description = "Invitasjonshendelser er lagt til.")],
+        responses = [
+            OpenApiResponse("200", description = "Invitasjonshendelser er lagt til."),
+            OpenApiResponse("404", description = "En av jobbsøkerne finnes ikke på treffet. Ingen blir invitert."),
+        ],
         path = inviterPath,
         methods = [HttpMethod.POST]
     )
@@ -655,7 +658,10 @@ class JobbsøkerController(
                 example = """{ "personTreffId": "2d4dcf50-2418-4085-9c5f-1390bc49a97f", "svar": true }"""
             )]
         ),
-        responses = [OpenApiResponse("200", description = "Svar registrert.")],
+        responses = [
+            OpenApiResponse("200", description = "Svar registrert."),
+            OpenApiResponse("404", description = "Jobbsøkeren finnes ikke på treffet."),
+        ],
         path = svarPath,
         methods = [HttpMethod.POST]
     )
@@ -667,7 +673,7 @@ class JobbsøkerController(
         val navIdent = ctx.extractNavIdent()
         log.info("Mottar svar på vegne av jobbsøker for $treffId med svar ${dto.svar}")
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            jobbsøkerService.svarPåVegneAvJobbsøker(jobbsøkerId, navIdent, dto.svar)
+            jobbsøkerService.svarPåVegneAvJobbsøker(jobbsøkerId, treffId, navIdent, dto.svar)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke invitere jobbsøkere")

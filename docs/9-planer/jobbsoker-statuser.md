@@ -35,21 +35,22 @@ vinne over. Slettet er en endestasjon fordi tjenestene avviser hendelser for sle
 Bare `OPPRETTET` (ny innlegging) opphever slettingen. Lekker en hendelse forbi en guard, vil
 statusen endre seg, så nye skrivende tjenester må sjekke `SLETTET`.
 
-| Skriver            | Avviser slettet med                                         | Serialisert mot sletting med     |
-| ------------------ | ----------------------------------------------------------- | -------------------------------- |
-| Svar (eier/borger) | `krevIkkeSlettetJobbsøker` (404)                            | `låsJobbsøker`                   |
-| Fått jobb          | `krevIkkeSlettetJobbsøker` i `registrerFåttJobb` (404)      | `låsJobbsøker`                   |
-| Angre fått jobb    | Skriver bare når status er `FÅTT_JOBB`                      | `låsJobbsøker` i `slett`         |
-| Invitasjon         | Inviterer bare `LAGT_TIL`                                   | `låsJobbsøker`, sortert på id    |
-| Oppmøte            | `Treffkontekst` tar ikke med slettede (400)                 | `medLåstTreff`, så `låsJobbsøker` |
-| Avlys og fullfør   | Gir ingen hendelse for `SLETTET`                            | `medLåstTreff`, så `låsJobbsøkereForTreff` |
+| Skriver            | Avviser slettet med                                         | Serialisert mot sletting med                  |
+| ------------------ | ----------------------------------------------------------- | --------------------------------------------- |
+| Svar (eier/borger) | `krevIkkeSlettetJobbsøker` (404)                            | `medLåsteJobbsøkere`                          |
+| Fått jobb          | `krevIkkeSlettetJobbsøker` i `registrerFåttJobb` (404)      | `medLåsteJobbsøkere` hos kalleren             |
+| Angre fått jobb    | Skriver bare når status er `FÅTT_JOBB`                      | `medLåsteJobbsøkere` i `slett`                |
+| Invitasjon         | Inviterer bare `LAGT_TIL`                                   | `medLåsteJobbsøkere`, alle i én spørring      |
+| Oppmøte            | `Treffkontekst` tar ikke med slettede (400)                 | `medLåstTreff`, så `låsJobbsøkere`            |
+| Avlys og fullfør   | Gir ingen hendelse for `SLETTET`                            | `medLåstTreff`, så `låsAlleJobbsøkerePåTreff` |
 
-Alle skrivinger som låser jobbsøkeren, kjører med `READ COMMITTED` (`executeInLockingTransaction`
-eller `medLåstTreff`). Da ser spørringene etter låsen det som ble lagret mens vi ventet. Under
-poolens `REPEATABLE READ` ville PostgreSQL avbrutt med `40001`. Se [låsing.md](låsing.md).
+Låsefunksjonene står i `låsing.kt` og låser jobbsøkerne sortert på id. Poolen kjører
+`READ COMMITTED`, så spørringene etter låsen ser det som ble lagret mens vi ventet. Under
+`REPEATABLE READ` ville PostgreSQL avbrutt med `40001`. Se [Transaksjoner og låsing](../2-arkitektur/transaksjoner.md).
 
-Formidling sjekker jobbsøkeren før kallene til stilling- og kandidatliste-API-et, men skriver
-`FÅTT_JOBB` først etterpå. Derfor sjekker `registrerFåttJobb` på nytt under lås.
+Formidling sjekker jobbsøkeren før kallene til stilling- og kandidatliste-API-et, men lagrer
+formidlingen og skriver `FÅTT_JOBB` først etterpå. Derfor sjekker `lagreFormidlinger` på nytt under
+lås at jobbsøkeren ikke er slettet, og `registrerFåttJobb` sjekker igjen før den skriver `FÅTT_JOBB`.
 
 ## Andre regler i tjenestene
 

@@ -9,6 +9,7 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkersideDto
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*

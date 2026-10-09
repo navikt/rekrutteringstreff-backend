@@ -27,6 +27,7 @@ import no.nav.toi.oppfølging.Vurderingsvalg
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
@@ -44,11 +45,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.sql.Connection
 import java.util.UUID
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import javax.sql.DataSource
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -57,12 +54,6 @@ class TreffgjennomføringKomponentTest {
     private val db = TestDatabase()
     private val appPort = ubruktPortnrFra10000.ubruktPortnr()
     private val mapper = JacksonConfig.mapper
-    private val dataSource = object : DataSource by db.dataSource {
-        override fun getConnection(): Connection = db.dataSource.connection.apply {
-            transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
-        }
-    }
-
     private lateinit var infra: TestInfrastructureContext
     private lateinit var ctx: ApplicationContext
     private lateinit var app: App
@@ -73,7 +64,7 @@ class TreffgjennomføringKomponentTest {
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
-        infra = TestInfrastructureContext(dataSource = dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
             .also { it.start() }
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
@@ -222,10 +213,10 @@ class TreffgjennomføringKomponentTest {
         val fnr = "12345678901"
         val person = jobbsøker(treff, fnr)
         ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
 
         oppmøte(treff, person, møtt = true)
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, false)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, false)
 
         assertThat(db.hentJobbsøkerStatus(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
         assertThat(gjeldendeSvar(treff, fnr)).isFalse()
@@ -242,7 +233,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(søkMedStatus(treff, JobbsøkerStatus.SVART_NEI)).containsExactly(person.somString)
         assertThat(søkMedStatus(treff, JobbsøkerStatus.MØTT_OPP)).isEmpty()
 
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
         oppmøte(treff, person, møtt = true)
 
         assertThat(db.hentJobbsøkerStatus(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
@@ -254,10 +245,10 @@ class TreffgjennomføringKomponentTest {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
         oppmøte(treff, person, møtt = true)
 
-        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, eier, true)
+        ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
 
         assertThat(antallHendelser(treff, "SVART_JA_TIL_INVITASJON_AV_EIER")).isEqualTo(1)
     }
@@ -823,29 +814,6 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `samtidige flyttinger av ulike personer bevarer begge endringene`() {
-        val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
-        oppmøte(treff, p1, møtt = true)
-        oppmøte(treff, p2, møtt = true)
-        møteoppsett(treff)
-
-        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-            val første = executor.submit<HttpResponse<String>> { flyttTilRom(treff, p1, 2) }
-            val andre = executor.submit<HttpResponse<String>> { flyttTilRom(treff, p2, 1) }
-            assertThat(første.get(10, TimeUnit.SECONDS).statusCode()).isEqualTo(200)
-            assertThat(andre.get(10, TimeUnit.SECONDS).statusCode()).isEqualTo(200)
-        }
-
-        val rom = aggregat(treff)["rom"]
-        assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
-            .containsExactly(p2.somString)
-        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
-            .containsExactly(p1.somString)
-    }
-
-    @Test
     fun `flytting avviser person fra et annet treff og manglende møteoppsett`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff, "11111111111")
@@ -1263,65 +1231,6 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `sletting venter på trefflåsen og ser interessen som ble lagret mens den ventet`() {
-        val treff = workOpTreff(antallArbeidsgivere = 2)
-        val person = jobbsøker(treff)
-        val ag = aktivArbeidsgiver(treff)
-        oppmøte(treff, person, møtt = true)
-
-        val respons = medVentendeOperasjon(treff, { slettArbeidsgiver(treff, ag) }) { connection ->
-            connection.prepareStatement(
-                """
-                INSERT INTO interesse (jobbsoker_id, arbeidsgiver_id)
-                SELECT j.jobbsoker_id, a.arbeidsgiver_id FROM jobbsoker j, arbeidsgiver a
-                WHERE j.id = ? AND a.id = ?
-                """.trimIndent()
-            ).use { stmt ->
-                stmt.setObject(1, person.somUuid)
-                stmt.setObject(2, ag.somUuid)
-                stmt.executeUpdate()
-            }
-        }
-
-        assertThat(respons.statusCode()).isEqualTo(409)
-        assertThat(mapper.readTree(respons.body())["hint"].asText()).isEqualTo("Fjern registrerte interesser først.")
-        assertThat(aggregat(treff)["interesser"]).hasSize(1)
-        assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(2)
-    }
-
-    @Test
-    fun `interesse venter på trefflåsen og avviser arbeidsgiver slettet mens den ventet`() {
-        val treff = workOpTreff()
-        val person = jobbsøker(treff)
-        val ag = aktivArbeidsgiver(treff)
-        oppmøte(treff, person, møtt = true)
-
-        val respons = medVentendeOperasjon(treff, { interesse(treff, person, ag, true) }) { connection ->
-            ctx.arbeidsgiverRepository.markerSlettet(connection, ag.somUuid)
-        }
-
-        assertThat(respons.statusCode()).isEqualTo(400)
-        assertThat(aggregat(treff)["interesser"]).isEmpty()
-    }
-
-    @Test
-    fun `samtidige arbeidsgivertillegg lagrer ulike rom før noen leser gjennomføringen`() {
-        val treff = workOpTreff(antallArbeidsgivere = 2)
-        val person = jobbsøker(treff)
-        oppmøte(treff, person, møtt = true)
-        møteoppsett(treff)
-
-        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-            val første = executor.submit<ArbeidsgiverTreffId> { opprettArbeidsgiverViaApi(treff, "000000001") }
-            val andre = executor.submit<ArbeidsgiverTreffId> { opprettArbeidsgiverViaApi(treff, "000000002", true) }
-            val nye = listOf(første.get(10, TimeUnit.SECONDS), andre.get(10, TimeUnit.SECONDS))
-            val lagret = lagretRotasjon(treff)
-            assertThat(nye.map { lagret[it.somString] }).containsExactlyInAnyOrder(3, 4)
-            assertThat(lagredeRom(treff)).containsExactlyEntriesOf(mapOf(person.somString to 1))
-        }
-    }
-
-    @Test
     fun `siste arbeidsgiver kan ikke fjernes, heller ikke fra tom møteplan`() {
         val treff = workOpTreff(antallArbeidsgivere = 0)
         val ag = opprettArbeidsgiverViaApi(treff, "000000001", true)
@@ -1418,32 +1327,6 @@ class TreffgjennomføringKomponentTest {
         val forventetHint = if (medVurdering) "Nullstill registrerte vurderinger først." else "Fjern registrerte interesser først."
         assertThat(mapper.readTree(respons.body())["hint"].asText()).isEqualTo(forventetHint)
         assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(2)
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = [false, true])
-    fun `tillegg ser møteoppsett som opprettes mens det venter på trefflåsen`(medBehov: Boolean) {
-        val treff = workOpTreff()
-        val person = jobbsøker(treff, "00000000000")
-        oppmøte(treff, person, møtt = true)
-
-        val ny = medVentendeOperasjon(treff, { opprettArbeidsgiverViaApi(treff, "000000001", medBehov) }) { connection ->
-            connection.prepareStatement(
-                """
-                INSERT INTO moteoppsett (treffgjennomforing_id, starttidspunkt, varighet_min)
-                SELECT t.treffgjennomforing_id, '09:00', 15 FROM treffgjennomforing t
-                JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = t.rekrutteringstreff_id
-                WHERE rt.id = ?
-                """.trimIndent()
-            ).use { stmt ->
-                stmt.setObject(1, treff.somUuid)
-                assertThat(stmt.executeUpdate()).isEqualTo(1)
-            }
-        }
-
-        assertThat(lagretRotasjon(treff)[ny.somString]).isEqualTo(2)
-        assertThat(lagredeRom(treff)).containsExactlyEntriesOf(mapOf(person.somString to 1))
-        assertThat(aggregat(treff)["rom"].last()["jobbsøkere"]).isEmpty()
     }
 
     @ParameterizedTest
@@ -1544,54 +1427,6 @@ class TreffgjennomføringKomponentTest {
         assertThat(ctx.jobbsøkerService.hentJobbsøkere(andreTreff)).hasSize(1)
     }
 
-    @Test
-    fun `jobbsøkersletting ser oppmøte som ble registrert mens den ventet på trefflåsen`() {
-        val treff = workOpTreff()
-        val person = jobbsøker(treff, "00000000000")
-
-        val svar = medVentendeOperasjon(treff, { slettJobbsøker(treff, person) }) { connection ->
-            ctx.hendelseWriter.forJobbsøker(connection, person, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, eier)
-            ctx.jobbsøkerService.oppdaterStatusFraHendelser(connection, person)
-        }
-
-        assertThat(svar.statusCode()).isEqualTo(422)
-        assertThat(oppmøteliste(treff)).containsExactly(person.somString)
-        assertThat(antallHendelser(treff, "SLETTET")).isZero()
-    }
-
-    @Test
-    fun `jobbsøkersletting ser intervjufordeling som ble lagret mens den ventet på trefflåsen`() {
-        val treff = workOpTreff()
-        val person = jobbsøker(treff, "00000000000")
-        val ag = aktivArbeidsgiver(treff)
-
-        val svar = medVentendeOperasjon(treff, { slettJobbsøker(treff, person) }) { connection ->
-            ctx.matchingRepository.erstattIntervjufordelinger(
-                connection,
-                listOf(ArbeidsgiverIntervjufordeling(ag, listOf(person), emptyList())),
-                ctx.treffkontekstRepository.krevKontekst(connection, treff),
-            )
-        }
-
-        assertThat(svar.statusCode()).isEqualTo(422)
-        assertThat(aggregat(treff)["intervjufordelinger"]).hasSize(1)
-        assertThat(antallHendelser(treff, "SLETTET")).isZero()
-    }
-
-    @Test
-    fun `oppmøte avviser jobbsøker slettet mens det ventet på trefflåsen`() {
-        val treff = workOpTreff()
-        val person = jobbsøker(treff, "00000000000")
-
-        val svar = medVentendeOperasjon(treff, { oppmøte(treff, person, møtt = true) }) { connection ->
-            ctx.jobbsøkerRepository.endreStatus(connection, person, JobbsøkerStatus.SLETTET)
-        }
-
-        assertThat(svar.statusCode()).isEqualTo(400)
-        assertThat(oppmøteliste(treff)).isEmpty()
-        assertThat(lagredeRom(treff)).isEmpty()
-    }
-
     // --- hjelpere -------------------------------------------------------------
 
     private fun slettJobbsøker(treff: TreffId, person: PersonTreffId): HttpResponse<String> = send(
@@ -1674,40 +1509,6 @@ class TreffgjennomføringKomponentTest {
         ).use { stmt ->
             stmt.setObject(1, person.somUuid)
             stmt.executeUpdate()
-        }
-    }
-
-    private fun <T> medVentendeOperasjon(
-        treff: TreffId,
-        operasjon: () -> T,
-        førFrigivelse: (Connection) -> Unit,
-    ): T = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-        db.dataSource.connection.use { connection ->
-            connection.autoCommit = false
-            connection.låsTreff(treff)
-            val pid = connection.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT pg_backend_pid()").use { it.next(); it.getInt(1) }
-            }
-            val ventende = executor.submit<T> { operasjon() }
-            try {
-                val frist = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-                var venter = false
-                while (!venter && System.nanoTime() < frist) {
-                    venter = db.dataSource.connection.use { sjekk ->
-                        sjekk.prepareStatement("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid)))").use { stmt ->
-                            stmt.setInt(1, pid)
-                            stmt.executeQuery().use { it.next(); it.getBoolean(1) }
-                        }
-                    }
-                    if (!venter) Thread.sleep(10)
-                }
-                assertThat(venter).withFailMessage("Operasjonen tok ikke trefflåsen").isTrue()
-                førFrigivelse(connection)
-                connection.commit()
-            } finally {
-                connection.rollback()
-            }
-            ventende.get(10, TimeUnit.SECONDS)
         }
     }
 

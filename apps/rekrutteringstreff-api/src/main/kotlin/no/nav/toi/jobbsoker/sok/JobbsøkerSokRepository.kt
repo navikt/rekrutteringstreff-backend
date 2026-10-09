@@ -1,7 +1,7 @@
 package no.nav.toi.jobbsoker.sok
 
 import no.nav.toi.JacksonConfig
-import no.nav.toi.executeInTransaction
+import no.nav.toi.executeInReadOnlyTransaction
 import no.nav.toi.jobbsoker.AktuellForTreffStatus
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -18,7 +18,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
     }
 
     fun sok(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons {
-        return dataSource.executeInTransaction { conn ->
+        return dataSource.executeInReadOnlyTransaction { conn ->
             val tilgjengeligeKontornumre = hentTilgjengeligeKontornumre(conn, treffId)
             request.kontornummer
                 ?.filterNot { it in tilgjengeligeKontornumre }

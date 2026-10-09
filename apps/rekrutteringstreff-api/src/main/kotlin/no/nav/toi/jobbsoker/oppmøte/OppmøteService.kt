@@ -4,6 +4,7 @@ import no.nav.toi.HendelseWriter
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.låsJobbsøkere
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
 import no.nav.toi.treffgjennomføring.RegistreringerRepository
@@ -28,7 +29,7 @@ class OppmøteService(
         treffgjennomføringWriter.skriv(treffId) { connection, kontekst, _ ->
             val personTreffId = PersonTreffId(oppmøteRequestDto.personTreffId)
             val jobbsøkerId = kontekst.krevJobbsøkerId(personTreffId)
-            jobbsøkerService.låsJobbsøker(connection, personTreffId)
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
 
             val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             if (oppmøteRequestDto.møtt == harMøtt) return@skriv

@@ -5,7 +5,8 @@ import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.authenticatedUser
-import no.nav.toi.executeInTransaction
+import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
+import no.nav.toi.medLåstTreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
@@ -41,32 +42,25 @@ class EierService(
         return treff.kontorer.any { it in tilknyttedeEnheterSet }
     }
 
-    fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null, kontorNavn: String? = null) {
-        require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
-        val eiere = eierRepository.hent(connection, treffId, forUpdate = true)
-            ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
-
-        eierRepository.leggTil(connection, treffId, navIdent, kontorEnhetId, eierNavn)
-        if (navIdent !in eiere.tilNavIdenter()) {
-            rekrutteringstreffRepository.leggTilHendelseForTreff(
-                connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
-                subjektId = navIdent, subjektNavn = navIdent,
-            )
-        }
-
-        oppdaterKontorerOgHendelser(connection, treffId, eiere, navIdent, kontorNavn = kontorNavn)
-    }
-
     fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null, kontorNavn: String? = null) {
-        dataSource.executeInTransaction { connection ->
-            leggTilEierMedKontor(connection, treffId, navIdent, kontorEnhetId, eierNavn, kontorNavn)
+        require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
+        dataSource.medLåstTreff(treffId) { connection ->
+            val eiere = hentEiere(connection, treffId)
+            eierRepository.leggTil(connection, treffId, navIdent, kontorEnhetId, eierNavn)
+            if (navIdent !in eiere.tilNavIdenter()) {
+                rekrutteringstreffRepository.leggTilHendelseForTreff(
+                    connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
+                    subjektId = navIdent, subjektNavn = navIdent,
+                )
+            }
+
+            oppdaterKontorerOgHendelser(connection, treffId, eiere, navIdent, kontorNavn = kontorNavn)
         }
     }
 
     fun slettEier(treffId: TreffId, eierNavIdent: String, utførtAv: String, kontorNavn: String? = null) {
-        dataSource.executeInTransaction { connection ->
-            val eiere = eierRepository.hent(connection, treffId, forUpdate = true)
-                ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
+        dataSource.medLåstTreff(treffId) { connection ->
+            val eiere = hentEiere(connection, treffId)
             if (eierNavIdent !in eiere.tilNavIdenter()) {
                 throw NotFoundResponse("Eier med navIdent $eierNavIdent finnes ikke for rekrutteringstreff ${treffId.somString}")
             }
@@ -91,8 +85,7 @@ class EierService(
         utførtAv: String,
         kontorNavn: String? = null,
     ) {
-        val eiereEtter = eierRepository.hent(connection, treffId)
-            ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
+        val eiereEtter = hentEiere(connection, treffId)
         val kontorerFør = eiereFør.map { it.kontorEnhetId }.toSet()
         val kontorerEtter = eiereEtter.map { it.kontorEnhetId }.toSet()
         (kontorerEtter - kontorerFør).forEach { kontor ->
@@ -108,4 +101,8 @@ class EierService(
             )
         }
     }
+
+    private fun hentEiere(connection: Connection, treffId: TreffId): List<Eier> =
+        eierRepository.hent(connection, treffId)
+            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
 }
