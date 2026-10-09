@@ -286,9 +286,13 @@ En jobbsøker skal bare få tilgang til sin egen invitasjon.
 Regelen ligger i backend og gjelder også antallene i filtrene. Utviklere ser
 alle treff. Jobbsøkerlista og treffgjennomføringen krever eier eller utvikler.
 Med direkte lenke ser en ikke-eier vanlig forhåndsvisning og kan legge seg til
-som medeier (se WO-12). Akseptansetestene lister underressurser som fortsatt
-mangler WorkOp-eiersjekk (se «Kjente feil og uavklarte regler» i
-[akseptansetester-workop.md](../../7-akseptansetest-og-ros/akseptansetester-workop.md)).
+som medeier (se WO-12).
+
+**Status 09.10.26:** Jobbsøkerlista, jobbsøkersøket, tillegg av jobbsøkere,
+arbeidsgiverbehovet og alle gjennomføringsendepunktene krever eier eller
+utvikler i API-et. Ukjent treff, og person- eller arbeidsgiver-id fra et annet
+treff, avvises uten endring (`TreffgjennomføringKomponentTest`). Utviklere ser
+alle WorkOp, også i søket, og det er ønsket.
 
 **Restrisiko:** Personer med legitim support- eller eiertilgang kan misbruke
 tilgangen. Auditlogg og oppfølging reduserer, men fjerner ikke risikoen.
