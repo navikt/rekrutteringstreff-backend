@@ -1427,6 +1427,132 @@ class TreffgjennomføringKomponentTest {
         assertThat(ctx.jobbsøkerService.hentJobbsøkere(andreTreff)).hasSize(1)
     }
 
+    @Test
+    fun `ukjent treff avvises for alle skriveoperasjoner i gjennomføringen`() {
+        val ukjent = TreffId(UUID.randomUUID())
+        val person = UUID.randomUUID().toString()
+        val ag = UUID.randomUUID().toString()
+        val kall = listOf(
+            "/treffgjennomforing/oppmote" to """{"personTreffId":"$person","møtt":true}""",
+            "/treffgjennomforing/romfordeling/$person" to """{"romnummer":1}""",
+            "/treffgjennomforing/interesse" to """{"personTreffId":"$person","arbeidsgiverTreffId":"$ag","interessert":true}""",
+            "/treffgjennomforing/intervjufordeling" to """{"arbeidsgiverTreffId":"$ag","inkludertePersonTreffIder":["$person"]}""",
+            "/oppfolging/vurderinger" to """{"personTreffId":"$person","arbeidsgiverTreffId":"$ag","vurderingsstatus":"AKTUELL"}""",
+        )
+
+        kall.forEach { (sti, body) ->
+            val respons = send(
+                HttpRequest.newBuilder().PUT(HttpRequest.BodyPublishers.ofString(body)),
+                "/api/rekrutteringstreff/${ukjent.somString}$sti",
+                eier,
+                listOf(arbeidsgiverrettet, utvikler),
+            )
+            assertThat(respons.statusCode()).withFailMessage("$sti ga ${respons.statusCode()}").isEqualTo(404)
+        }
+        assertThat(antallTreffgjennomføringsrader()).isZero()
+    }
+
+    @Test
+    fun `person og arbeidsgiver fra et annet treff avvises uten endring i noen av treffene`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff, "11111111111")
+        val ag = aktivArbeidsgiver(treff)
+        val annet = workOpTreff(antallArbeidsgivere = 2)
+        val annenPerson = jobbsøker(annet, "22222222222")
+        val annenAg = aktivArbeidsgiver(annet)
+        listOf(treff to person, annet to annenPerson).forEach { (t, p) -> oppmøte(t, p, møtt = true) }
+        listOf(treff, annet).forEach { møteoppsett(it) }
+        val førTreff = aggregat(treff)
+        val førAnnet = aggregat(annet)
+        val hendelserFør = antallJobbsøkerhendelser(treff) to antallJobbsøkerhendelser(annet)
+
+        val svar = listOf(
+            oppmøte(treff, annenPerson, møtt = false),
+            flyttTilRom(treff, annenPerson, 2),
+            interesse(treff, annenPerson, ag, interessert = true),
+            interesse(treff, person, annenAg, interessert = true),
+            intervjufordeling(treff, annenAg),
+            intervjufordeling(treff, ag, inkluderte = listOf(annenPerson)),
+            vurderingFor(treff, annenPerson, ag, ""","vurderingsstatus":"AKTUELL""""),
+            vurderingFor(treff, person, annenAg, ""","vurderingsstatus":"AKTUELL""""),
+        )
+
+        assertThat(svar.map { it.statusCode() }).containsOnly(400)
+        assertThat(aggregat(treff)).isEqualTo(førTreff)
+        assertThat(aggregat(annet)).isEqualTo(førAnnet)
+        assertThat(antallJobbsøkerhendelser(treff) to antallJobbsøkerhendelser(annet)).isEqualTo(hendelserFør)
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(
+        strings = [
+            ""","vurderingsnotat":["AG_GODT_INNTRYKK","FINNES_IKKE"]""",
+            ""","avtaltIntervju":true,"avtaltIntervjuDato":"2026-02-30"""",
+            ""","avtaltIntervju":true,"avtaltIntervjuDato":"01.09.2026"""",
+            ""","avtaltIntervju":false,"avtaltIntervjuDato":"2026-09-01"""",
+        ]
+    )
+    fun `ugyldig vurdering avvises uten delvis lagring`(ugyldigeFelter: String) {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        val hendelserFør = antallJobbsøkerhendelser(treff)
+
+        val felter = ""","vurderingsstatus":"AKTUELL","jobbtilbud":true$ugyldigeFelter"""
+        assertThat(vurderingFor(treff, person, ag, felter).statusCode()).isEqualTo(400)
+
+        assertThat(aggregat(treff)["vurderinger"]).isEmpty()
+        assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(hendelserFør)
+    }
+
+    @Test
+    fun `identisk vurdering sendt på nytt gir ingen nye hendelser`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        val felter = """
+            ,"vurderingsstatus":"AKTUELL","vurderingsnotat":["AG_GODT_INNTRYKK"],
+            "avtaltIntervju":true,"avtaltIntervjuDato":"2026-09-01","jobbtilbud":true
+        """.trimIndent()
+        assertThat(vurderingFor(treff, person, ag, felter).statusCode()).isEqualTo(200)
+        val hendelserFør = antallJobbsøkerhendelser(treff)
+
+        assertThat(vurderingFor(treff, person, ag, felter).statusCode()).isEqualTo(200)
+
+        assertThat(aggregat(treff)["vurderinger"]).hasSize(1)
+        assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(hendelserFør)
+    }
+
+    @Test
+    fun `slettet jobbsøker kan ikke endres eller slettes på nytt via gamle id-er`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val ag = aktivArbeidsgiver(treff)
+        val fremmøtt = jobbsøker(treff, "11111111111")
+        val slettet = jobbsøker(treff, "22222222222")
+        oppmøte(treff, fremmøtt, møtt = true)
+        møteoppsett(treff)
+        interesse(treff, fremmøtt, ag, interessert = true)
+        assertThat(slettJobbsøker(treff, slettet).statusCode()).isEqualTo(200)
+        val før = aggregat(treff)
+        val hendelserFør = db.hentJobbsøkerHendelser(treff).size
+
+        val svar = mapOf(
+            "oppmøte" to oppmøte(treff, slettet, møtt = true),
+            "rom" to flyttTilRom(treff, slettet, 2),
+            "interesse" to interesse(treff, slettet, ag, interessert = true),
+            "intervjufordeling" to intervjufordeling(treff, ag, inkluderte = listOf(fremmøtt, slettet)),
+            "vurdering" to vurderingFor(treff, slettet, ag, ""","vurderingsstatus":"AKTUELL""""),
+            "ny sletting" to slettJobbsøker(treff, slettet),
+        ).mapValues { it.value.statusCode() }
+
+        assertThat(svar.filterValues { it in 200..299 }).isEmpty()
+        assertThat(aggregat(treff)).isEqualTo(før)
+        assertThat(db.hentJobbsøkerHendelser(treff).size).isEqualTo(hendelserFør)
+        assertThat(ctx.jobbsøkerService.hentJobbsøkere(treff).map { it.personTreffId }).containsExactly(fremmøtt)
+    }
+
     // --- hjelpere -------------------------------------------------------------
 
     private fun slettJobbsøker(treff: TreffId, person: PersonTreffId): HttpResponse<String> = send(

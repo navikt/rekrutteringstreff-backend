@@ -182,7 +182,7 @@ regel i backend, må mocken endres også.
 
 ## Kjente mangler
 
-Se «Kjente feil og uavklarte regler» i
+Se «Kjente begrensninger og avklarte regler» i
 [akseptansetester-workop.md](../7-akseptansetest-og-ros/akseptansetester-workop.md).
 
 ## Bakgrunn

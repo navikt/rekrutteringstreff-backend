@@ -228,6 +228,8 @@ Fjern låsen midlertidig og kontroller at testen da feiler. Slik sjekker du at t
 
 Vi tester mekanismen i `TransaksjonTest`, ikke hver operasjon som bruker den. Lag en ny samtidighetstest bare når du innfører en ny type lås eller låserekkefølge. Skal du teste en sjekk som gjøres på nytt etter et eksternt kall, kan du gjøre endringen inne i mocken av det eksterne kallet. Da trenger du verken tråder eller låser i testen.
 
+Samtidighetsscenarioene i akseptansetesten for WorkOp (13.3) står i `TreffgjennomføringTransaksjonTest`, på samme måte som `AktivitetskortTransaksjonTest` har sine. De viser at den som får trefflåsen sist, bygger på det som ble lagret først: romflytting, vurdering på ulike par, oppmøtefjerning mot ny interesse, arbeidsgiversletting mot ny interesse og jobbsøkersletting mot oppmøte. Der står også to tester for databasefeil midt i en sammensatt lagring (14.1.11). En trigger får en `INSERT` til å feile, og testen kontrollerer at hele operasjonen er rullet tilbake.
+
 🔴 Rød sone: samtidighet, isolasjonsnivå og låserekkefølge. Den som endrer låsingen, bør skrive samtidighetstesten selv.
 
 ## Bekreftet mot PostgreSQL
