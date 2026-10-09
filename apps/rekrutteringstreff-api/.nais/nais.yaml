@@ -115,6 +115,8 @@ spec:
       value: {{kandidat_api_url}}
     - name: KANDIDAT_API_SCOPE
       value: {{kandidat_api_scope}}
+    - name: WORKOP_PILOTKONTORER
+      value: {{workop_pilotkontorer}}
   observability:
     autoInstrumentation:
       enabled: true

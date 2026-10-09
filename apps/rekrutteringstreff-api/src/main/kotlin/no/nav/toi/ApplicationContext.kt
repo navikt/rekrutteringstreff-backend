@@ -42,6 +42,7 @@ import no.nav.toi.oppfølging.OppfølgingService
 import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.jobbsoker.oppmøte.OppmøteService
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.WorkOpPilottilgang
 import no.nav.toi.treffgjennomføring.StegRepository
 import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
 import no.nav.toi.treffgjennomføring.matching.MatchingRepository
@@ -108,6 +109,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         treffkontekstRepository, møteplanRepository, møteplansynk, registreringerRepository,
     )
     val eierService = EierService(eierRepository, rekrutteringstreffRepository, infra.dataSource)
+    val workOpPilottilgang = WorkOpPilottilgang(infra.workOpPilotkontorer)
     val rekrutteringstreffService = RekrutteringstreffService(
         infra.dataSource,
         rekrutteringstreffRepository,
@@ -164,14 +166,14 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     )
 
     val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService, rekrutteringstreffService)
-    val rekrutteringstreffController = RekrutteringstreffController(rekrutteringstreffService, eierService, kiLoggService)
+    val rekrutteringstreffController = RekrutteringstreffController(rekrutteringstreffService, eierService, kiLoggService, workOpPilottilgang)
     val eierController = EierController(eierService)
     val jobbsøkerController = JobbsøkerController(jobbsøkerService, eierService, infra.modiaKlient, rekrutteringstreffService)
     val jobbsøkerInnloggetBorgerController = JobbsøkerInnloggetBorgerController(jobbsøkerService)
     val jobbsøkerOutboundController = JobbsøkerOutboundController(jobbsøkerRepository, infra.kandidatsøkKlient, eierService)
     val innleggController = InnleggController(innleggService, kiLoggService, eierService)
     val kiController = KiController(kiLoggRepository, openAiService)
-    val sokController = RekrutteringstreffSokController(sokService)
+    val sokController = RekrutteringstreffSokController(sokService, workOpPilottilgang)
     val healthController = HealthController(healthRepository)
     val formidlingController = FormidlingController(formidlingService, eierService, infra.modiaKlient)
     val statistikkController = StatistikkController(statistikkService)

@@ -12,7 +12,7 @@ import javax.sql.DataSource
 
 class TestInfrastructureContext(
     override val dataSource: DataSource,
-    override val pilotkontorer: List<String> = listOf("1234"),
+    override val workOpPilotkontorer: List<String> = listOf("1234"),
     modiaKlient: ModiaKlient? = null,
     modiaKlientUrl: String = "",
     kandidatsøkKlient: KandidatsøkKlient? = null,

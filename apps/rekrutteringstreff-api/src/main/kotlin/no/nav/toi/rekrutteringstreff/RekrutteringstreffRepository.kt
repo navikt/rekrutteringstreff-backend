@@ -190,6 +190,17 @@ class RekrutteringstreffRepository(
             s.executeQuery().use { rs -> if (rs.next()) rs.tilRekrutteringstreff() else null }
         }
 
+
+    fun hentKategori(treff: TreffId): RekrutteringstreffKategori? =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT kategori FROM $tabellnavn WHERE $id = ?").use { s ->
+                s.setObject(1, treff.somUuid)
+                s.executeQuery().use { rs ->
+                    if (rs.next()) RekrutteringstreffKategori.valueOf(rs.getString(1)) else null
+                }
+            }
+        }
+
     /**
      * Liste over hendelser for gitt treffId – nyeste først
      */

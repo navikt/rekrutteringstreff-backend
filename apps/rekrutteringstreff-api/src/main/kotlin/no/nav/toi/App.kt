@@ -8,6 +8,7 @@ import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.ExceptionMapping.exceptionMapping
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.leggTilWorkOpPilotkontorsjekk
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
@@ -45,6 +46,10 @@ class App(
                     authConfigs = ctx.authConfigs,
                     rolleUuidSpesifikasjon = ctx.rolleUuidSpesifikasjon,
                     modiaKlient = ctx.modiaKlient,
+                )
+                leggTilWorkOpPilotkontorsjekk(
+                    workOpPilottilgang = ctx.workOpPilottilgang,
+                    rekrutteringstreffRepository = ctx.rekrutteringstreffRepository,
                 )
 
                 registrer(ctx.sokController)

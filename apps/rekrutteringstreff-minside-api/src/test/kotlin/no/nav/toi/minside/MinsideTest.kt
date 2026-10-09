@@ -88,7 +88,7 @@ class MinsideTest {
                     modiaGenerell = UUID.randomUUID(),
                     modiaOppfølging = UUID.randomUUID()
                 )
-                override val pilotkontorer = emptyList<String>()
+                override val workOpPilotkontorer = emptyList<String>()
                 override val leaderElection = LeaderElectionMock()
                 override val accessTokenClient = Companion.accessTokenClient
                 override val httpClient = Companion.httpClient

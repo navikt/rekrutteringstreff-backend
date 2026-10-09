@@ -18,6 +18,7 @@ class RekrutteringstreffSokService(
         navIdent: String,
         kontorId: String?,
         erUtvikler: Boolean = false,
+        harWorkOpPilottilgang: Boolean = false,
     ): RekrutteringstreffSokRespons {
         val startTidNanos = System.nanoTime()
         val resultat = repository.sokMedAggregering(
@@ -35,6 +36,7 @@ class RekrutteringstreffSokService(
             side = request.side,
             antallPerSide = request.antallPerSide,
             erUtvikler = erUtvikler,
+            harWorkOpPilottilgang = harWorkOpPilottilgang,
         )
 
         val respons = RekrutteringstreffSokRespons(

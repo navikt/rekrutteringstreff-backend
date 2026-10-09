@@ -29,6 +29,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         side: Int,
         antallPerSide: Int,
         erUtvikler: Boolean = false,
+        harWorkOpPilottilgang: Boolean = false,
     ): SokMedAggregeringResultat {
         val (whereForKategoriAggregering, paramsForKategoriAggregering) = byggWhere(
             navIdent = navIdent,
@@ -42,6 +43,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
+            harWorkOpPilottilgang = harWorkOpPilottilgang,
         )
         val (whereForStatusaggregering, paramsForStatusaggregering) = byggWhere(
             navIdent = navIdent,
@@ -55,6 +57,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
+            harWorkOpPilottilgang = harWorkOpPilottilgang,
         )
 
         val (whereForFylkesnummerAggregering, paramsForFylkesnummerAggregering) = byggWhere(
@@ -69,6 +72,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
+            harWorkOpPilottilgang = harWorkOpPilottilgang,
         )
 
         val (whereForKommunenummerAggregering, paramsForKommunenummerAggregering) = byggWhere(
@@ -83,6 +87,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
+            harWorkOpPilottilgang = harWorkOpPilottilgang,
         )
 
         val (whereForTreffliste, paramsForTreffliste) = byggWhere(
@@ -97,6 +102,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
+            harWorkOpPilottilgang = harWorkOpPilottilgang,
         )
 
         return dataSource.connection.use { conn ->
@@ -327,11 +333,12 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         fritekst: List<String>?,
         visning: Visning,
         erUtvikler: Boolean = false,
+        harWorkOpPilottilgang: Boolean = false,
     ): Pair<String, List<SqlParam>> {
         val conditions = listOfNotNull(
             byggVisningsCondition(visning, navIdent, kontorId),
             byggUtkastSynlighetCondition(navIdent),
-            byggWorkOpSynlighetCondition(navIdent, erUtvikler),
+            byggWorkOpSynlighetCondition(navIdent, erUtvikler, harWorkOpPilottilgang),
             byggKategoriCondition(kategorier),
             byggStatusCondition(statuser, publisertStatuser),
             byggKontorCondition(kontorer),
@@ -374,8 +381,9 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         )
     }
 
-    private fun byggWorkOpSynlighetCondition(navIdent: String?, erUtvikler: Boolean): Condition? {
+    private fun byggWorkOpSynlighetCondition(navIdent: String?, erUtvikler: Boolean, harWorkOpPilottilgang: Boolean): Condition? {
         if (erUtvikler) return null
+        if (!harWorkOpPilottilgang) return Condition(clause = "kategori <> 'WORKOP'", params = emptyList())
         return Condition(
             clause = "(kategori <> 'WORKOP' OR ? = ANY(eiere))",
             params = listOf(SqlParam(navIdent ?: "", ParamType.STRING)),
