@@ -11,9 +11,9 @@ application {
 }
 
 val javalinVersion = "7.2.3"
-val mockOAuth2ServerVersion = "6.0.3"
-val flywayVersion = "13.8.0"
-val postgresVersion = "42.7.13"
+val mockOAuth2ServerVersion = "6.0.5"
+val flywayVersion = "13.10.0"
+val postgresVersion = "42.7.14"
 val hikariVersion = "7.1.0"
 val testContainerVersion = "2.0.5"
 val swaggerParserVersion = "2.1.48"
