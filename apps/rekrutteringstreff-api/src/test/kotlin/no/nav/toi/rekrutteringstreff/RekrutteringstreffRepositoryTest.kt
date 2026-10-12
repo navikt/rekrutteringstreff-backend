@@ -8,6 +8,7 @@ import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.dto.EierOgKontorDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within

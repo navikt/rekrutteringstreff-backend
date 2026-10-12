@@ -3,9 +3,11 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
@@ -270,13 +272,12 @@ class JobbsøkerServiceTest {
     }
 
     @Test
-    fun `markerSlettet skal returnere IKKE_FUNNET når jobbsøker ikke finnes`() {
+    fun `markerSlettet avviser jobbsøker som ikke finnes`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val ikkeEksisterendeId = PersonTreffId(UUID.randomUUID())
 
-        val resultat = jobbsøkerService.markerSlettet(ikkeEksisterendeId, treffId, "testperson")
-
-        assertThat(resultat).isEqualTo(MarkerSlettetResultat.IKKE_FUNNET)
+        assertThatThrownBy { jobbsøkerService.markerSlettet(ikkeEksisterendeId, treffId, "testperson") }
+            .isInstanceOf(JobbsøkerIkkeFunnetException::class.java)
     }
 
     @Test
@@ -341,10 +342,10 @@ class JobbsøkerServiceTest {
         jobbsøkerService.svarNeiTilInvitasjon(fnr, treffId, fnr.asString)
         assertThat(gjeldende()).isEqualTo(JobbsøkerStatus.SVART_NEI to false)
 
-        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, "testperson", true)
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, treffId, "testperson", true)
         assertThat(gjeldende()).isEqualTo(JobbsøkerStatus.SVART_JA to true)
 
-        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, "testperson", false)
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, treffId, "testperson", false)
         assertThat(gjeldende()).isEqualTo(JobbsøkerStatus.SVART_NEI to false)
 
         val jobbsøker = jobbsøkerService.hentJobbsøkere(treffId).single()

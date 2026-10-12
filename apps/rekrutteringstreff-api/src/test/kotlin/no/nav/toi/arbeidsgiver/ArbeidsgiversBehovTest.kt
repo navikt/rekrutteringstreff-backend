@@ -11,6 +11,7 @@ import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutbou
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverMedBehovDto
 import no.nav.toi.arbeidsgiver.dto.BehovMetadataDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*

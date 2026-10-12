@@ -1,165 +1,164 @@
 # Låsing og samtidighet
 
-**Status:** Strategien er et forslag. Deler av den er innført i `refactor-status` (se «Gjort i refactor-status»). Vurderingen gjelder koden per 07.10.2026.
-
-Dokumentet beskriver hvordan skrivende operasjoner bør låse rader i PostgreSQL. Det vurderer også dagens kode opp mot strategien. Les [Database](../2-arkitektur/database.md) for skjema og [Jobbsøkerstatus](jobbsoker-statuser.md) for statusreglene som låsene beskytter.
+**Status:** Arbeidsdokument. Strategien står i [Transaksjoner og låsing](../2-arkitektur/transaksjoner.md). Her vurderer vi koden opp mot strategien og samler det som ikke er avklart. Når de fire forretningsreglene under «Åpne spørsmål» er avklart, sletter vi dokumentet.
 
 ## Kort fortalt
 
-- Treffgjennomføring og arbeidsgivere følger strategien gjennom `medLåstTreff`.
-- Statusskrivinger på jobbsøkere (svar, invitasjon, fått jobb, oppmøte) kjører nå med `READ COMMITTED` og låser jobbsøkeren før validering.
-- Aktuell-status og eierlåsene kjører fortsatt under `REPEATABLE READ`. Der gir samtidige kall trolig HTTP 500 i stedet for å vente og fortsette. De fleste testene fanger ikke det, fordi testdatabasen kjører `READ COMMITTED`.
-- Fem ulike låsemønstre gjør det vanskelig å se hvor koden låser. `hentStatus` låser uten at navnet sier det.
+- Koden i branchen `fiks-transaksjonslåsing` følger strategien per 08.10.2026.
+- Publiser, avpubliser, gjenåpne, slett treff, oppdater treff, registrer endring, legg til jobbsøkere, endre behov og lagring av formidlinger låste ikke før denne branchen.
+- `låsJobbsøkere` sjekker at jobbsøkerne hører til treffet i stien. Invitasjon og svar på vegne av jobbsøker gir derfor 404 for en jobbsøker fra et annet treff, og skriver ingenting.
+- Fire forretningsregler er ikke avklart. Til vi har bestemt oss, følger koden reglene slik de er i dag.
 
-## Strategi
+## Vurdering av koden
 
-### 1. Lås først, valider etterpå
+✅ følger strategien. ⚠️ en kjent svakhet eller en forretningsregel som ikke er avklart. Alle skrivinger kjører `READ COMMITTED`.
 
-Ta låsen før du leser verdiene du bestemmer ut fra: status, synlighet, svar, registreringer. En sjekk før låsen kan være utdatert når låsen er tatt.
+### Treffet
 
-### 2. Bare låsefunksjoner låser
+| Operasjon | Lås | Sjekker under lås | Vurdering |
+| --- | --- | --- | --- |
+| Opprett treff | Ingen | Ikke relevant | ✅ Nye rader som ingen andre skriver til ennå. |
+| Publiser og gjenåpne | `medLåstTreff` | Status | ✅ |
+| Avlys og fullfør | `medLåstTreff`, så `låsAlleJobbsøkerePåTreff` i `avsluttTreff` | Status. Fullfør sjekker også sluttidspunktet. | ✅ |
+| Fullfør fra `RekrutteringstreffScheduler` | Som fullfør | Som fullfør | ✅ Feiler ett treff, fortsetter kjøringen med de andre. |
+| Avpubliser | `medLåstTreff` | Ingen statussjekk | ⚠️ Kan sette et avlyst eller fullført treff tilbake til utkast. Se åpent spørsmål 1. |
+| Slett treff (`markerSlettet`) | `medLåstTreff` | Status `UTKAST` og ingen jobbsøkere. Leser arbeidsgiverne på samme tilkobling. | ✅ |
+| Oppdater treff | `medLåstTreff` | Ingen statussjekk | ⚠️ Kan endre et avlyst eller fullført treff. Se åpent spørsmål 2. |
+| Registrer endring (`registrerEndring`) | `medLåstTreff`, så `låsAlleJobbsøkerePåTreff` | Status `PUBLISERT`. Velger hendelser ut fra jobbsøkerstatus. | ✅ |
+| Eiere: legg til og slett (`EierService`) | `medLåstTreff` | Eierne og regelen om siste eier | ✅ |
+| Innlegg og KI-logg | Ingen | Ikke relevant | ✅ FK-sjekken ved nye rader venter ikke på trefflåsen (forsøk 3 i [transaksjoner.md](../2-arkitektur/transaksjoner.md#bekreftet-mot-postgresql)). |
 
-`FOR UPDATE` står bare i låsefunksjonene. Repository-funksjoner som leser, låser aldri. Da ser du låsingen i servicekoden, og ingen lesing tar en lås som ikke var tiltenkt.
+### Jobbsøkere
 
-| Låsefunksjon | Låser | Finnes i dag |
-| --- | --- | --- |
-| `medLåstTreff` / `Connection.låsTreff` | Treffraden | Ja, `treffLås.kt` |
-| `medLåstJobbsøker` / `Connection.låsJobbsøker` | Én jobbsøkerrad | Nei, bare `JobbsøkerRepository.låsJobbsøker` uten transaksjon |
-| `Connection.låsJobbsøkere` | Flere jobbsøkerrader, sortert på id | Nei |
+| Operasjon | Lås | Sjekker under lås | Vurdering |
+| --- | --- | --- | --- |
+| Legg til jobbsøkere (`leggTilJobbsøkere`) | `medLåstTreff` etter kandidatsøk | Eksisterende og slettede jobbsøkere | ✅ Sjekker ikke treffstatus. Se åpent spørsmål 4. |
+| Invitasjon (`inviter`) | `medLåsteJobbsøkere` for hele lista | Synlighet og status | ✅ Sjekker ikke treffstatus. Se åpent spørsmål 3. |
+| Svar fra jobbsøker | Slår opp jobbsøkeren på fødselsnummer, så `medLåsteJobbsøkere` | Synlighet, slettet og gjeldende svar | ✅ Sjekker ikke treffstatus. Se åpent spørsmål 3. |
+| Svar på vegne av jobbsøker | `medLåsteJobbsøkere` med treffet fra stien | Synlighet, slettet og gjeldende svar | ✅ Som svar fra jobbsøker. |
+| Fått jobb og angring (`registrerFåttJobb` og `angreFåttJobb`) | Kalleren låser med `medLåsteJobbsøkere` | Status | ✅ |
+| Oppmøte (`OppmøteService`) | `medLåstTreff` gjennom `TreffgjennomføringWriter.skriv`, så `låsJobbsøkere` | Gjeldende oppmøte og registreringer | ✅ |
+| Slett jobbsøker (`markerSlettet`) | `medLåstTreff`, så `låsJobbsøkere` | Status `LAGT_TIL` og ingen registreringer | ✅ |
+| Aktuell-status (`endreAktuellForTreffStatus`) | `medLåsteJobbsøkere` | Gjeldende aktuell-status | ✅ |
+| Synlighet fra Kafka (`oppdaterSynlighetFraEvent` og `oppdaterSynlighetFraNeed`) | Ingen. Regelen står i `WHERE`. | I `UPDATE` | ✅ Venter på låser på samme jobbsøker i stedet for å feile med `40001`. |
+| Hendelser fra Kafka som ikke endrer status (`registrerAktivitetskortOpprettelseFeilet` og `registrerMinsideVarselSvar`) | Ingen | Ikke relevant | ✅ |
+| `JobbsøkerhendelserScheduler` | Ingen | Ikke relevant | ✅ Skriver bare egne pollingrader. |
 
-### 3. Skrivinger med lås kjører `READ COMMITTED`
+### Arbeidsgivere, formidling og treffgjennomføring
 
-Poolen har `REPEATABLE READ` som standard. Under `REPEATABLE READ` tar transaksjonen et øyeblikksbilde ved første spørring. Venter transaksjonen på en lås, og den andre transaksjonen endrer eller sletter raden før commit, avbryter PostgreSQL med `40001 could not serialize access due to concurrent update`. Det samme gjelder `INSERT ... ON CONFLICT DO UPDATE` mot en rad som en annen transaksjon nettopp har lagt inn. Se [PostgreSQL 13.2.2](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-REPEATABLE-READ).
+| Operasjon | Lås | Sjekker under lås | Vurdering |
+| --- | --- | --- | --- |
+| Treffgjennomføring (`TreffgjennomføringWriter.skriv`): steg, møteoppsett, rom, interesse, intervjufordeling og vurdering | `medLåstTreff` | Treffkonteksten (`krevKontekst`) | ✅ |
+| Arbeidsgiver: legg til, legg til med behov og slett | `medLåstTreff` | Slettet arbeidsgiver som kan reaktiveres, siste arbeidsgiver og registreringer | ✅ |
+| Endre behov (`oppdaterBehov`) | `medLåstTreff` | At arbeidsgiveren ikke er slettet, i upsert-SQL-en | ✅ |
+| Opprett formidling: lagring (`lagreFormidlinger`) | `medLåstTreff`, så `låsJobbsøkere` | Samme arbeidsgiverrad, at de låste jobbsøkerradene finnes og ikke er slettet, adressebeskyttelse og eksisterende formidlinger | ⚠️ Låsingen er riktig. Ved dobbel innsending blir stillingen fra innsendingen som får låsen sist, liggende ubrukt. |
+| Opprett formidling: fått jobb | `medLåsteJobbsøkere`, så `registrerFåttJobb` | Status | ✅ |
+| Slett formidling | `medLåsteJobbsøkere`, så `angreFåttJobb` | Status | ✅ |
 
-Under `READ COMMITTED` får hver spørring et nytt øyeblikksbilde. Etter at låsen er tatt, ser neste spørring det den andre transaksjonen lagret. Det er dette `medLåstTreff` bygger på.
+## Lesbarhet
 
-Isolasjonsnivået må settes før første spørring i transaksjonen. Den som starter transaksjonen, må derfor velge nivået. Låsefunksjonen kan ikke gjøre det. Derfor er strategien å bruke wrappere (`medLåstTreff`, `medLåstJobbsøker`) som både starter transaksjonen og tar låsen.
+Alle låsene står i `låsing.kt`, og ingen lesefunksjoner låser. To ting gjenstår:
 
-Lesende GET-kall beholder `REPEATABLE READ`, slik at én respons ser ett konsistent øyeblikksbilde.
+- `EierService`, `FormidlingService.slett` og `RekrutteringstreffRepository` kaster fortsatt Javalins `NotFoundResponse` og `BadRequestResponse`. [Prinsippene](../2-arkitektur/prinsipper.md) sier at vi skal bruke unntak som `ExceptionMapping` håndterer. Vi lot dem stå for ikke å endre HTTP-svarene i denne branchen. «Kan ikke slette siste eier» har heller ikke et domeneunntak som gir 400.
+- `JobbsøkerSokRepository`, `JobbsøkerFormidlingSokRepository` og `RekrutteringstreffSokRepository` starter egne lesetransaksjoner, siden søket teller, aggregerer og henter én side i samme øyeblikksbilde. Dette er nå en uttrykt regel i [transaksjoner.md](../2-arkitektur/transaksjoner.md#hvor-transaksjonen-startes). `FormidlingRepository.hentMedWhere` kjører bare én spørring og bruker derfor autocommit.
 
-Alternativet er å beholde `REPEATABLE READ` og prøve på nytt ved `40001`. Det krever at hele transaksjonen kan kjøres på nytt uten bivirkninger. Det gjelder ikke når det skjer HTTP-kall før transaksjonen, som i `FormidlingService`. Vi velger derfor `READ COMMITTED`.
+## Tester
 
-### 4. Fast låserekkefølge
+`TestDatabase` og produksjon bruker samme isolasjonsnivå, og ingen tester overstyrer det.
 
-1. Treff
-2. Jobbsøkere, sortert på `id`
-3. Andre rader (eiere, formidlinger, rom)
+`TransaksjonTest` tester mekanismen, ikke hver operasjon som bruker den:
 
-Lås aldri i motsatt rekkefølge. Skal du låse flere jobbsøkere, gjør du det i én spørring:
+- at bare `låsing.kt` låser rader
+- at en transaksjon inne i en annen stoppes
+- at en `Error` i blokken gir rollback og slipper låsen
+- at `medLåstTreff` og `medLåsteJobbsøkere` venter på låsen og ser endringen som ble lagret mens de ventet
+- at oppmøte låser jobbsøkeren i tillegg til treffet, siden svar bare låser jobbsøkeren
+- at avlys låser alle jobbsøkerne før den velger hendelse ut fra statusen. Fullfør bruker den samme koden.
+- at oppmøte teller deltakernummer under trefflåsen
+- at to samtidige eierslettinger ikke fjerner begge eierne
 
-```sql
-SELECT 1 FROM jobbsoker WHERE id = ANY(?) ORDER BY id FOR UPDATE
-```
+For alle testene som venter på en lås, har vi fjernet låsen og sett at testen feiler. Alle bruker `medVentendeOperasjon`, så de er deterministiske og trenger ikke flere runder.
 
-To transaksjoner som låser de samme radene i ulik rekkefølge, kan låse hverandre fast. PostgreSQL bryter da den ene med `40P01 deadlock detected`.
+Vi lager ikke en samtidighetstest for hver operasjon som bruker låsene. Samtidighetstestene som fantes før branchen, er enten skrevet om til testene over eller slettet, fordi testene over dekker det samme. Det gjelder `JobbsøkerstatusSamtidighetTest` og samtidighetstestene i `TreffgjennomføringKomponentTest`, `EierRepositoryTest`, `InvitasjonFeilhåndteringTest`, `JobbsøkerInnloggetBorgerTest` og `OppmøteServiceTest`.
 
-### 5. Velg treff- eller jobbsøkerlås ut fra hva som endres
+`bare låsefila låser rader` leser kildekoden under `src/main/kotlin`. Den feiler hvis `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE` eller `FOR KEY SHARE` står i en annen fil enn `låsing.kt`.
 
-- **Trefflås** når operasjonen endrer tilstand som deles på treffet: rom, deltakernummer, arbeidsgivere, eiere, eller flere jobbsøkere samtidig.
-- **Jobbsøkerlås** når operasjonen bare gjelder én person: svar, fått jobb, aktuell-status.
+`FormidlingServiceTest` sjekker sjekkene som gjøres på nytt under låsen, uten tråder. Testene endrer databasen inne i mocken av stilling-API-et, altså mellom første sjekk og lagringen:
 
-Trefflåsen setter alle skrivinger på treffet i kø. Det er enkelt og trygt, men gir mer venting. Med få samtidige brukere per treff er ventetiden lav. Jobbsøkerlåsen gir mer samtidighet, men da må låserekkefølgen følges.
+- en uferdig formidling fra en annen innsending blir fullført
+- en arbeidsgiverrad som er byttet ut med en annen rad med samme orgnr, blir avvist
+- en slettet jobbsøkerrad blir avvist, også når en annen rad har samme fødselsnummer
 
-### 6. Bevis på lås i signaturen
+`JobbsøkerTest` sjekker at invitasjon og svar på vegne av jobbsøker gir 404 for en jobbsøker fra et annet treff, og ikke skriver noe.
 
-Funksjoner som krever lås, tar et bevis som parameter i stedet for en `Connection`:
+`RekrutteringstreffSchedulerTest` sjekker at et treff som feiler, ikke stopper fullføringen av de andre treffene.
 
-```kotlin
-class LåstJobbsøker internal constructor(
-    val connection: Connection,
-    val personTreffId: PersonTreffId,
-)
+## Innført i #229
 
-fun <T> DataSource.medLåstJobbsøker(personTreffId: PersonTreffId, block: (LåstJobbsøker) -> T): T =
-    executeInTransaction(transactionIsolation = Connection.TRANSACTION_READ_COMMITTED) { connection ->
-        block(connection.låsJobbsøker(personTreffId))
-    }
+Dette kom før `fiks-transaksjonslåsing`. Noe av det er endret siden, se neste avsnitt.
 
-fun registrerFåttJobb(låst: LåstJobbsøker, navIdent: String) { ... }
-```
+- `executeInLockingTransaction` kjørte `READ COMMITTED`. `medLåstTreff`, svar, invitasjon og formidling brukte den.
+- Svar og invitasjon låser jobbsøkeren før de sjekker synlighet og status.
+- `inviter` låser jobbsøkerne i fast rekkefølge.
+- Oppmøte låser jobbsøkeren etter treffet.
+- Avlys og fullfør låser treffet og alle jobbsøkerne, og validerer under lås.
+- `JobbsøkerstatusSamtidighetTest` kjørte med `REPEATABLE READ`, som produksjon gjorde da. Klassen er slettet i `fiks-transaksjonslåsing`, se «Tester».
 
-Kompilatoren stopper et kall uten lås, og funksjonen trenger ikke låse på nytt. Prisen er en ekstra type og endrede signaturer. Innfør dette etter at punkt 1 til 5 er på plass.
+## Endret i `fiks-transaksjonslåsing`
 
-### 7. Ingen eksterne kall under lås
+Steg 1 til 3 under «Tiltak» er gjort. Dette endrer oppførselen:
 
-HTTP-kall og Kafka-sending skjer før eller etter transaksjonen med lås. `FormidlingService` gjør dette riktig: den kaller stilling- og kandidatliste-API-et først, og sjekker jobbsøkeren på nytt under lås.
+- Invitasjon og svar på vegne av jobbsøker gir 404 og skriver ingenting når jobbsøkeren hører til et annet treff. Er én slik jobbsøker med i en invitasjon, blir ingen invitert.
+- Registrer endring på et treff som ikke er publisert, gir 409 i stedet for 400. Sjekken ligger i servicen.
+- Lagring av formidling sjekker arbeidsgiveren og jobbsøkerne på nytt under låsen. Den sjekker de samme radene som ble valgt før stillingen ble opprettet, ikke bare orgnr og fødselsnummer, siden det kan finnes flere rader med samme verdi på et treff. Feiler sjekken, gir den samme feilkode som når den feiler før stillingen opprettes. En jobbsøker som blir slettet mens stillingen opprettes, gir derfor 400 i stedet for 404.
+- Har en jobbsøker fått formidling hos arbeidsgiveren mens stillingen ble opprettet, lager lagringen ingen ny. Er utfallet allerede sendt, hopper den over formidlingen. Mangler utfallet, behandler den formidlingen videre, slik retry gjør. Da svarer ikke kallet OK på en formidling som ikke er ferdig.
+- `leggTilJobbsøkere` returnerer hvor mange som faktisk ble lagt til.
+- Låsene kaster domeneunntak. Et treff som ikke finnes, gir `RekrutteringstreffIkkeFunnetException`, også når vi legger til eller sletter eiere. Sletting av en jobbsøker som ikke finnes på treffet, gir `JobbsøkerIkkeFunnetException`. Begge gir 404 som før, men svaret følger nå `ProblemDetails`.
+- `RekrutteringstreffScheduler` fortsetter med neste treff når ett feiler.
+- Transaksjonshjelperne ruller også tilbake ved `Error`, for eksempel `StackOverflowError`. Før committet `autoCommit = true` i `finally` det blokken hadde rukket å skrive.
 
-### 8. Samtidighetstester bruker samme isolasjonsnivå som produksjon
+Ellers i koden:
 
-Tester av samtidige kall må bruke `REPEATABLE READ` som standard på poolen. Ellers tester de ikke det som kjører i produksjon.
+- `executeInLockingTransaction` er fjernet. Skrivinger bruker `medLåstTreff`, `medLåsteJobbsøkere` eller `executeInTransaction`, og lesetransaksjoner bruker `executeInReadOnlyTransaction`.
+- `medLåsteJobbsøkere` erstatter `executeInTransaction` med `låsJobbsøkere` på første linje. `executeInTransaction` betyr nå at transaksjonen ikke tar eksplisitt lås.
+- Transaksjonsfunksjonene kaster `IllegalStateException` hvis en transaksjon startes inne i en annen. Før ville kallet hengt hvis den indre ventet på en lås den ytre holdt. Ingen kode gjør dette i dag. `TransaksjonTest` dekker vakten.
+- `låsing.kt` erstatter `treffLås.kt` og låsene i `JobbsøkerRepository` og `EierRepository`.
+- `hentStatus`, `hentSlettestatus`, `hentAktuellForTreffStatus` (før `hentAktuellForTreffStatusForOppdatering`) og `EierRepository.hent` låser ikke lenger.
+- Avlys og fullfør validerer selv og kaller `avsluttTreff`, i stedet for å sende en `valider`-lambda.
+- `finnStatuskrevIkkeSlettetJobbsøker` heter `krevIkkeSlettetJobbsøker`, og `JobbsøkerService.låsJobbsøker` er fjernet.
+- Regelen om siste eier står bare i `EierService`. `EierService.leggTilEierMedKontor(connection, …)` er fjernet. Variantene i `EierRepository` som startet egen transaksjon, ligger nå i testkoden.
 
-## Vurdering av dagens kode
+## Åpne spørsmål
 
-✅ følger strategien. ⚠️ avvik uten feil data. ❌ avvik som trolig gir feil eller HTTP 500.
+Koden følger reglene slik de er i dag, til vi har avklart disse. Svaret på spørsmål 1, 2 og 4 gir en statussjekk under låsen vi allerede tar. Spørsmål 3 endrer også låsingen.
 
-| Operasjon | Lås | Isolasjon | Validering | Vurdering |
-| --- | --- | --- | --- | --- |
-| Treffgjennomføring (`TreffgjennomføringWriter.skriv`): rom, møteplan | `medLåstTreff` | RC | Etter lås, i `krevKontekst` | ✅ |
-| Oppmøte (`OppmøteService.oppdaterOppmøte`) | `medLåstTreff`, så `låsJobbsøker` | RC | Etter lås | ✅ |
-| Arbeidsgiver: legg til, endre behov, slett (`ArbeidsgiverService`) | `medLåstTreff` | RC | Etter lås | ✅ |
-| Slett jobbsøker (`JobbsøkerService.markerSlettet`) | `medLåstTreff`, så `hentSlettestatus` med `FOR UPDATE OF j` | RC | Etter lås | ✅ Riktig rekkefølge. ⚠️ Jobbsøkerlåsen er skjult i en lesefunksjon. |
-| Svar fra eier eller borger (`JobbsøkerService.registrerSvar`) | `låsJobbsøker`, så `hentStatus` med `FOR UPDATE` | RC | Etter lås | ✅ ⚠️ Dobbel lås. |
-| Invitasjon (`JobbsøkerService.inviter`) | `låsJobbsøker` én og én, sortert på id | RC | Etter lås | ✅ ⚠️ Dobbel lås. Én spørring for alle ville vært enklere. |
-| Fått jobb (`FormidlingService.opprettFormidling` → `registrerFåttJobb`) | `låsJobbsøker`, så `hentStatus` én gang | RC | Etter lås | ✅ ⚠️ Dobbel lås. |
-| Slett formidling (`FormidlingService.slett` → `angreFåttJobb`) | `låsJobbsøker` først | RC | Etter lås | ✅ ⚠️ `angreFåttJobb` låser på nytt gjennom `hentStatus`. |
-| Aktuell-status (`JobbsøkerService.endreAktuellForTreffStatus`) | `hentAktuellForTreffStatusForOppdatering` | RR | I samme spørring | ✅ Navnet viser låsen. ⚠️ `40001`. |
-| Eiere: legg til og slett (`EierService`) | `EierRepository.hent(forUpdate = true)`: treff, så eiere | RR | Etter lås | ✅ Riktig rekkefølge. ❌ `40001` når to kall endrer samme eierrader. ⚠️ `FOR UPDATE` også i `EierRepository.leggTil`. |
-| Synlighet fra event og need (`oppdaterSynlighetFraEvent`/`FraNeed`) | Ingen eksplisitt lås. `UPDATE` låser radene til commit. | Autocommit | Ikke relevant | ✅ Kort transaksjon. |
-| Avlys og fullfør treff (`RekrutteringstreffService.leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff`) | `medLåstTreff`, deretter alle jobbsøkerne på treffet (`låsJobbsøkereForTreff`, sortert på `id`) | RC | Treffstatus sjekkes og jobbsøkerstatus leses etter låsene. | ✅ |
+1. Fra hvilke statuser kan et treff avpubliseres? I dag fra alle. Frontend kaller ikke endepunktet. Testen `Endepunkter som kun legger til hendelse` i `RekrutteringstreffTest` avpubliserer et utkast og forventer 200.
+2. Kan et avlyst eller fullført treff oppdateres? I dag ja. Frontend viser «Rediger» bare for utkast og publiserte treff.
+3. Kan vi invitere, og kan jobbsøkere svare, når treffet ikke er publisert? I dag ja, uansett treffstatus. [Ordlista](../1-oversikt/ordliste.md) sier at jobbsøkere kan inviteres når treffet er publisert, og bruker-frontenden skjuler svarknappene når treffet er avlyst. Mange tester inviterer og svarer uten å publisere treffet først. Skal vi sjekke treffstatus, må svar og invitasjon låse treffet før jobbsøkerne (regel 5 i [Transaksjoner og låsing](../2-arkitektur/transaksjoner.md)).
+4. Kan vi legge til jobbsøkere på et avlyst eller fullført treff? I dag ja.
 
-RC er `READ COMMITTED`, RR er `REPEATABLE READ`.
+## Gjenstår
 
-### Låsemønstre i bruk
-
-| Mønster | Eksempel | Ser du låsen ved kallet? |
-| --- | --- | --- |
-| Wrapper som starter transaksjon og låser | `medLåstTreff` | Ja |
-| Egen låsemetode | `JobbsøkerRepository.låsJobbsøker` | Ja |
-| Lesing med `ForOppdatering` i navnet | `hentAktuellForTreffStatusForOppdatering` | Ja |
-| Lesing som låser uten å si det | `hentStatus`, `hentSlettestatus` | Nei |
-| Boolsk parameter | `EierRepository.hent(forUpdate = true)` | Ja, ved kallstedet |
-
-Låsene i lesefunksjonene er ikke der for ytelse. En spørring som både leser og låser, sparer én rundtur til databasen. Det viktige er at verdien beslutningen bygger på, leses under lås.
-
-### Tester
-
-`TestDatabase` bruker standardnivået til PostgreSQL, `READ COMMITTED`. Produksjonspoolen i `InfrastructureContext` bruker `REPEATABLE READ`. Bare `TreffgjennomføringKomponentTest` setter `REPEATABLE READ` selv.
-
-Disse testene viser derfor oppførselen under `READ COMMITTED`, ikke i produksjon:
-
-- `JobbsøkerInnloggetBorgerTest`: `samtidige svar ja kall håndteres konsistent`
-- `InvitasjonFeilhåndteringTest`: `samtidige invitasjoner registrerer kun én INVITERT-hendelse`
-- `EierRepositoryTest`: `samtidige tillegg av samme eier ...` og `samtidige slettinger beholder siste eier`
-
-`JobbsøkerstatusSamtidighetTest` kjører svar og oppmøte samtidig på samme person, og avlys eller fullfør samtidig med svar, med `REPEATABLE READ` på poolen, som i produksjon.
-
-### Usikkerhet
-
-Funnene om `40001` er utledet fra PostgreSQL-dokumentasjonen og kodelesing. `ExceptionMapping` gjør `SQLException` om til HTTP 500, unntatt `23503`, så en `40001` blir trolig en 500-feil. Deadlock i `inviter` er ikke kjørt.
-
-## Gjort i refactor-status
-
-- `executeInLockingTransaction` i `transactionManager.kt` kjører med `READ COMMITTED`. `medLåstTreff` bruker den.
-- Svar, invitasjon, fått jobb og sletting av formidling bruker `executeInLockingTransaction`.
-- `registrerSvar` og `inviter` låser jobbsøkeren før synlighet og status sjekkes.
-- `inviter` låser i fast rekkefølge (sortert på id).
-- `OppmøteService` låser jobbsøkeren etter treffet, så oppmøte og svar ikke skriver status samtidig.
-- `registrerFåttJobb` leser statusen én gang.
-- Avlys og fullfør låser treffet og deretter alle jobbsøkerne på treffet, sortert på `id`. Treffstatus sjekkes og jobbsøkerstatus leses etter låsene, så samtidige svar er med når hendelsen velges, og to samtidige avlysninger gir én avlysning.
-- `JobbsøkerstatusSamtidighetTest` dekker samtidig svar og oppmøte, og avlys eller fullfør samtidig med svar.
+- Unik indeks på jobbsøker `(rekrutteringstreff_id, fodselsnummer)` for rader som ikke er slettet. Låsen hindrer duplikater fra appen i dag, og indeksen stopper også feil i ny kode. Sjekk først at produksjon ikke har duplikater.
+- Ved dobbel innsending av formidling blir den ene stillingen liggende ubrukt. Det krever et reservasjonssteg før stillingen opprettes, eller et idempotent stilling-API.
+- Javalin-unntakene og lesetransaksjonene i repositoriene (se «Lesbarhet»).
+- Frontend: `/rediger` sjekker ikke treffstatus, og autolagringen er på for avlyste treff. `useRepubliser` kaller `registrerEndring` også for fullførte treff og logger bare feilen. Avklar sammen med spørsmål 2.
 
 ## Tiltak
 
-Gjør tiltakene i egen branch og i denne rekkefølgen:
+Steg 1 til 3 er gjort i `fiks-transaksjonslåsing`:
 
-1. **Bekreft funnene for resten.** Kjør testene over med `REPEATABLE READ` på poolen, slik `TreffgjennomføringKomponentTest` gjør. Forvent 500 eller feilende tester for eiere.
-2. **Innfør `medLåstJobbsøker`** som starter transaksjonen og låser. Flytt `registrerSvar`, `registrerFåttJobb`, `FormidlingService.slett` og `endreAktuellForTreffStatus` over.
-3. **Bruk `READ COMMITTED` i `EierService`** og `endreAktuellForTreffStatus`, for eksempel med `executeInLockingTransaction`.
-4. **Gjør `hentStatus` til en ren lesing.** Flytt `FOR UPDATE` til låsefunksjonene. `hentSlettestatus` og `hentAktuellForTreffStatusForOppdatering` kan bli rene lesinger etter en eksplisitt lås.
-5. **Lås alle i én spørring i `inviter`**, sortert på `id`.
-6. **La samtidighetstestene kjøre med samme isolasjonsnivå som produksjon**, for eksempel ved å sette `transactionIsolation` i `TestDatabase`.
-7. **Legg til en enkel arkitekturtest** som feiler hvis `FOR UPDATE` står utenfor låsefilene.
-8. **Vurder bevis-typen** fra punkt 6 i strategien.
-9. **Oppdater avsnittet om låsing** i [database.md](../2-arkitektur/database.md).
+1. ✅ Lås skrivingene som manglet lås.
+2. ✅ `READ COMMITTED` som standard, `executeInReadOnlyTransaction` for lesing og `FOR NO KEY UPDATE`.
+3. ✅ Lesbarhet: én låsefil, lesefunksjoner uten lås, nye navn, domeneunntak fra låsene og testen som stopper låser utenfor låsefila.
 
-🔴 Rød sone: samtidighet, isolasjonsnivå og låserekkefølge. Den som gjør endringene, bør skrive testene i tiltak 1 selv og forstå hvorfor de feiler.
+### Steg 4: Flytt strategien
+
+- ✅ Lag [transaksjoner.md](../2-arkitektur/transaksjoner.md) av strategien og forsøkene mot PostgreSQL.
+- ✅ Pek lenken i [jobbsoker-statuser.md](jobbsoker-statuser.md) til det nye dokumentet.
+- Avklar de åpne spørsmålene og legg inn statussjekkene.
+- Slett dette dokumentet.
+
+Eldre planer nevner fortsatt `FOR UPDATE` og `treffLås.kt`: [eiere-og-kontorer-egen-tabell.md](eiere-og-kontorer-egen-tabell.md) og [treffgjennomforing-domeneoppdeling.md](workop/treffgjennomforing-domeneoppdeling.md). De viser hva vi planla da, og vi lar dem stå.
+
+🔴 Rød sone: samtidighet, isolasjonsnivå og låserekkefølge. Den som endrer låsingen, bør skrive samtidighetstesten selv og se den feile uten låsen.

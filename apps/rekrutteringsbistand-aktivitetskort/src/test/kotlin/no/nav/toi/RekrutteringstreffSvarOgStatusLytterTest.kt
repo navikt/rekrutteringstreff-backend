@@ -6,6 +6,7 @@ import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.aktivitetskort.RekrutteringstreffType
+import no.nav.toi.aktivitetskort.WorkOpType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
@@ -176,6 +177,50 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         assertThat(rekrutteringstreffHendelser).hasSize(0)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
+    }
+
+    @Test
+    fun `workopSvarOgStatus med svar ja skal flytte WorkOp-kort til gjennomføres`() {
+        testWorkOpSvarOgStatus(
+            svar = true,
+            treffstatus = null,
+            forventetAktivitetsStatus = AktivitetsStatus.GJENNOMFORES,
+            forventetEndretAvType = EndretAvType.PERSONBRUKERIDENT,
+            endretAvPersonbruker = true
+        )
+    }
+
+    @Test
+    fun `workopSvarOgStatus med svar nei skal flytte WorkOp-kort til avbrutt`() {
+        testWorkOpSvarOgStatus(
+            svar = false,
+            treffstatus = null,
+            forventetAktivitetsStatus = AktivitetsStatus.AVBRUTT,
+            forventetEndretAvType = EndretAvType.PERSONBRUKERIDENT,
+            endretAvPersonbruker = true
+        )
+    }
+
+    @Test
+    fun `workopSvarOgStatus fullført for bruker som har svart ja skal flytte WorkOp-kort til fullført`() {
+        testWorkOpSvarOgStatus(
+            svar = true,
+            treffstatus = "fullført",
+            forventetAktivitetsStatus = AktivitetsStatus.FULLFORT,
+            forventetEndretAvType = EndretAvType.PERSONBRUKERIDENT,
+            endretAvPersonbruker = true
+        )
+    }
+
+    @Test
+    fun `workopSvarOgStatus avlyst for bruker som ikke har svart skal flytte WorkOp-kort til avbrutt`() {
+        testWorkOpSvarOgStatus(
+            svar = null,
+            treffstatus = "avlyst",
+            forventetAktivitetsStatus = AktivitetsStatus.AVBRUTT,
+            forventetEndretAvType = EndretAvType.NAVIDENT,
+            endretAvPersonbruker = false
+        )
     }
 
     private fun testSvar(
@@ -374,20 +419,73 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         }
     }
 
+    private fun testWorkOpSvarOgStatus(
+        svar: Boolean?,
+        treffstatus: String?,
+        forventetAktivitetsStatus: AktivitetsStatus,
+        forventetEndretAvType: EndretAvType,
+        endretAvPersonbruker: Boolean
+    ) {
+        val fnr = "01010012345"
+        val rekrutteringstreffId = UUID.randomUUID()
+        val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
+        val endretAv = if (endretAvPersonbruker) fnr else "Z123456"
+
+        repository.opprettRekrutteringstreffInvitasjon(
+            fnr,
+            rekrutteringstreffId,
+            "Test WorkOp",
+            fraTid.toLocalDate(),
+            fraTid.plusHours(2).toLocalDate(),
+            "formatertTid",
+            "testuser",
+            "Test Sted",
+            "1234",
+            "Test Poststed",
+            aktivitetskortType = WorkOpType,
+        )
+
+        rapid.sendTestMessage(
+            rapidMelding(
+                fnr = fnr,
+                rekrutteringstreffId = rekrutteringstreffId,
+                svar = svar,
+                treffstatus = treffstatus,
+                endretAv = endretAv,
+                endretAvPersonbruker = endretAvPersonbruker,
+                eventName = "workopSvarOgStatus"
+            )
+        )
+
+        val aktivitetskort = testRepository.hentAlleRekrutteringstreffInvitasjoner()
+        assertThat(aktivitetskort).hasSize(2)
+        assertThat(rapid.inspektør.size).isEqualTo(0)
+
+        aktivitetskort.sortedBy { it.opprettetTidspunkt }.apply {
+            assertThat(this[1].aktivitetskortId).isEqualTo(this[0].aktivitetskortId)
+            assertThat(this[1].aktivitetsStatus).isEqualTo(forventetAktivitetsStatus.name)
+            assertThat(this[1].aktivitetsType).isEqualTo(WorkOpType.dbType)
+            assertThat(this[1].beskrivelse).isEqualTo(WorkOpType.beskrivelse)
+            assertThat(this[1].opprettetAv).isEqualTo(endretAv)
+            assertThat(this[1].opprettetAvType).isEqualTo(forventetEndretAvType.name)
+        }
+    }
+
     private fun rapidMelding(
         fnr: String,
         rekrutteringstreffId: UUID,
         svar: Boolean?,
         treffstatus: String?,
         endretAv: String,
-        endretAvPersonbruker: Boolean
+        endretAvPersonbruker: Boolean,
+        eventName: String = "rekrutteringstreffSvarOgStatus"
     ): String {
         val svarJson = if (svar != null) """"svar": $svar,""" else ""
         val treffstatusJson = if (treffstatus != null) """"treffstatus": "$treffstatus",""" else ""
 
         return """
         {
-          "@event_name": "rekrutteringstreffSvarOgStatus",
+          "@event_name": "$eventName",
           "fnr": "$fnr",
           "rekrutteringstreffId": "$rekrutteringstreffId",
           $svarJson

@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff.sok
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
+import no.nav.toi.executeInReadOnlyTransaction
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import java.sql.Connection
@@ -105,7 +106,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             harWorkOpPilottilgang = harWorkOpPilottilgang,
         )
 
-        return dataSource.connection.use { conn ->
+        return dataSource.executeInReadOnlyTransaction { conn ->
             SokMedAggregeringResultat(
                 treff = hentTreff(conn, whereForTreffliste, paramsForTreffliste, sortering, side, antallPerSide),
                 antallTotalt = hentAntallTotalt(conn, whereForTreffliste, paramsForTreffliste),

@@ -14,6 +14,7 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -628,6 +629,61 @@ class JobbsøkerTest {
         assertThat(response.statusCode()).isEqualTo(HTTP_OK)
         val jobbsøkere = db.hentAlleJobbsøkere()
         assertThat(jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.INVITERT)
+    }
+
+    @Test
+    fun `svar på vegne av jobbsøker fra et annet treff gir 404 og skriver ingenting`() {
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
+        val mittTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        val annetTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "B654321")
+        val fremmed = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), annetTreff, Fødselsnummer("12312312312"),
+            Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.LAGT_TIL
+        )
+        db.leggTilJobbsøkere(listOf(fremmed))
+        db.inviterJobbsøkere(listOf(fremmed.personTreffId), annetTreff)
+        val hendelserFør = db.hentJobbsøkerHendelser(annetTreff)
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$mittTreff/jobbsoker/${fremmed.personTreffId}/svar",
+            """{ "personTreffId": "${fremmed.personTreffId}", "svar": true }""",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
+        assertThat(db.hentJobbsøkerHendelser(annetTreff)).isEqualTo(hendelserFør)
+        assertThat(db.hentJobbsøkerStatus(fremmed.personTreffId)).isEqualTo(JobbsøkerStatus.INVITERT)
+    }
+
+    @Test
+    fun `invitasjon med jobbsøker fra et annet treff gir 404 og inviterer ingen`() {
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
+        val mittTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        val annetTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "B654321")
+        val egen = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), mittTreff, Fødselsnummer("12312312312"),
+            Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.LAGT_TIL
+        )
+        val fremmed = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), annetTreff, Fødselsnummer("32132132132"),
+            Fornavn("Kari"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.LAGT_TIL
+        )
+        db.leggTilJobbsøkere(listOf(egen, fremmed))
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$mittTreff/jobbsoker/inviter",
+            """{ "personTreffIder": ["${egen.personTreffId}", "${fremmed.personTreffId}"] }""",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
+        assertThat(db.hentJobbsøkerHendelser(mittTreff) + db.hentJobbsøkerHendelser(annetTreff))
+            .noneMatch { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
+        assertThat(db.hentJobbsøkerStatus(egen.personTreffId)).isEqualTo(JobbsøkerStatus.LAGT_TIL)
+        assertThat(db.hentJobbsøkerStatus(fremmed.personTreffId)).isEqualTo(JobbsøkerStatus.LAGT_TIL)
     }
 
     private val testeierIdent = "A123456"

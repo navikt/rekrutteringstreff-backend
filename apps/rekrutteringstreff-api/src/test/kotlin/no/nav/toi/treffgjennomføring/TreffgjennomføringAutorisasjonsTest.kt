@@ -22,6 +22,7 @@ import no.nav.toi.lagTokenBorger
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import no.nav.toi.ubruktPortnrFra10000
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway

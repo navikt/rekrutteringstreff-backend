@@ -1,6 +1,6 @@
 package no.nav.toi.treffgjennomføring
 
-import no.nav.toi.executeInTransaction
+import no.nav.toi.executeInReadOnlyTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkereRequestDto
 import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkersideDto
@@ -16,12 +16,12 @@ class TreffgjennomføringService(
     private val jobbsøkerRepository: GjennomføringJobbsøkerRepository = GjennomføringJobbsøkerRepository(),
 ) {
 
-    fun hent(treffId: TreffId): TreffgjennomføringDto = dataSource.executeInTransaction { connection ->
+    fun hent(treffId: TreffId): TreffgjennomføringDto = dataSource.executeInReadOnlyTransaction { connection ->
         reader.les(connection, kontekstRepository.krevKontekst(connection, treffId))
     }
 
     fun hentJobbsøkere(treffId: TreffId, request: GjennomføringJobbsøkereRequestDto): GjennomføringJobbsøkersideDto =
-        dataSource.executeInTransaction { connection -> jobbsøkerRepository.hentSide(connection, treffId, request) }
+        dataSource.executeInReadOnlyTransaction { connection -> jobbsøkerRepository.hentSide(connection, treffId, request) }
 
     fun settGjeldendeSteg(treffId: TreffId, steg: TreffgjennomføringSteg): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, _, rad ->

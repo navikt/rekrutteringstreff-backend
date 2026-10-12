@@ -240,7 +240,7 @@ om de tilhører hver sin part. `Vurderingsnotat` har to prefikser:
 | Prefiks | Betydning              | Eksempler                                                       |
 | ------- | ---------------------- | --------------------------------------------------------------- |
 | `AG_`   | «Arbeidsgiveren sier»  | `AG_GODT_INNTRYKK`, `AG_MANGLER_SPRÅK`, `AG_ANDRE_PASSET_BEDRE` |
-| `JS_`   | «Jobbsøkeren sier»     | `JS_POSITIV`, `JS_REISEVEI`, `JS_HELSE_KAPASITET`               |
+| `JS_`   | «Jobbsøkeren sier»     | `JS_POSITIV`, `JS_REISEVEI`, `JS_INDIVIDUELLE_FORUTSETNINGER`   |
 
 Frontend formaliserer det samme i `notatvalg.ts` med typen `Notatpart` og
 overskriftene «Arbeidsgiveren sier» / «Jobbsøkeren sier».
@@ -270,7 +270,7 @@ fjernes. Fire grunner:
    `vurdering`-raden for det paret, aldri alene.
 2. **Personvern peker samme vei.** Flere av kodene er vurderinger av
    enkeltpersoner — `AG_MANGLER_KOMPETANSE`, `AG_MANGLER_SPRÅK` og særlig
-   `JS_HELSE_KAPASITET`, som grenser mot helseopplysning. Slikt hører hjemme i
+   `JS_INDIVIDUELLE_FORUTSETNINGER`, som kan brukes om helse. Slikt hører hjemme i
    jobbsøkerens spor, med jobbsøkerens sletteregler. Å duplisere det inn i
    `arbeidsgiver_hendelse` sprer personopplysninger til en tabell som ellers
    ikke handler om personer.

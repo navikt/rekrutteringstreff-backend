@@ -374,9 +374,10 @@ class RekrutteringstreffServiceTest {
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
         jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
-        // Publiser før avlysning
+        // Gjenåpning skriver ingen jobbsøkerhendelser, så SVART_JA_TREFF_AVLYST er fortsatt siste hendelse
         publiserTreff(treffId, navIdent)
         rekrutteringstreffService.avlys(treffId, navIdent)
+        rekrutteringstreffService.gjenåpne(treffId, navIdent)
 
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 

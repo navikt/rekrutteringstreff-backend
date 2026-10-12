@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiversBehovDto
-import no.nav.toi.executeInTransaction
 import no.nav.toi.medLåstTreff
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.RegistreringerRepository
@@ -86,10 +85,10 @@ class ArbeidsgiverService(
         behov: ArbeidsgiversBehov,
         navIdent: String,
     ): ArbeidsgiverMedBehov? {
-        val oppdatert = dataSource.executeInTransaction { connection ->
+        val oppdatert = dataSource.medLåstTreff(treffId) { connection ->
             val oppdatert = arbeidsgiverRepository.upsertBehov(connection, treffId, arbeidsgiverTreffId, behov)
             if (!oppdatert) {
-                return@executeInTransaction false
+                return@medLåstTreff false
             }
             arbeidsgiverRepository.leggTilHendelse(
                 connection,
@@ -150,6 +149,10 @@ class ArbeidsgiverService(
 
     fun hentArbeidsgiver(treffId: TreffId, orgnr: Orgnr): Arbeidsgiver? {
         return arbeidsgiverRepository.hentArbeidsgiver(treffId, orgnr)
+    }
+
+    fun hentArbeidsgiver(connection: Connection, treffId: TreffId, orgnr: Orgnr): Arbeidsgiver? {
+        return arbeidsgiverRepository.hentArbeidsgiver(connection, treffId, orgnr)
     }
 
     fun hentArbeidsgiverHendelser(treffId: TreffId): List<ArbeidsgiverHendelseMedArbeidsgiverData> {

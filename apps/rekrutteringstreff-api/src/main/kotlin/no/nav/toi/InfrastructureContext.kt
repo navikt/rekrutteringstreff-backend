@@ -35,7 +35,7 @@ open class InfrastructureContext(
             maximumPoolSize = 15
             minimumIdle = 3
             isAutoCommit = true
-            transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+            transactionIsolation = READ_COMMITTED
             initializationFailTimeout = 10_000
             connectionTimeout = 30_000
             idleTimeout = 600_000

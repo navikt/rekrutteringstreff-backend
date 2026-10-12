@@ -88,9 +88,11 @@ Service-laget er kjernen i forretningslogikken.
 **Ansvar:**
 
 - **Entry point for repository-kall**: All database-aksess går gjennom service-laget
-- **Transaksjonshåndtering**: Database-transaksjoner opprettes og håndteres her
+- **Transaksjonshåndtering**: Transaksjoner som omfatter flere repositorykall, og alle transaksjoner som låser, startes her. Se [transaksjoner.md](transaksjoner.md#hvor-transaksjonen-startes) for unntakene i repository-laget.
 - **Orkestrering**: Koordinering av kall på tvers av repositories og meldinger
 - **Forretningslogikk**: Logikk som ikke hører hjemme i database/SQL eller meldingslyttere
+
+Se [transaksjoner.md](transaksjoner.md) for isolasjonsnivå og radlåser.
 
 ### Repository-laget
 

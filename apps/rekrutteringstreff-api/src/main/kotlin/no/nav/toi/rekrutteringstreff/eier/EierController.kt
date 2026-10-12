@@ -32,7 +32,7 @@ class EierController(
 
     @OpenApi(
         summary = "Legg til deg selv som eier av et rekrutteringstreff",
-        description = "Bruker trenger ikke være eksisterende eier. Krever kontortilknytning. Oppdaterer kontor og valgfritt eiernavn. Manglende eller blankt eiernavn beholder lagret navn. Valgfritt kontorNavn brukes som subjektNavn i KONTOR_LAGT_TIL. Manglende eller blankt kontornavn bruker kontornummeret. Utføres atomisk med FOR UPDATE-lås.",
+        description = "Bruker trenger ikke være eksisterende eier. Krever kontortilknytning. Oppdaterer kontor og valgfritt eiernavn. Manglende eller blankt eiernavn beholder lagret navn. Valgfritt kontorNavn brukes som subjektNavn i KONTOR_LAGT_TIL. Manglende eller blankt kontornavn bruker kontornummeret. Utføres atomisk med lås på treffet.",
         operationId = "leggTilMegSomEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],

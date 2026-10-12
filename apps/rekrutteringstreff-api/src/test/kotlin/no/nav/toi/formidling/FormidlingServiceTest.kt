@@ -9,6 +9,7 @@ import no.nav.toi.formidling.dto.ArbeidsgiverDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.formidling.dto.StillingDto
 import no.nav.toi.executeInTransaction
+import no.nav.toi.låsJobbsøkere
 import io.mockk.every
 import io.mockk.clearMocks
 import io.mockk.mockk
@@ -29,6 +30,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
+import java.sql.Connection
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -310,6 +312,104 @@ class FormidlingServiceTest {
     }
 
     @Test
+    fun `fullfører uferdig formidling som ble lagret mens stillingen ble opprettet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
+
+        // Etterligner dobbel innsending der den andre innsendingen lagret formidlingen, men feilet før utfallet ble sendt.
+        var formidlingIdFraDenAndre = 0L
+        mensStillingenOpprettes { connection ->
+            formidlingIdFraDenAndre = formidlingRepository.opprett(
+                connection, treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId,
+            )
+        }
+
+        val opprettede = formidlingService.opprettFormidling(
+            treffId = treffId,
+            opprettFormidling = opprettFormidlingDto("123456789", "12345678901"),
+            navIdent = "testperson",
+            userToken = "test-token",
+        )
+
+        assertThat(opprettede.map { it.formidlingId }).containsExactly(formidlingIdFraDenAndre)
+        assertThat(formidlingService.hent(formidlingIdFraDenAndre)!!.utfallSendtTidspunkt).isNotNull()
+        verify(exactly = 1) {
+            kandidatKlient.leggTilPersonerPåKandidatliste(kandidatlisteId, stillingId, any(), any(), any())
+        }
+        assertThat(jobbsøkerService.hentJobbsøkere(treffId).single().status).isEqualTo(JobbsøkerStatus.FÅTT_JOBB)
+    }
+
+    @Test
+    fun `avviser når arbeidsgiveren ble byttet ut med en annen rad med samme orgnr mens stillingen ble opprettet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, arbeidsgiverTreffId) = opprettTestdataForFormidling(treffId)
+        val arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
+
+        var nyArbeidsgiverTreffId: ArbeidsgiverTreffId? = null
+        mensStillingenOpprettes { connection ->
+            arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverTreffId.somUuid)
+            nyArbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(
+                connection,
+                LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Test AS"), emptyList(), null, null, null),
+                treffId,
+            )
+        }
+
+        assertThatThrownBy {
+            formidlingService.opprettFormidling(
+                treffId = treffId,
+                opprettFormidling = opprettFormidlingDto("123456789", "12345678901"),
+                navIdent = "testperson",
+                userToken = "test-token",
+            )
+        }.isInstanceOf(ArbeidsgiverIkkeFunnetException::class.java)
+
+        assertThat(formidlingService.hent(treffId, personTreffId, arbeidsgiverTreffId)).isNull()
+        assertThat(formidlingService.hent(treffId, personTreffId, nyArbeidsgiverTreffId!!)).isNull()
+        verify(exactly = 0) {
+            kandidatKlient.leggTilPersonerPåKandidatliste(any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `avviser slettet jobbsøker selv om en annen rad fikk samme fødselsnummer mens stillingen ble opprettet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, arbeidsgiverTreffId) = opprettTestdataForFormidling(treffId)
+
+        val duplikat = PersonTreffId(UUID.randomUUID())
+        mensStillingenOpprettes { connection ->
+            JobbsøkerRepository(db.dataSource, mapper).endreStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
+            connection.prepareStatement(
+                """
+                INSERT INTO jobbsoker (id, rekrutteringstreff_id, fodselsnummer, fornavn, etternavn, status)
+                VALUES (?, (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?), ?, 'Ola', 'Nordmann', 'LAGT_TIL')
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setObject(1, duplikat.somUuid)
+                stmt.setObject(2, treffId.somUuid)
+                stmt.setString(3, "12345678901")
+                stmt.executeUpdate()
+            }
+        }
+
+        // Samme unntak som når jobbsøkeren mangler før stillingen opprettes, så controlleren svarer 400 i begge tilfeller.
+        assertThatThrownBy {
+            formidlingService.opprettFormidling(
+                treffId = treffId,
+                opprettFormidling = opprettFormidlingDto("123456789", "12345678901"),
+                navIdent = "testperson",
+                userToken = "test-token",
+            )
+        }.isInstanceOf(JobbsøkerIkkeFunnetPåTreffException::class.java)
+
+        assertThat(formidlingService.hent(treffId, personTreffId, arbeidsgiverTreffId)).isNull()
+        assertThat(formidlingService.hent(treffId, duplikat, arbeidsgiverTreffId)).isNull()
+        verify(exactly = 0) {
+            kandidatKlient.leggTilPersonerPåKandidatliste(any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
     fun `slett formidling skal markere formidling som slettet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
@@ -355,6 +455,7 @@ class FormidlingServiceTest {
 
         // Simuler at jobbsøkeren har fått jobb (slik opprettelse av formidling gjør)
         db.dataSource.executeInTransaction { connection ->
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
             jobbsøkerService.registrerFåttJobb(connection, personTreffId, "testperson")
         }
         assertThat(jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }.status)
@@ -388,6 +489,7 @@ class FormidlingServiceTest {
         val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         db.dataSource.executeInTransaction { connection ->
+            connection.låsJobbsøkere(treffId, listOf(personTreffId))
             jobbsøkerService.registrerFåttJobb(connection, personTreffId, "testperson")
         }
         assertThat(jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }.status)
@@ -570,6 +672,14 @@ class FormidlingServiceTest {
         val stillingId: UUID,
         val kandidatlisteId: UUID,
     )
+
+    /** Lagrer [endring] mens stilling-API-et oppretter stillingen, altså etter første sjekk og før lagringen under lås. */
+    private fun mensStillingenOpprettes(endring: (Connection) -> Unit) {
+        every { stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any()) } answers {
+            db.dataSource.executeInTransaction(endring)
+            OpprettFormidlingStillingRespons(stillingsId = UUID.randomUUID(), kandidatlisteId = UUID.randomUUID())
+        }
+    }
 
     private fun opprettTestdataForFormidling(treffId: TreffId): FormidlingTestdata {
         val orgnr = "123456789"

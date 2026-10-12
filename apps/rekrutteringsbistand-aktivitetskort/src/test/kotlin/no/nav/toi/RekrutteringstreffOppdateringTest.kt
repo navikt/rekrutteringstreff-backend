@@ -4,6 +4,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.RekrutteringstreffType
+import no.nav.toi.aktivitetskort.WorkOpType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy
@@ -149,6 +150,62 @@ class RekrutteringstreffOppdateringTest {
     }
 
     @Test
+    fun `lesing av workopoppdatering fra rapid skal oppdatere eksisterende WorkOp-kort`() {
+        val fnr = "01010012345"
+        val rekrutteringstreffId = UUID.randomUUID()
+        val opprinneligFraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
+
+        rapid.sendTestMessage(
+            rapidInvitasjonMelding(
+                fnr,
+                rekrutteringstreffId,
+                "Original WorkOp",
+                opprinneligFraTid,
+                opprinneligFraTid.plusHours(2),
+                "testuser",
+                ZonedDateTime.now(),
+                "Original Gate 1",
+                "1234",
+                "Original By",
+                eventName = "workopinvitasjon"
+            )
+        )
+
+        val invitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
+        assertThat(invitasjoner).hasSize(1)
+        assertThat(invitasjoner[0].aktivitetsType).isEqualTo(WorkOpType.dbType)
+
+        val nyFraTid = ZonedDateTime.of(2025, 10, 2, 10, 0, 0, 0, ZoneId.of("Europe/Oslo"))
+        rapid.sendTestMessage(
+            rapidOppdateringMelding(
+                fnr,
+                rekrutteringstreffId,
+                "Oppdatert WorkOp",
+                nyFraTid,
+                nyFraTid.plusHours(3),
+                "Ny Gate 2",
+                "5678",
+                "Ny By",
+                eventName = "workopoppdatering"
+            )
+        )
+
+        val aktivitetskort = testRepository.hentAlleRekrutteringstreffInvitasjoner()
+        assertThat(aktivitetskort).hasSize(2)
+        aktivitetskort.last().apply {
+            assertThat(aktivitetskortId).isEqualTo(invitasjoner[0].aktivitetskortId)
+            assertThat(aktivitetsType).isEqualTo(WorkOpType.dbType)
+            assertThat(beskrivelse).isEqualTo(WorkOpType.beskrivelse)
+            assertThat(tittel).isEqualTo("Oppdatert WorkOp")
+            assertThat(fraTid).isEqualTo(nyFraTid.toLocalDate())
+            assertThat(detaljer).contains("10:00")
+            assertThat(detaljer).contains("13:00")
+            assertThat(detaljer).contains("Ny Gate 2, 5678 Ny By")
+            assertThat(opprettetAv).isEqualTo("SYSTEM")
+        }
+    }
+
+    @Test
     fun `lesing av rekrutteringstreffoppdatering fra rapid skal oppdatere aktivitetskort med flersdagers arrangement`() {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
@@ -219,10 +276,11 @@ class RekrutteringstreffOppdateringTest {
         opprettetTidspunkt: ZonedDateTime,
         gateadresse: String,
         postnummer: String,
-        poststed: String
+        poststed: String,
+        eventName: String = "rekrutteringstreffinvitasjon"
     ): String = """
         {
-            "@event_name": "rekrutteringstreffinvitasjon",
+            "@event_name": "$eventName",
             "fnr":"$fnr",
             "rekrutteringstreffId":"$rekrutteringstreffId",
             "tittel": "$tittel",
@@ -245,10 +303,11 @@ class RekrutteringstreffOppdateringTest {
         tilTid: ZonedDateTime,
         gateadresse: String,
         postnummer: String,
-        poststed: String
+        poststed: String,
+        eventName: String = "rekrutteringstreffoppdatering"
     ): String = """
         {
-            "@event_name": "rekrutteringstreffoppdatering",
+            "@event_name": "$eventName",
             "fnr":"$fnr",
             "rekrutteringstreffId":"$rekrutteringstreffId",
             "tittel": "$tittel",

@@ -1460,8 +1460,8 @@ class RekrutteringstreffTest {
             token.serialize()
         )
 
-        // Skal returnere 400 Bad Request fordi treffet ikke er publisert
-        assertThat(response.statusCode()).isEqualTo(400)
+        // Skal returnere 409 Conflict fordi treffet ikke er publisert
+        assertThat(response.statusCode()).isEqualTo(409)
     }
 
     @Test
@@ -1496,8 +1496,8 @@ class RekrutteringstreffTest {
             token.serialize()
         )
 
-        // Skal returnere 400 Bad Request fordi treffet er fullført
-        assertThat(response.statusCode()).isEqualTo(400)
+        // Skal returnere 409 Conflict fordi treffet er fullført
+        assertThat(response.statusCode()).isEqualTo(409)
     }
 
     @Test
@@ -1531,8 +1531,8 @@ class RekrutteringstreffTest {
             token.serialize()
         )
 
-        // Skal returnere 400 Bad Request fordi treffet er avlyst
-        assertThat(response.statusCode()).isEqualTo(400)
+        // Skal returnere 409 Conflict fordi treffet er avlyst
+        assertThat(response.statusCode()).isEqualTo(409)
     }
 
     @Test

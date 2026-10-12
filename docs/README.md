@@ -19,6 +19,7 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 - [Teknologi og overordnet arkitektur](2-arkitektur/teknologi%20og%20overorndet%20arkitektur.md) - Viktigste teknologier (frontend + backend) og konseptuell flyt
 - [Arkitekturbeslutninger](2-arkitektur/arkitekturbeslutninger.md) - FAQ: Hvorfor egen MinSide-backend, appoppdeling, synkron vs. asynkron, hendelse_data-struktur
 - [Database](2-arkitektur/database.md) - Databaseskjema, ER-diagram og Flyway-migrasjoner
+- [Transaksjoner og låsing](2-arkitektur/transaksjoner.md) - Isolasjonsnivå, radlåser og låserekkefølge for skrivinger
 - [Treffgjennomføring](2-arkitektur/treffgjennomforing.md) - Stegene på treffdagen, regler, endepunkter og hendelser
 
 ### 3. [Sikkerhet](3-sikkerhet/)
@@ -51,6 +52,8 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 
 - [Akseptansetester](7-akseptansetest-og-ros/akseptansetester.md) - Manuelle tester for domeneeksperter før pilot/prodsetting
 - [Automatiske backend-tester](7-akseptansetest-og-ros/automatiske-tester.md) - Plan for automatisering av akseptansetester i backend
+- [Testresultater WorkOp](7-akseptansetest-og-ros/testresultater-workop.md) - Resultat av første testrunde for WorkOp, med feil som gjenstår og uavklarte regler
+- [Akseptansetester WorkOp, runde 2](7-akseptansetest-og-ros/akseptansetester-workop-runde2.md) - Retest av endrede og nye tester og rettede funn etter første testrunde
 
 ### 8. [Utviklerrutiner](8-utviklerrutiner/)
 

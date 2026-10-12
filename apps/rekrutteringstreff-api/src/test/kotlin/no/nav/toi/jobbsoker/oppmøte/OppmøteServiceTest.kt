@@ -18,9 +18,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 /**
  * Oppmøtet lagres som jobbsøkerstatusen MØTT_OPP, på samme akse som svarene. Testene låser at
@@ -168,30 +165,6 @@ class OppmøteServiceTest {
 
         assertThat(status(urørt)).isEqualTo(JobbsøkerStatus.LAGT_TIL)
         assertThat(ctx.treffgjennomføringService.hent(treffId).oppmøte).containsExactly(registrert.somString)
-    }
-
-    @Test
-    fun `samtidige oppmøteregistreringer gir ulike deltakernummer`() {
-        val treffId = workOpTreff()
-        val personer = (1..6).map { jobbsøker(treffId, "1234567890$it") }
-        val start = CountDownLatch(1)
-        val pool = Executors.newFixedThreadPool(personer.size)
-
-        try {
-            val oppgaver = personer.map { person ->
-                pool.submit {
-                    start.await()
-                    møtt(treffId, person)
-                }
-            }
-            start.countDown()
-            oppgaver.forEach { it.get(30, TimeUnit.SECONDS) }
-        } finally {
-            pool.shutdownNow()
-        }
-
-        val numre = ctx.treffgjennomføringService.hent(treffId).deltakernummer.map { it.deltakernummer }
-        assertThat(numre.sorted()).isEqualTo((1..personer.size).toList())
     }
 
     @Test

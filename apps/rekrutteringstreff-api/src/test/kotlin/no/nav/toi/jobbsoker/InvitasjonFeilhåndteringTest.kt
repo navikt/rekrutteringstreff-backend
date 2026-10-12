@@ -5,15 +5,12 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.HttpURLConnection.HTTP_INTERNAL_ERROR
 import java.net.HttpURLConnection.HTTP_OK
 import java.util.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Tester for feilhåndtering ved invitasjon av jobbsøkere.
@@ -63,72 +60,6 @@ class InvitasjonFeilhåndteringTest {
     @AfterEach
     fun reset() {
         db.slettAlt()
-    }
-
-    /**
-     * To samtidige invitasjoner registrerer kun én invitasjon (idempotent)
-     * 
-     * Verifiserer at systemet håndterer race conditions ved samtidige invitasjoner.
-     * Kun én INVITERT-hendelse skal registreres selv om to kall kommer samtidig.
-     */
-    @Test
-    fun `samtidige invitasjoner registrerer kun én INVITERT-hendelse`() {
-        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
-        val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
-
-        db.leggTilJobbsøkere(
-            listOf(
-                Jobbsøker(
-                    PersonTreffId(UUID.randomUUID()),
-                    treffId,
-                    fnr,
-                    Fornavn("Test"),
-                    Etternavn("Person"),
-                    null, null, null,
-                    JobbsøkerStatus.LAGT_TIL,
-                )
-            )
-        )
-
-        val jobbsøkere = db.hentAlleJobbsøkere()
-        val personTreffId = jobbsøkere.first().personTreffId
-        ctx.eierRepository.leggTil(treffId, "A123456", "0315")
-
-        val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
-
-        // Start samtidige invitasjons-kall
-        val executor = Executors.newFixedThreadPool(2)
-        val latch = CountDownLatch(2)
-        val successfulResponses = AtomicInteger(0)
-
-        repeat(2) {
-            executor.submit {
-                try {
-                    val response = httpPost(
-                        "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
-                        requestBody,
-                        token.serialize()
-                    )
-
-                    if (response.statusCode() == HTTP_OK) {
-                        successfulResponses.incrementAndGet()
-                    }
-                } finally {
-                    latch.countDown()
-                }
-            }
-        }
-
-        latch.await(10, TimeUnit.SECONDS)
-        executor.shutdown()
-
-        // Verifiser at kun én INVITERT-hendelse ble registrert
-        val hendelser = db.hentJobbsøkerHendelser(treffId)
-        val invitasjonsHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
-
-        assertThat(invitasjonsHendelser).hasSize(1)
-        assertThat(invitasjonsHendelser.first().aktørIdentifikasjon).isEqualTo("A123456")
     }
 
     @Test

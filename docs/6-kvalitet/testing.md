@@ -93,3 +93,4 @@ val postgres = PostgreSQLContainer<Nothing>("postgres:15")
 - [Plan for automatiske backend-tester](../7-akseptansetest-og-ros/automatiske-tester.md) - Detaljert plan for automatisering av akseptansetester
 - [Database](../2-arkitektur/database.md) - Database-skjema som testes
 - [Prinsipper](../2-arkitektur/prinsipper.md) - Arkitekturprinsipper som påvirker testbarhet
+- [Transaksjoner og låsing](../2-arkitektur/transaksjoner.md) - Samtidighetstester med `medVentendeOperasjon`

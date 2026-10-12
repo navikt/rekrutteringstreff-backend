@@ -1,9 +1,9 @@
 package no.nav.toi.arbeidsgiver
 
-import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.JacksonConfig
+import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -200,7 +200,7 @@ class ArbeidsgiverServiceTest {
 
         val sql = sporSql { service -> leggTilFiktivArbeidsgiver(service, treff, medBehov) }
 
-        assertThat(sql[0]).endsWith("FOR UPDATE")
+        assertThat(sql[0]).endsWith("FOR NO KEY UPDATE")
         assertThat(sql[1]).startsWith("SELECT EXISTS").contains("moteoppsett", "jobbsoker_romtildeling")
         // Med behov slås også en eventuell slettet arbeidsgiver opp for reaktivering.
         assertThat(sql.filter { it.startsWith("SELECT") }).hasSize(if (medBehov) 3 else 2)
@@ -249,11 +249,11 @@ class ArbeidsgiverServiceTest {
         val treff = TreffId(UUID.randomUUID())
         val sql = sporSql { service ->
             assertThatThrownBy { leggTilFiktivArbeidsgiver(service, treff, medBehov) }
-                .isInstanceOf(NotFoundResponse::class.java)
+                .isInstanceOf(RekrutteringstreffIkkeFunnetException::class.java)
         }
 
         assertThat(sql).hasSize(1)
-        assertThat(sql.single()).endsWith("FOR UPDATE")
+        assertThat(sql.single()).endsWith("FOR NO KEY UPDATE")
     }
 
     private fun leggTilFiktivArbeidsgiver(service: ArbeidsgiverService, treff: TreffId, medBehov: Boolean) {

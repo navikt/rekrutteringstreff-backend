@@ -18,6 +18,8 @@ internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
 
 data class JobbsøkerSlettestatus(val jobbsøkerId: Long, val status: JobbsøkerStatus)
 
+data class JobbsøkerStatusOgSperret(val status: JobbsøkerStatus, val sperret: Boolean)
+
 data class JobbsøkerTreffHistorikk(
     val id: UUID?,
     val tittel: String,
@@ -285,7 +287,10 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun hentSlettedeJobbsøkere(treff: TreffId): List<Jobbsøker> = dataSource.connection.use { conn ->
+    fun hentSlettedeJobbsøkere(treff: TreffId): List<Jobbsøker> =
+        dataSource.connection.use { conn -> hentSlettedeJobbsøkere(conn, treff) }
+
+    fun hentSlettedeJobbsøkere(conn: Connection, treff: TreffId): List<Jobbsøker> =
         conn.prepareStatement(
             """
                 SELECT 
@@ -317,7 +322,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 generateSequence { if (rs.next()) rs.toJobbsøkerUtenHendelser() else null }.toList()
             }
         }
-    }
 
     fun hentJobbsøkere(conn: Connection, treff: TreffId): List<Jobbsøker> {
         val sql = """
@@ -453,7 +457,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             SELECT j.jobbsoker_id, j.status FROM jobbsoker j
             JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
             WHERE rt.id = ? AND j.id = ? AND j.status != 'SLETTET' AND j.er_synlig = TRUE
-            FOR UPDATE OF j
             """.trimIndent()
         ).use { stmt ->
             stmt.setObject(1, treffId.somUuid)
@@ -585,54 +588,56 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     }
 
     fun hentJobbsøker(treff: TreffId, fødselsnummer: Fødselsnummer, inkluderUsynlige: Boolean = false): Jobbsøker? =
-        dataSource.connection.use { conn ->
-            val synlighetSjekk = if (inkluderUsynlige) "" else "AND js.er_synlig = TRUE"
-            conn.prepareStatement(
-                """
-                SELECT
-                    js.id,
-                    js.jobbsoker_id,
-                    js.fodselsnummer,
-                    js.fornavn,
-                    js.etternavn,
-                    js.kontornavn,
-                    js.veileder_navn,
-                    js.veileder_navident,
-                    js.alder,
-                    js.innsatsgruppe,
-                    js.kontornummer,
-                    js.status,
-                    js.aktuell_for_treff_status,
-                    js.sperret,
-                    rt.id as treff_id,
-                    COALESCE(
-                        json_agg(
-                            json_build_object(
-                                'id', jh.id,
-                                'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SS.MSOF'),
-                                'hendelsestype', jh.hendelsestype,
-                                'opprettetAvAktortype', jh.opprettet_av_aktortype,
-                                'aktøridentifikasjon', jh.aktøridentifikasjon,
-                                'hendelseData', jh.hendelse_data
-                            ) ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
-                        ) FILTER (WHERE jh.id IS NOT NULL),
-                        '[]'
-                    ) AS hendelser
-                FROM jobbsoker js
-                JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-                WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET' $synlighetSjekk
-                GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
-                         js.kontornavn, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, js.kontornummer, rt.id
+        dataSource.connection.use { conn -> hentJobbsøker(conn, treff, fødselsnummer, inkluderUsynlige) }
+
+    fun hentJobbsøker(conn: Connection, treff: TreffId, fødselsnummer: Fødselsnummer, inkluderUsynlige: Boolean = false): Jobbsøker? {
+        val synlighetSjekk = if (inkluderUsynlige) "" else "AND js.er_synlig = TRUE"
+        return conn.prepareStatement(
             """
-            ).use { stmt ->
-                stmt.setObject(1, treff.somUuid)
-                stmt.setString(2, fødselsnummer.asString)
-                stmt.executeQuery().use { rs ->
-                    if (rs.next()) rs.toJobbsøker() else null
-                }
+            SELECT
+                js.id,
+                js.jobbsoker_id,
+                js.fodselsnummer,
+                js.fornavn,
+                js.etternavn,
+                js.kontornavn,
+                js.veileder_navn,
+                js.veileder_navident,
+                js.alder,
+                js.innsatsgruppe,
+                js.kontornummer,
+                js.status,
+                js.aktuell_for_treff_status,
+                js.sperret,
+                rt.id as treff_id,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', jh.id,
+                            'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SS.MSOF'),
+                            'hendelsestype', jh.hendelsestype,
+                            'opprettetAvAktortype', jh.opprettet_av_aktortype,
+                            'aktøridentifikasjon', jh.aktøridentifikasjon,
+                            'hendelseData', jh.hendelse_data
+                        ) ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
+                    ) FILTER (WHERE jh.id IS NOT NULL),
+                    '[]'
+                ) AS hendelser
+            FROM jobbsoker js
+            JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
+            WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET' $synlighetSjekk
+            GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
+                     js.kontornavn, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, js.kontornummer, rt.id
+        """
+        ).use { stmt ->
+            stmt.setObject(1, treff.somUuid)
+            stmt.setString(2, fødselsnummer.asString)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.toJobbsøker() else null
             }
         }
+    }
 
     fun endreStatus(
         connection: Connection,
@@ -700,7 +705,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    fun hentAktuellForTreffStatusForOppdatering(
+    fun hentAktuellForTreffStatus(
         connection: Connection,
         treffId: TreffId,
         personTreffId: PersonTreffId,
@@ -710,7 +715,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             SELECT j.aktuell_for_treff_status FROM jobbsoker j
             JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
             WHERE rt.id = ? AND j.id = ? AND j.status != 'SLETTET' AND j.er_synlig = TRUE
-            FOR UPDATE OF j
             """.trimIndent()
         ).use { stmt ->
             stmt.setObject(1, treffId.somUuid)
@@ -776,15 +780,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
      * - Kun hvis nyere tidspunkt når eksisterende kilde er EVENT
      */
     fun oppdaterSynlighetFraEvent(
-        fodselsnummer: String,
-        erSynlig: Boolean,
-        sperret: Boolean,
-        tidspunkt: Instant
-    ): Int = dataSource.connection.use { conn ->
-        oppdaterSynlighetFraEvent(conn, fodselsnummer, erSynlig, sperret, tidspunkt)
-    }
-
-    fun oppdaterSynlighetFraEvent(
         connection: Connection,
         fodselsnummer: String,
         erSynlig: Boolean,
@@ -817,15 +812,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
      * Skriver KUN hvis synlighet ikke er satt fra før.
      */
     fun oppdaterSynlighetFraNeed(
-        fodselsnummer: String,
-        erSynlig: Boolean,
-        sperret: Boolean,
-        tidspunkt: Instant
-    ): Int = dataSource.connection.use { conn ->
-        oppdaterSynlighetFraNeed(conn, fodselsnummer, erSynlig, sperret, tidspunkt)
-    }
-
-    fun oppdaterSynlighetFraNeed(
         connection: Connection,
         fodselsnummer: String,
         erSynlig: Boolean,
@@ -850,15 +836,11 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.executeUpdate()
         }
 
-    /**
-     * Henter status for en jobbsøker basert på personTreffId med radlås.
-     * Bruker SELECT FOR UPDATE for å forhindre race conditions ved samtidige operasjoner.
-     * Returnerer null hvis jobbsøkeren ikke finnes.
-     */
+    /** Henter status for en jobbsøker. Returnerer null hvis jobbsøkeren ikke finnes. */
     fun hentStatus(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus? =
         connection.prepareStatement(
             """
-            SELECT status FROM jobbsoker WHERE id = ? FOR UPDATE
+            SELECT status FROM jobbsoker WHERE id = ?
             """.trimIndent()
         ).use { stmt ->
             stmt.setObject(1, personTreffId.somUuid)
@@ -867,26 +849,24 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun låsJobbsøker(connection: Connection, personTreffId: PersonTreffId) {
-        connection.prepareStatement("SELECT 1 FROM jobbsoker WHERE id = ? FOR UPDATE").use { stmt ->
-            stmt.setObject(1, personTreffId.somUuid)
-            stmt.executeQuery().close()
-        }
-    }
-
-    /** Låser alle jobbsøkerne på treffet sortert på id, samme rekkefølge som `inviter`. Ta trefflåsen først. */
-    fun låsJobbsøkereForTreff(connection: Connection, treffId: TreffId) {
-        connection.prepareStatement(
-            """
-            SELECT 1 FROM jobbsoker j
-            JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
-            WHERE rt.id = ?
-            ORDER BY j.id
-            FOR UPDATE OF j
-            """.trimIndent()
-        ).use { stmt ->
-            stmt.setObject(1, treffId.somUuid)
-            stmt.executeQuery().close()
+    /** Henter status og adressebeskyttelse for jobbsøkerne, også slettede og usynlige. Ukjente id-er er ikke med. */
+    fun hentStatusOgSperret(
+        connection: Connection,
+        personTreffIder: Collection<PersonTreffId>,
+    ): Map<PersonTreffId, JobbsøkerStatusOgSperret> {
+        if (personTreffIder.isEmpty()) return emptyMap()
+        return connection.prepareStatement("SELECT id, status, sperret FROM jobbsoker WHERE id = ANY(?)").use { stmt ->
+            stmt.setArray(1, connection.createArrayOf("uuid", personTreffIder.map { it.somUuid }.toTypedArray()))
+            stmt.executeQuery().use { rs ->
+                buildMap {
+                    while (rs.next()) {
+                        put(
+                            PersonTreffId(UUID.fromString(rs.getString("id"))),
+                            JobbsøkerStatusOgSperret(JobbsøkerStatus.valueOf(rs.getString("status")), rs.getBoolean("sperret")),
+                        )
+                    }
+                }
+            }
         }
     }
 
