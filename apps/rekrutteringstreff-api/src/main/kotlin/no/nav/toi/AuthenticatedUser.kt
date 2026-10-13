@@ -101,7 +101,7 @@ private class AuthenticatedNavUser(
 
     fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
     override fun extractNavIdent() = navIdent
-    override fun extractKontorId() = veiledersKontor ?: modiaKlient.hentVeiledersAktivEnhet(token)
+    override fun extractKontorId() = veiledersKontor ?: modiaKlient.hentVeiledersAktivEnhet(token).also { veiledersKontor = it }
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
     override fun innkommendeToken() = token
     override fun erUtvikler() = roller.any { it == Rolle.UTVIKLER }

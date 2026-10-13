@@ -7,9 +7,11 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.WorkOpPilottilgang
 
 class RekrutteringstreffSokController(
     private val sokService: RekrutteringstreffSokService,
+    private val workOpPilottilgang: WorkOpPilottilgang,
 ) : RuteRegistrerer {
     companion object {
         private const val sokPath = "/api/rekrutteringstreff/sok"
@@ -208,8 +210,9 @@ class RekrutteringstreffSokController(
             null
         }
         val erUtvikler = ctx.authenticatedUser().erUtvikler()
+        val harWorkOpPilottilgang = workOpPilottilgang.harPilottilgang(ctx.authenticatedUser())
 
-        ctx.status(200).json(sokService.sok(request, navIdent, kontorId, erUtvikler))
+        ctx.status(200).json(sokService.sok(request, navIdent, kontorId, erUtvikler, harWorkOpPilottilgang))
     }
 }
 

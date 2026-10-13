@@ -32,9 +32,9 @@ class MiljøsperreTest {
     }
 
     @Test
-    fun `treffgjennomføring-steg under utvikling er stengt i prod ogsaa for workop`() {
-        assertThatThrownBy { kontekst(erWorkOp = true).krevWorkOpEllerLokalUtvikling(Miljø.PROD_GCP) }
-            .isInstanceOf(BadRequestResponse::class.java)
+    fun `treffgjennomføring-steg krever workop i prod`() {
+        assertThatCode { kontekst(erWorkOp = true).krevWorkOpEllerLokalUtvikling(Miljø.PROD_GCP) }
+            .doesNotThrowAnyException()
         assertThatThrownBy { kontekst(erWorkOp = false).krevWorkOpEllerLokalUtvikling(Miljø.PROD_GCP) }
             .isInstanceOf(BadRequestResponse::class.java)
     }

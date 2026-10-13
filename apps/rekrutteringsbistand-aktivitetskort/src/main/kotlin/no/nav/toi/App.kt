@@ -46,7 +46,6 @@ class App(
     private val meterRegistry: PrometheusMeterRegistry,
     private val isRunning: () -> Boolean,
     private val isReady: () -> Boolean,
-    private val workOpLyttereAktivert: Boolean,
 ) {
     private lateinit var javalin: Javalin
     private lateinit var schedulerContext: SchedulerContext
@@ -87,13 +86,9 @@ class App(
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
 
-        if (workOpLyttereAktivert) {
-            RekrutteringstreffInvitasjonLytter(rapidsConnection, repository, WorkOpType)
-            RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository, eventName = "workopSvarOgStatus")
-            RekrutteringstreffOppdateringLytter(rapidsConnection, repository, eventName = "workopoppdatering")
-        } else {
-            log.info("WorkOp-lyttere er deaktivert i dette miljøet")
-        }
+        RekrutteringstreffInvitasjonLytter(rapidsConnection, repository, WorkOpType)
+        RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository, eventName = "workopSvarOgStatus")
+        RekrutteringstreffOppdateringLytter(rapidsConnection, repository, eventName = "workopoppdatering")
 
         Thread {
             try {
@@ -141,7 +136,6 @@ fun main() {
         meterRegistry = meterRegistry,
         isRunning = rapidsConnection::isRunning,
         isReady = rapidsConnection::isReady,
-        workOpLyttereAktivert = !Miljø.fraClusterNavn(env["NAIS_CLUSTER_NAME"]).erProd,
     )
     Runtime.getRuntime().addShutdownHook(Thread {
         app.stop()

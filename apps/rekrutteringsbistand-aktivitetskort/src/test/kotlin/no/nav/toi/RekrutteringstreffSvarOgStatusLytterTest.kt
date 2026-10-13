@@ -57,8 +57,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         leaderElection = LeaderElectionMock(),
         meterRegistry = meterRegistry,
         isRunning = { true },
-        isReady = { true },
-        workOpLyttereAktivert = true,
+        isReady = { true }
     )
 
     @BeforeAll

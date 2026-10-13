@@ -40,7 +40,7 @@ class RekrutteringstreffSokKomponenttest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = db.dataSource, pilotkontorer = listOf("0315"), modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
+        infra = TestInfrastructureContext(dataSource = db.dataSource, workOpPilotkontorer = listOf("0315"), modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
         app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
     }
 

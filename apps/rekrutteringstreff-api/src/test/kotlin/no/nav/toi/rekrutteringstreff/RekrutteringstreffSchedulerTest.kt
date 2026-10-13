@@ -5,7 +5,6 @@ import no.nav.toi.LeaderElectionInterface
 import io.mockk.every
 import io.mockk.spyk
 import no.nav.toi.LeaderElectionMock
-import no.nav.toi.Miljø
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
@@ -38,7 +37,6 @@ class RekrutteringstreffSchedulerTest {
             jobbsøkerRepository,
             arbeidsgiverRepository,
             jobbsøkerService,
-            Miljø.LOKALT,
         )
     }
 

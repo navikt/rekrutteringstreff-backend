@@ -17,8 +17,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.sql.Timestamp
-import java.time.Instant
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokRepositoryTest {
@@ -741,7 +739,8 @@ class RekrutteringstreffSokRepositoryTest {
             fritekst = null,
             visning = Visning.ALLE,
             side = 1,
-            antallPerSide = 25
+            antallPerSide = 25,
+            harWorkOpPilottilgang = true
         )
         assertThat(resultat.treff).hasSize(1)
         assertThat(resultat.treff.first().tittel).isEqualTo("WorkOp")
@@ -765,7 +764,8 @@ class RekrutteringstreffSokRepositoryTest {
             fritekst = null,
             visning = Visning.ALLE,
             side = 1,
-            antallPerSide = 25
+            antallPerSide = 25,
+            harWorkOpPilottilgang = true
         )
         val rekrutteringstreff =
             resultat.kategoriaggregering.find { it.verdi == SokKategori.REKRUTTERINGSTREFF.name }
@@ -850,7 +850,8 @@ class RekrutteringstreffSokRepositoryTest {
             fritekst = null,
             visning = Visning.ALLE,
             side = 1,
-            antallPerSide = 25
+            antallPerSide = 25,
+            harWorkOpPilottilgang = true
         )
 
         assertThat(resultat.treff).extracting("id").doesNotContain(andresWorkOp.toString())

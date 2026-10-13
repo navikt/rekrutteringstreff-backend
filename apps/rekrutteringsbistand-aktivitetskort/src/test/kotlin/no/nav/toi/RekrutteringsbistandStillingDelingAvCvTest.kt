@@ -56,8 +56,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         leaderElection = LeaderElectionMock(),
         meterRegistry = meterRegistry,
         isRunning = {true},
-        isReady = {true},
-        workOpLyttereAktivert = false
+        isReady = {true}
     )
 
     @BeforeAll
