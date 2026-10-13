@@ -20,6 +20,12 @@ val junitJupiterVersion = "5.14.4"
 val junitPlatformVersion = "1.14.4"
 val assertjVersion = "3.27.7"
 
+// Sikkerhetsfikser for transitive avhengigheter (logstash-logback-encoder og rapids-and-rivers).
+// Fjern når de som drar dem inn bruker rettede versjoner.
+val jackson3Version = "3.2.3"
+val micrometerVersion = "1.16.7"
+val lz4JavaVersion = "1.11.4"
+
 dependencies {
     constraints {
         // Alternativer til require er strictly og preferred.
@@ -33,6 +39,21 @@ dependencies {
         }
         implementation("net.logstash.logback:logstash-logback-encoder") {
             version { require(logstashLogbackEncoderVersion) }
+        }
+        implementation("tools.jackson.core:jackson-core") {
+            version { require(jackson3Version) }
+        }
+        implementation("tools.jackson.core:jackson-databind") {
+            version { require(jackson3Version) }
+        }
+        implementation("io.micrometer:micrometer-core") {
+            version { require(micrometerVersion) }
+        }
+        implementation("io.micrometer:micrometer-registry-prometheus") {
+            version { require(micrometerVersion) }
+        }
+        implementation("at.yawk.lz4:lz4-java") {
+            version { require(lz4JavaVersion) }
         }
         testImplementation("org.junit.jupiter:junit-jupiter-api") {
             version { require(junitJupiterVersion) }
