@@ -15,6 +15,7 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.*
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.WorkOpPilottilgang
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.ZonedDateTime
@@ -24,6 +25,7 @@ class RekrutteringstreffController(
     private val rekrutteringstreffService: RekrutteringstreffService,
     private val eierService: EierService,
     private val kiLoggService: KiLoggService,
+    private val workOpPilottilgang: WorkOpPilottilgang,
 ) : RuteRegistrerer {
 
     companion object {
@@ -88,6 +90,9 @@ class RekrutteringstreffController(
     private fun opprettRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
+        if (inputDto.kategori == RekrutteringstreffKategori.WORKOP) {
+            workOpPilottilgang.krevPilottilgang(ctx.authenticatedUser())
+        }
         val kontorId = ctx.authenticatedUser().extractKontorId()
             ?.takeIf { it.isNotBlank() }
             ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")

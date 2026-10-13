@@ -57,8 +57,7 @@ class HelsesjekkControllerTest {
         leaderElection = LeaderElectionMock(),
         meterRegistry = meterRegistry,
         isRunning = isRunning,
-        isReady = isReady,
-        workOpLyttereAktivert = false,
+        isReady = isReady
     )
 
     @Test

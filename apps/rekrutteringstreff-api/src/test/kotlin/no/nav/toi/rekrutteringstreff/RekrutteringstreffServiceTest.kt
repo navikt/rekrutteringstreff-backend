@@ -2,7 +2,6 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.Miljø
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.exception.UlovligOppdateringException
@@ -47,7 +46,6 @@ class RekrutteringstreffServiceTest {
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
                 jobbsøkerService,
-                Miljø.LOKALT,
             )
         }
     }
@@ -671,45 +669,6 @@ class RekrutteringstreffServiceTest {
             }
         }
     }
-
-    @Test
-    fun `Skal ikke kunne opprette WorkOp i prod`() {
-        assertThatThrownBy {
-            prodService().opprett(
-                OpprettRekrutteringstreffInternalDto(
-                    tittel = "WorkOp",
-                    kategori = RekrutteringstreffKategori.WORKOP,
-                    opprettetAvPersonNavident = "NAV1234",
-                    opprettetAvNavkontorEnhetId = "0605",
-                    opprettetAvTidspunkt = nowOslo(),
-                )
-            )
-        }.isInstanceOf(UlovligOppdateringException::class.java)
-    }
-
-    @Test
-    fun `Skal fortsatt kunne opprette ordinaert rekrutteringstreff i prod`() {
-        val treffId = prodService().opprett(
-            OpprettRekrutteringstreffInternalDto(
-                tittel = "Treff",
-                kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
-                opprettetAvPersonNavident = "NAV1234",
-                opprettetAvNavkontorEnhetId = "0605",
-                opprettetAvTidspunkt = nowOslo(),
-            )
-        )
-
-        assertThat(rekrutteringstreffService.hentRekrutteringstreff(treffId)).isNotNull()
-    }
-
-    private fun prodService() = RekrutteringstreffService(
-        db.dataSource,
-        rekrutteringstreffRepository,
-        jobbsøkerRepository,
-        arbeidsgiverRepository,
-        jobbsøkerService,
-        Miljø.PROD_GCP,
-    )
 
     private fun opprettTreff(): TreffId {
         val rekrutteringstreff = OpprettRekrutteringstreffInternalDto(

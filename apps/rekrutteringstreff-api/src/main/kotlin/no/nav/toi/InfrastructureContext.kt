@@ -81,8 +81,9 @@ open class InfrastructureContext(
         )
     }
 
-    open val pilotkontorer: List<String> by lazy { getenv("PILOTKONTORER").split(",").map { it.trim() } }
-
+    open val workOpPilotkontorer: List<String> by lazy {
+        getenv("WORKOP_PILOTKONTORER").split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    }
     open val leaderElection: LeaderElectionInterface by lazy { LeaderElection() }
 
     open val httpClient: HttpClient by lazy {

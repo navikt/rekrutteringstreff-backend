@@ -188,24 +188,28 @@ Roller tildeles via medlemskap i AD-grupper:
 | Modia generell     | `rekrutteringsbistand-modia-generell`     | Lese «fått jobben»-statistikk  |
 | Modia oppfølging   | `rekrutteringsbistand-modia-oppfolging`   | Lese «fått jobben»-statistikk  |
 
-## Pilotkontorer
+## Pilotkontorer for WorkOp
 
-I pilotperioden må NAV-ansatte (unntatt utviklere) være innlogget på et pilotkontor for å få tilgang.
+WorkOp er i pilot. Nav-ansatte (unntatt utviklere) må være innlogget på et pilotkontor for å opprette, åpne eller søke opp WorkOp. Vanlige rekrutteringstreff påvirkes ikke.
 
 ```mermaid
 flowchart TD
-    A[Bruker åpner Rekrutteringstreff] --> B{Har utvikler-rolle?}
-    B -->|Ja| C[Full tilgang]
+    A[Kall mot WorkOp] --> B{Utvikler eller borger?}
+    B -->|Ja| C[Vanlig rolle- og eiersjekk]
     B -->|Nei| D{Aktivt kontor i pilotliste?}
-    D -->|Ja| E[Tilgang basert på rolle]
-    D -->|Nei| F[Ingen tilgang]
+    D -->|Ja| C
+    D -->|Nei| F[403]
 ```
 
 **Pilotkontor-sjekk:**
 
-1. Frontend henter aktivt kontor fra modiacontextholder
-2. API verifiserer at kontoret er i listen over pilotkontorer
-3. Utviklere har tilgang uavhengig av kontor
+1. Listen styres av miljøvariabelen `WORKOP_PILOTKONTORER` (kommaseparert, satt i `.nais/dev-gcp.yaml` og `.nais/prod-gcp.yaml`). Tom liste gir bare utviklere tilgang.
+2. API-et henter aktivt kontor fra modiacontextholder, ikke fra klienten.
+3. Et felles filter (`leggTilWorkOpPilotkontorsjekk`) sjekker alle ruter under `/api/rekrutteringstreff` med treff-id i stien. Er treffet WorkOp, kreves pilotkontor.
+4. Opprettelse av WorkOp sjekkes i controlleren, og søket skjuler WorkOp for brukere utenfor piloten.
+5. Tjenestelaget, aktivitetskort og kandidatvarsel har ingen egne miljøsperrer for WorkOp. Pilotsjekken i API-et er eneste sperre.
+
+Treffgjennomføring er bare åpnet for WorkOp. For vanlige treff svarer alle treffgjennomføring- og oppfølgingsendepunkter 400 i dev og prod. De kan bare brukes ved lokal kjøring.
 
 ## Se også
 

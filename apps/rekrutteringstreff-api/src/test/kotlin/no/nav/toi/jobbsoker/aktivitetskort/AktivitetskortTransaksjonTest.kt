@@ -7,7 +7,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionMock
-import no.nav.toi.Miljø
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
@@ -47,7 +46,6 @@ class AktivitetskortTransaksjonTest {
             jobbsøkerRepository,
             arbeidsgiverRepository,
             jobbsøkerService,
-            Miljø.LOKALT,
         )
     }
 

@@ -1,5 +1,6 @@
 package no.nav.toi.treffgjennomføring
 
+import no.nav.toi.Miljø
 import no.nav.toi.executeInReadOnlyTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.dto.GjennomføringJobbsøkereRequestDto
@@ -13,8 +14,14 @@ class TreffgjennomføringService(
     private val reader: TreffgjennomføringReader,
     private val writer: TreffgjennomføringWriter,
     private val stegRepository: StegRepository,
+    private val miljø: Miljø,
     private val jobbsøkerRepository: GjennomføringJobbsøkerRepository = GjennomføringJobbsøkerRepository(),
 ) {
+
+    /** Treffgjennomføring er bare åpnet for WorkOp. Vanlige treff kan bare bruke den ved lokal kjøring. */
+    fun krevWorkOpEllerLokalUtvikling(treffId: TreffId) = dataSource.executeInReadOnlyTransaction { connection ->
+        kontekstRepository.krevKontekst(connection, treffId).krevWorkOpEllerLokalUtvikling(miljø)
+    }
 
     fun hent(treffId: TreffId): TreffgjennomføringDto = dataSource.executeInReadOnlyTransaction { connection ->
         reader.les(connection, kontekstRepository.krevKontekst(connection, treffId))
