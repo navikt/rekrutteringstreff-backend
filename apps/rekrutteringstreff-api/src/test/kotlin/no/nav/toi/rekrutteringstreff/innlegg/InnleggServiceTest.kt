@@ -1,7 +1,6 @@
 package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.innlegg
 
 import no.nav.toi.JacksonConfig
-import no.nav.toi.Miljø
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
@@ -49,7 +48,6 @@ class InnleggServiceTest {
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
                 jobbsøkerService,
-                Miljø.LOKALT,
             )
             innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
         }

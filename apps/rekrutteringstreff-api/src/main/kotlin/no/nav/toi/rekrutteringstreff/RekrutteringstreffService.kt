@@ -24,7 +24,6 @@ class RekrutteringstreffService(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
     private val jobbsøkerService: JobbsøkerService,
-    private val miljø: Miljø,
 ) {
     private val logger: Logger = log
 
@@ -233,10 +232,6 @@ class RekrutteringstreffService(
     }
 
     fun opprett(internalDto: OpprettRekrutteringstreffInternalDto): TreffId {
-        if (internalDto.kategori == RekrutteringstreffKategori.WORKOP && miljø.erProd) {
-            logger.warn("Forsøk på å opprette WorkOp i produksjon. Avvist.")
-            throw UlovligOppdateringException("WorkOp kan ikke opprettes i produksjon")
-        }
         return dataSource.executeInTransaction { connection ->
             val (treffId, dbId) = rekrutteringstreffRepository.opprett(connection, internalDto)
             rekrutteringstreffRepository.leggTilHendelse(

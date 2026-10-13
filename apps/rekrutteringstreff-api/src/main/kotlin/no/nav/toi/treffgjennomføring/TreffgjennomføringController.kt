@@ -106,6 +106,7 @@ class TreffgjennomføringController(
     ): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
+        treffgjennomføringService.krevWorkOpEllerLokalUtvikling(treffId)
         ctx.status(200).json(operasjon(ctx, treffId, navIdent))
     }
 
@@ -125,6 +126,7 @@ class TreffgjennomføringController(
     private fun hentHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
+        treffgjennomføringService.krevWorkOpEllerLokalUtvikling(treffId)
         AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
         ctx.status(200).json(treffgjennomføringService.hent(treffId))
     }
@@ -160,6 +162,7 @@ class TreffgjennomføringController(
     private fun hentJobbsøkereHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
+        treffgjennomføringService.krevWorkOpEllerLokalUtvikling(treffId)
         val request = ctx.bodyAsClass<GjennomføringJobbsøkereRequestDto>()
         if (request.side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
         if (request.antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")

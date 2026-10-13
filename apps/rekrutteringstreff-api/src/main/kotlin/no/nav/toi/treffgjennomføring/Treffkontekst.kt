@@ -35,11 +35,7 @@ data class Treffkontekst(
     }
 
     fun krevWorkOpEllerLokalUtvikling(miljø: Miljø) {
-        when (miljø) {
-            Miljø.PROD_GCP -> throw BadRequestResponse("Steget er ikke tilgjengelig i produksjon")
-            Miljø.DEV_GCP -> krevWorkOp()
-            Miljø.LOKALT -> {}
-        }
+        if (miljø != Miljø.LOKALT) krevWorkOp()
     }
 }
 

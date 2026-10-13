@@ -116,7 +116,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         jobbsøkerRepository,
         arbeidsgiverRepository,
         jobbsøkerService,
-        infra.miljø
     )
     val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
     val openAiService = OpenAiService(openAiKlient, kiLoggRepository, openAiProperties)
@@ -130,6 +129,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         reader = treffgjennomføringReader,
         writer = treffgjennomføringWriter,
         stegRepository = stegRepository,
+        miljø = infra.miljø,
     )
     val oppmøteService = OppmøteService(
         treffgjennomføringWriter = treffgjennomføringWriter,

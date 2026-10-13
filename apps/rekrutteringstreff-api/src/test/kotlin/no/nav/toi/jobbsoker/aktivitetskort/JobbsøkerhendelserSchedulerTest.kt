@@ -4,7 +4,6 @@ package no.nav.toi.jobbsoker.aktivitetskort
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionMock
-import no.nav.toi.Miljø
 import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
@@ -45,7 +44,6 @@ class JobbsøkerhendelserSchedulerTest {
             jobbsøkerRepository,
             arbeidsgiverRepository,
             jobbsøkerService,
-            Miljø.LOKALT,
         )
     }
 
