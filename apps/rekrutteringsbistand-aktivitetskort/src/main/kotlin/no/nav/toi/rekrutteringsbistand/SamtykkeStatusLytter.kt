@@ -12,7 +12,9 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
 import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.EndretAvType
+import no.nav.toi.aktivitetskort.Sentiment
 import java.time.ZonedDateTime
 
 private sealed interface SamtykkeStatusHendelse {
@@ -21,6 +23,7 @@ private sealed interface SamtykkeStatusHendelse {
     fun aktivitetsStatus(packet: JsonMessage): AktivitetsStatus
     fun endretAv(packet: JsonMessage, fnr: String): String
     fun endretAvType(packet: JsonMessage): EndretAvType
+    fun etiketter(packet: JsonMessage): List<AktivitetskortEtikett>
 }
 
 class SamtykkeStatusLytter private constructor(
@@ -121,6 +124,13 @@ private object SamtykkeBesvartHendelse : SamtykkeStatusHendelse {
 
     override fun endretAvType(packet: JsonMessage) =
         IdentType.valueOf(packet["besvartAvIdentType"].asText()).tilEndretAvType()
+
+    override fun etiketter(packet: JsonMessage) =
+        listOf(if (packet["samtykkeGitt"].asText().toBooleanStrict()) {
+            AktivitetskortEtikett("Godtatt CV-deling", Sentiment.POSITIVE)
+        } else {
+            AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE)
+        })
 }
 
 private object SelvbetjentSamtykkeGittHendelse : SamtykkeStatusHendelse {
@@ -138,6 +148,9 @@ private object SelvbetjentSamtykkeGittHendelse : SamtykkeStatusHendelse {
     override fun endretAv(packet: JsonMessage, fnr: String) = fnr
 
     override fun endretAvType(packet: JsonMessage) = EndretAvType.PERSONBRUKERIDENT
+
+    override fun etiketter(packet: JsonMessage) =
+        listOf(AktivitetskortEtikett("Godtatt CV-deling", Sentiment.POSITIVE))
 }
 
 private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
@@ -157,6 +170,9 @@ private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
 
     override fun endretAvType(packet: JsonMessage) =
         IdentType.valueOf(packet["trukketAvIdentType"].asText()).tilEndretAvType()
+
+    override fun etiketter(packet: JsonMessage) =
+        listOf(AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE))
 }
 
 private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {
@@ -173,6 +189,9 @@ private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {
     override fun endretAv(packet: JsonMessage, fnr: String) = EndretAvType.SYSTEM.name
 
     override fun endretAvType(packet: JsonMessage) = EndretAvType.SYSTEM
+
+    override fun etiketter(packet: JsonMessage) =
+        listOf(AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE))
 }
 
 private fun JsonMessage.requireZonedDateTime(key: String) {
