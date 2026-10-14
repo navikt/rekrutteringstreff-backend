@@ -470,23 +470,21 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     ""
                 }
             ).apply {
-                setObject(1, UUID.randomUUID())
-                setString(2, aktivitetsStatus.name)
-                var indexOffset = 0
+                var indexOffset = 1
+                setObject(indexOffset++, UUID.randomUUID())
+                setString(indexOffset++, aktivitetsStatus.name)
                 if(etiketter != null) {
-                    setString(3, etiketter.let { objectMapper.writeValueAsString(it) } ?: "")
-                    indexOffset++
+                    setString(indexOffset++, etiketter.let { objectMapper.writeValueAsString(it) } ?: "")
                 }
-                setString(3+indexOffset, endretAv)
-                setString(4+indexOffset, endretAvType.name)
-                setTimestamp(5+indexOffset, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
-                setObject(6+indexOffset, aktivitetskortId)
-                setString(7+indexOffset, aktivitetsStatus.name)
-                setString(8+indexOffset, endretAv)
-                setString(9+indexOffset, endretAvType.name)
+                setString(indexOffset++, endretAv)
+                setString(indexOffset++, endretAvType.name)
+                setTimestamp(indexOffset++, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
+                setObject(indexOffset++, aktivitetskortId)
+                setString(indexOffset++, aktivitetsStatus.name)
+                setString(indexOffset++, endretAv)
+                setString(indexOffset++, endretAvType.name)
                 if (forventetSisteAktivitetsstatus != null) {
-                    setString(10+indexOffset, forventetSisteAktivitetsstatus.name)
-                    indexOffset++
+                    setString(indexOffset++, forventetSisteAktivitetsstatus.name)
                 }
             }.executeUpdate()
         }.let { rowsUpdated ->
