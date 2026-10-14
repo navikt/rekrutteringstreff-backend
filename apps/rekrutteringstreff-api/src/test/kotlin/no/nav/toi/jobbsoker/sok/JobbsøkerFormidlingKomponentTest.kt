@@ -833,6 +833,47 @@ class JobbsøkerFormidlingKomponentTest {
     }
 
     @Test
+    fun `formidling-mittkontor returnerer alle jobbsøkere når veileders kontor er eierkontor`() {
+        val eierkontor = "KONTOR-A"
+        val treffId = opprettTreffMedEier("TESTEIER", opprettetAvKontor = eierkontor)
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"enheter":[{"enhetId":"$eierkontor","navn":"Kontor Test"}]}""")
+                )
+        )
+
+        db.leggTilJobbsøkereMedHendelse(
+            listOf("11111111111" to eierkontor, "22222222222" to "KONTOR-B").map { (fnr, kontor) ->
+                LeggTilJobbsøker(
+                    fødselsnummer = Fødselsnummer(fnr),
+                    fornavn = Fornavn("Filter"),
+                    etternavn = Etternavn("Rad${fnr.takeLast(2)}"),
+                    veilederNavIdent = VeilederNavIdent("ANNENVEILEDER"),
+                    kontor = Kontor(kontornummer = kontor, kontornavn = null),
+                )
+            },
+            treffId,
+        )
+
+        val response = httpPost(
+            formidlingMittKontorPath(treffId),
+            formidlingBody(),
+            navIdent = "TESTINNLOGGET",
+            groups = listOf(AzureAdRoller.jobbsøkerrettet),
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
+            .containsExactlyInAnyOrder("11111111111", "22222222222")
+    }
+
+    @Test
     fun `bruker uten relevante roller får 403 på formidling-mittkontor`() {
         val treffId = opprettTreffMedEier("A123456")
         val response = httpPost(

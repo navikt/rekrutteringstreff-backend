@@ -326,6 +326,7 @@ class JobbsøkerController(
         summary = "Hent jobbsøkere for mitt kontor",
         description = "Returnerer jobbsøkere på treffet der jobbsøkerens kontor matcher et av kontorene " +
             "innlogget bruker er tilknyttet i Modia — uavhengig av hvem som er registrert som veileder. " +
+            "Er et av disse kontorene også eierkontor for treffet, returneres alle jobbsøkere på treffet uavhengig av kontor. " +
             "Inkluderer skjulte jobbsøkere (er_synlig=false), men ikke slettede. " +
             "Krever jobbsøkerrettet rolle, men ingen eier-status. " +
             "Støtter paginering og fritekst-søk på navn eller fødselsnummer.",
@@ -375,14 +376,18 @@ class JobbsøkerController(
         val request = lesFormidlingRequest(ctx)
         val tilknyttedeEnheter = modiaKlient.hentMineEnheter(innloggetBruker.innkommendeToken())
 
-        AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
-        ctx.status(200).json(
+        val jobbsøkere = if (eierService.harTilgangViaTreffkontor(treff, tilknyttedeEnheter)) {
+            jobbsøkerService.hentAlleJobbsøkereForFormidling(treff, request)
+        } else {
             jobbsøkerService.hentJobbsøkereForMittKontorForFormidling(
                 treffId = treff,
                 request = request,
                 tilknyttedeEnheter = tilknyttedeEnheter,
             )
-        )
+        }
+
+        AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
+        ctx.status(200).json(jobbsøkere)
     }
 
     @OpenApi(
