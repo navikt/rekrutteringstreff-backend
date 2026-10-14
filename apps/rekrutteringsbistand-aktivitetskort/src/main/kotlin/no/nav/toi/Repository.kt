@@ -426,6 +426,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         endretAv: String,
         endretAvType: EndretAvType,
         forventetSisteAktivitetsstatus: AktivitetsStatus? = null,
+        etiketter: List<AktivitetskortEtikett>? = null
     ) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
@@ -445,7 +446,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     siste_aktivitetskort.slutt_dato,
                     siste_aktivitetskort.detaljer,
                     siste_aktivitetskort.handlinger,
-                    siste_aktivitetskort.etiketter,
+                    ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?" },
                     siste_aktivitetskort.oppgave,
                     siste_aktivitetskort.action_type,
                     siste_aktivitetskort.avtalt_med_nav,
@@ -469,17 +470,21 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     ""
                 }
             ).apply {
-                setObject(1, UUID.randomUUID())
-                setString(2, aktivitetsStatus.name)
-                setString(3, endretAv)
-                setString(4, endretAvType.name)
-                setTimestamp(5, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
-                setObject(6, aktivitetskortId)
-                setString(7, aktivitetsStatus.name)
-                setString(8, endretAv)
-                setString(9, endretAvType.name)
+                var indexOffset = 1
+                setObject(indexOffset++, UUID.randomUUID())
+                setString(indexOffset++, aktivitetsStatus.name)
+                if(etiketter != null) {
+                    setString(indexOffset++, etiketter.let { objectMapper.writeValueAsString(it) } ?: "")
+                }
+                setString(indexOffset++, endretAv)
+                setString(indexOffset++, endretAvType.name)
+                setTimestamp(indexOffset++, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
+                setObject(indexOffset++, aktivitetskortId)
+                setString(indexOffset++, aktivitetsStatus.name)
+                setString(indexOffset++, endretAv)
+                setString(indexOffset++, endretAvType.name)
                 if (forventetSisteAktivitetsstatus != null) {
-                    setString(10, forventetSisteAktivitetsstatus.name)
+                    setString(indexOffset++, forventetSisteAktivitetsstatus.name)
                 }
             }.executeUpdate()
         }.let { rowsUpdated ->
@@ -633,7 +638,15 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                             )
                         )
                     )
-                    setString(10, "[]")
+                    setString(10, objectMapper.writeValueAsString(
+                        listOf(
+                            AktivitetskortEtikett(
+                                "Venter svar",
+                                Sentiment.NEUTRAL,
+                                null
+                            )
+                        )
+                    ))
                     setNull(11, VARCHAR)
                 }.executeUpdate()
 
