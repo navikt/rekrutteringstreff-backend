@@ -21,20 +21,38 @@ class OppfølgingRepository {
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
             stmt.executeQuery().use { rs ->
-                rs.tilListe {
-                    Vurdering(
-                        personTreffId = PersonTreffId(it.getString(1)),
-                        arbeidsgiverTreffId = ArbeidsgiverTreffId(it.getString(2)),
-                        vurderingsstatus = Vurderingsvalg.entries.firstOrNull { valg -> valg.name == it.getString(3) },
-                        vurderingsnotat = it.lesNotater(4),
-                        avtaltIntervju = it.getBoolean(5),
-                        avtaltIntervjuDato = it.getDate(6)?.toLocalDate(),
-                        jobbtilbud = it.getBoolean(7),
-                    )
-                }
+                rs.tilListe { it.tilVurdering() }
             }
         }
     }
+
+    fun hentVurdering(connection: Connection, jobbsøkerId: Long, arbeidsgiverId: Long): Vurdering? {
+        val sql = """
+            SELECT j.id::text, a.id::text, v.vurderingsstatus, v.vurderingsnotat,
+                   v.avtalt_intervju, v.avtalt_intervju_dato, v.jobbtilbud
+            FROM vurdering v
+            JOIN jobbsoker j ON j.jobbsoker_id = v.jobbsoker_id
+            JOIN arbeidsgiver a ON a.arbeidsgiver_id = v.arbeidsgiver_id
+            WHERE v.jobbsoker_id = ? AND v.arbeidsgiver_id = ?
+        """.trimIndent()
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setLong(1, jobbsøkerId)
+            stmt.setLong(2, arbeidsgiverId)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.tilVurdering() else null
+            }
+        }
+    }
+
+    private fun ResultSet.tilVurdering() = Vurdering(
+        personTreffId = PersonTreffId(getString(1)),
+        arbeidsgiverTreffId = ArbeidsgiverTreffId(getString(2)),
+        vurderingsstatus = Vurderingsvalg.entries.firstOrNull { it.name == getString(3) },
+        vurderingsnotat = lesNotater(4),
+        avtaltIntervju = getBoolean(5),
+        avtaltIntervjuDato = getDate(6)?.toLocalDate(),
+        jobbtilbud = getBoolean(7),
+    )
 
     private fun ResultSet.lesNotater(kolonne: Int): List<Vurderingsnotat> {
         val array = getArray(kolonne) ?: return emptyList()
@@ -74,7 +92,7 @@ class OppfølgingRepository {
         }
     }
 
-    fun finnesForPar(connection: Connection, jobbsøkerId: Long, arbeidsgiverId: Long): Boolean =
+    fun harVurdering(connection: Connection, jobbsøkerId: Long, arbeidsgiverId: Long): Boolean =
         connection.prepareStatement("SELECT 1 FROM vurdering WHERE jobbsoker_id = ? AND arbeidsgiver_id = ?").use { stmt ->
             stmt.setLong(1, jobbsøkerId)
             stmt.setLong(2, arbeidsgiverId)

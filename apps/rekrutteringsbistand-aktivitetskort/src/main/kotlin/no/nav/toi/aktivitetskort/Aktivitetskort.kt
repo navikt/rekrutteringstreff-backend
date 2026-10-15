@@ -194,13 +194,12 @@ object RekrutteringstreffType: AktivitetskortType {
         fellesMeldingsfelter: FellesMeldingsfelter,
         resultSet: ResultSet,
         aktivitetskortId: String
-    ) = RekrutteringstreffFeilMelding(
-            fellesMeldingsfelter = fellesMeldingsfelter,
-            rekrutteringstreffId = resultSet
-                .getObject("rekrutteringstreff_id", UUID::class.java)
-                ?.toString()
-                ?: error("Mangler rekrutteringstreffId for aktivitetskort $aktivitetskortId"),
-        )
+    ) = rekrutteringstreffFeil(
+        fellesMeldingsfelter = fellesMeldingsfelter,
+        resultSet = resultSet,
+        aktivitetskortId = aktivitetskortId,
+        eventName = "aktivitetskort-feil-rekrutteringstreff",
+    )
 }
 object WorkOpType: AktivitetskortType {
     override val eventName = "workopinvitasjon"
@@ -213,14 +212,28 @@ object WorkOpType: AktivitetskortType {
         fellesMeldingsfelter: FellesMeldingsfelter,
         resultSet: ResultSet,
         aktivitetskortId: String
-    ) = WorkOpFeilMelding(
-            fellesMeldingsfelter = fellesMeldingsfelter,
-            rekrutteringstreffId = resultSet
-                .getObject("rekrutteringstreff_id", UUID::class.java)
-                ?.toString()
-                ?: error("Mangler rekrutteringstreffId for aktivitetskort $aktivitetskortId")
-        )
+    ) = rekrutteringstreffFeil(
+        fellesMeldingsfelter = fellesMeldingsfelter,
+        resultSet = resultSet,
+        aktivitetskortId = aktivitetskortId,
+        eventName = "aktivitetskort-feil-workop",
+    )
 }
+
+private fun rekrutteringstreffFeil(
+    fellesMeldingsfelter: FellesMeldingsfelter,
+    resultSet: ResultSet,
+    aktivitetskortId: String,
+    eventName: String,
+) = RekrutteringstreffFeilMelding(
+    fellesMeldingsfelter = fellesMeldingsfelter,
+    rekrutteringstreffId = resultSet
+        .getObject("rekrutteringstreff_id", UUID::class.java)
+        ?.toString()
+        ?: error("Mangler rekrutteringstreffId for aktivitetskort $aktivitetskortId"),
+    eventName = eventName,
+)
+
 object DeleCvMedArbeidsgiverType: AktivitetskortType {
     override val eventName = "deltstilling"
     override val beskrivelse = "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."

@@ -1,8 +1,6 @@
 package no.nav.toi
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
-import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -11,7 +9,6 @@ import java.sql.Connection
 
 class HendelseWriter(
     private val jobbsøkerRepository: JobbsøkerRepository,
-    private val arbeidsgiverRepository: ArbeidsgiverRepository,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val mapper: ObjectMapper,
 ) {
@@ -28,21 +25,6 @@ class HendelseWriter(
         hendelsestype = hendelsestype,
         aktørType = AktørType.MARKEDSKONTAKT_ELLER_VEILEDER,
         opprettetAv = navIdent,
-        hendelseData = hendelseData(data),
-    )
-
-    fun forArbeidsgiver(
-        connection: Connection,
-        arbeidsgiverTreffId: ArbeidsgiverTreffId,
-        hendelsestype: ArbeidsgiverHendelsestype,
-        navIdent: String,
-        data: Map<String, Any?> = emptyMap(),
-    ) = arbeidsgiverRepository.leggTilHendelse(
-        connection = connection,
-        arbeidsgiverTreffId = arbeidsgiverTreffId,
-        hendelsestype = hendelsestype,
-        opprettetAvAktørType = AktørType.MARKEDSKONTAKT_ELLER_VEILEDER,
-        aktøridentifikasjon = navIdent,
         hendelseData = hendelseData(data),
     )
 

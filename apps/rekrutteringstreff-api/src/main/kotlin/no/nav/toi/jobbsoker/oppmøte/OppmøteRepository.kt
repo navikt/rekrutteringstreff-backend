@@ -10,6 +10,30 @@ data class Deltakernummer(val personTreffId: PersonTreffId, val deltakernummer: 
 
 class OppmøteRepository {
 
+    fun erFremmøtt(connection: Connection, jobbsøkerId: Long): Boolean {
+        val sql = """
+            SELECT j.status != ?
+              AND (
+                  SELECT jh.hendelsestype
+                  FROM jobbsoker_hendelse jh
+                  WHERE jh.jobbsoker_id = j.jobbsoker_id
+                    AND jh.hendelsestype IN (?, ?)
+                  ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
+                  LIMIT 1
+              ) = ?
+            FROM jobbsoker j
+            WHERE j.jobbsoker_id = ?
+        """.trimIndent()
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, JobbsøkerStatus.SLETTET.name)
+            stmt.setString(2, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE.name)
+            stmt.setString(3, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET.name)
+            stmt.setString(4, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE.name)
+            stmt.setLong(5, jobbsøkerId)
+            stmt.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
+        }
+    }
+
     fun hentFremmøtteJobbsøkere(connection: Connection, treffDbId: Long): List<PersonTreffId> {
         val sql = """
             SELECT j.id::text

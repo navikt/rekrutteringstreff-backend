@@ -37,19 +37,12 @@ abstract class AktivitetskortFeil(
 class RekrutteringstreffFeilMelding(
     fellesMeldingsfelter: FellesMeldingsfelter,
     val rekrutteringstreffId: String,
+    override val eventName: String,
 ) : AktivitetskortFeil(fellesMeldingsfelter) {
-    override val eventName = "aktivitetskort-feil-rekrutteringstreff"
 }
 class DeltStillingFeilMelding(
     fellesMeldingsfelter: FellesMeldingsfelter,
     val stillingId: String,
 ) : AktivitetskortFeil(fellesMeldingsfelter) {
     override val eventName = "aktivitetskort-feil-deltstilling"
-}
-
-class WorkOpFeilMelding(
-    fellesMeldingsfelter: FellesMeldingsfelter,
-    val rekrutteringstreffId: String,
-) : AktivitetskortFeil(fellesMeldingsfelter) {
-    override val eventName = "aktivitetskort-feil-workop"
 }
