@@ -10,6 +10,7 @@ on:
       - .github/workflows/deploy-rekrutteringstreff-api.yaml
       - .github/workflows/deploy-template.yaml
       - buildSrc/**
+      - gradle/wrapper/gradle-wrapper.properties
       - technical-libs/logging/**
       - technical-libs/testrapid/**
   workflow_dispatch:
