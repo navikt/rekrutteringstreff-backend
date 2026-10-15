@@ -101,7 +101,7 @@ enum class UautentifiserendeTestCase(val leggPåToken: HttpRequest.Builder.(Mock
         )
     }),
     UtgåttToken({ authServer, authPort ->
-        this.header("Authorization", "Bearer ${authServer.lagToken(authPort, expiry = -1).serialize()}")
+        this.header("Authorization", "Bearer ${authServer.lagToken(authPort, expiry = -3600).serialize()}")
     }),
     ManglendeNavIdent({ authServer, authPort ->
         this.header("Authorization", "Bearer ${authServer.lagToken(authPort, claims = emptyMap()).serialize()}")

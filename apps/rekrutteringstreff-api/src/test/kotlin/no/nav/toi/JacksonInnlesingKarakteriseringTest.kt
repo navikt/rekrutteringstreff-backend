@@ -1,5 +1,8 @@
 package no.nav.toi
 
+import no.nav.toi.rekrutteringstreff.Endringsfelttype
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
+import tools.jackson.databind.DatabindException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -37,6 +40,23 @@ class JacksonInnlesingKarakteriseringTest {
             InnlesingDto::class.java,
         )
         assertEquals(InnlesingDto("a", null, listOf("én"), "ja", "fordi"), dto)
+    }
+
+    @Test
+    fun `ukjente enumverdier og null i endringssett ignoreres`() {
+        val endringer = mapper.readValue(
+            """{"endredeFelter":["NAVN","ukjentFelt",null,"NAVN","STED"],"ukjentFelt":true}""",
+            Rekrutteringstreffendringer::class.java,
+        )
+        assertEquals(setOf(Endringsfelttype.NAVN, Endringsfelttype.STED), endringer.endredeFelter)
+        assertEquals("""{"endredeFelter":["NAVN","STED"]}""", mapper.writeValueAsString(endringer))
+    }
+
+    @Test
+    fun `null som endringssett avvises`() {
+        assertThrows(DatabindException::class.java) {
+            mapper.readValue("""{"endredeFelter":null}""", Rekrutteringstreffendringer::class.java)
+        }
     }
 
     @Test
