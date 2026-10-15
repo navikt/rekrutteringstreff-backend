@@ -877,6 +877,9 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende avlyst-status med hendelseId for jobbsøker som har svart ja`() {
         val expectedFnr = Fødselsnummer("12345678901")
+        // Aktivitetsplanen godtar bare Nav-ident her, så meldingen bruker den som opprettet treffet.
+        val opprettetAv = "Z999999"
+        val arrangør = "Z888888"
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -891,7 +894,7 @@ class JobbsøkerhendelserSchedulerTest {
         jobbsøkerService.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
         scheduler.wrapJobbkjøring()
 
-        rekrutteringstreffService.avlys(treffId, expectedFnr.asString)
+        rekrutteringstreffService.avlys(treffId, arrangør)
         scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + avlyst-status
@@ -899,7 +902,8 @@ class JobbsøkerhendelserSchedulerTest {
         assertThat(melding["@event_name"].asString()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asString()).isEqualTo(expectedFnr.asString)
         assertThat(melding["rekrutteringstreffId"].asString()).isEqualTo(treffId.somString)
-        assertThat(melding["endretAv"].asString()).isEqualTo(expectedFnr.asString)
+        assertThat(melding["endretAv"].asString()).isEqualTo(opprettetAv)
+        assertThat(melding["endretAv"].asString()).isNotEqualTo(expectedFnr.asString)
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
         assertThat(melding["svar"].asBoolean()).isTrue
         assertThat(melding["treffstatus"].asString()).isEqualTo("avlyst")
@@ -912,6 +916,9 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende fullfort-status paa rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
+        // Aktivitetsplanen godtar bare Nav-ident her, så meldingen bruker den som opprettet treffet.
+        val opprettetAv = "Z999999"
+        val arrangør = "Z888888"
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -926,9 +933,9 @@ class JobbsøkerhendelserSchedulerTest {
         jobbsøkerService.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
         scheduler.wrapJobbkjøring()
 
-        db.endreTilTidTilPassert(treffId, expectedFnr.asString)
+        db.endreTilTidTilPassert(treffId, arrangør)
         // Treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
-        rekrutteringstreffService.fullfør(treffId, expectedFnr.asString)
+        rekrutteringstreffService.fullfør(treffId, arrangør)
         scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status
@@ -936,7 +943,8 @@ class JobbsøkerhendelserSchedulerTest {
         assertThat(melding["@event_name"].asString()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asString()).isEqualTo(expectedFnr.asString)
         assertThat(melding["rekrutteringstreffId"].asString()).isEqualTo(treffId.somString)
-        assertThat(melding["endretAv"].asString()).isEqualTo(expectedFnr.asString)
+        assertThat(melding["endretAv"].asString()).isEqualTo(opprettetAv)
+        assertThat(melding["endretAv"].asString()).isNotEqualTo(expectedFnr.asString)
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
         assertThat(melding["svar"].asBoolean()).isTrue
         assertThat(melding["treffstatus"].asString()).isEqualTo("fullført")

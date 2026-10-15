@@ -73,7 +73,7 @@ class AktivitetskortJsonKarakteriseringTest {
         )
         val publiserte = mutableListOf<Pair<String, String>>()
         val markerte = mutableListOf<String>()
-        RekrutteringstreffFeilMelding(fellesfelter, "treff-789").sendTilRapid(
+        RekrutteringstreffFeilMelding(fellesfelter, "treff-789", eventName = "aktivitetskort-feil-rekrutteringstreff").sendTilRapid(
             rapidPublish = { key, json -> publiserte += key to json },
             markerFeilkøhendelseSomSendt = { markerte += it },
         )
@@ -131,7 +131,7 @@ class AktivitetskortJsonKarakteriseringTest {
             "AktivitetskortHandling.fraAkaasJson" to """[{"tekst":"Svar","subtekst":"Svar på treffet","url":"https://example.test/svar","lenkeType":"FELLES"}]""",
             "AktivitetskortEtikett.fraAkaasJson" to """[{"tekst":"Venter svar","sentiment":"NEUTRAL"}]""",
             "AktivitetskortOppgave.fraAkaasJson" to """{"ekstern":{"tekst":"Les mer","subtekst":"Åpne lenken","url":"https://example.test/ekstern"}}""",
-            "AktivitetskortFeil.sendTilRapid" to """{"rekrutteringstreffId":"treff-789","fnr":"12345678901","aktivitetskortId":"kort-123","aktivitetskortType":"REKRUTTERINGSTREFF","endretAv":"Z123456","messageId":"melding-456","errorMessage":"Ugyldig rekrutteringstreff","errorType":"UGYLDIG_IDENT","timestamp":"2026-03-04T09:08:07.123+01:00","@event_name":"aktivitetskort-feil-rekrutteringstreff"}""",
+            "AktivitetskortFeil.sendTilRapid" to """{"rekrutteringstreffId":"treff-789","@event_name":"aktivitetskort-feil-rekrutteringstreff","fnr":"12345678901","aktivitetskortId":"kort-123","aktivitetskortType":"REKRUTTERINGSTREFF","endretAv":"Z123456","messageId":"melding-456","errorMessage":"Ugyldig rekrutteringstreff","errorType":"UGYLDIG_IDENT","timestamp":"2026-03-04T09:08:07.123+01:00"}""",
             "AktivitetskortFeil.rapidKey" to "12345678901",
             "AktivitetskortFeil.markertMessageId" to "melding-456",
             "Repository:85" to """[{"label":"Tid","verdi":"10:30"},{"label":"Sted","verdi":"Gate 1, 0123 Oslo"}]""",

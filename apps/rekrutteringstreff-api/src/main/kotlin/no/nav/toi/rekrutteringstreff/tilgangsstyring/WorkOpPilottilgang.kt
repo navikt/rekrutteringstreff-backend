@@ -10,6 +10,18 @@ import no.nav.toi.rekrutteringstreff.TreffId
 class WorkOpPilottilgang(workOpPilotkontorer: List<String>) {
     private val workOpPilotkontorer = workOpPilotkontorer.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
 
+    init {
+        // Fanger usiterte YAML-verdier, der f.eks. 0704 leses som oktal og blir "452".
+        val ugyldige = this.workOpPilotkontorer.filterNot { it.matches(gyldigEnhetsnummer) }
+        require(ugyldige.isEmpty()) {
+            "WORKOP_PILOTKONTORER inneholder ugyldige enhetsnumre $ugyldige. Forventer fire sifre, f.eks. \"0704\"."
+        }
+    }
+
+    private companion object {
+        val gyldigEnhetsnummer = Regex("""^\d{4}$""")
+    }
+
     fun harPilottilgang(bruker: AuthenticatedUser): Boolean {
         if (bruker.erBorger || bruker.erUtvikler()) return true
         val kontor = bruker.extractKontorId()?.trim() ?: return false

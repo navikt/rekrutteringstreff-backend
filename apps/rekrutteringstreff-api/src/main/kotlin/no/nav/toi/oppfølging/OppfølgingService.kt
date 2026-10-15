@@ -11,7 +11,6 @@ import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import java.sql.Connection
-import no.nav.toi.Miljø
 
 class OppfølgingService(
     private val writer: TreffgjennomføringWriter,
@@ -19,22 +18,18 @@ class OppfølgingService(
     private val oppmøteRepository: OppmøteRepository,
     private val stegRepository: StegRepository,
     private val hendelser: HendelseWriter,
-    private val miljø: Miljø,
 ) {
 
     fun lagreVurdering(treffId: TreffId, dto: VurderingDto, navIdent: String): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
-            kontekst.krevWorkOpEllerLokalUtvikling(miljø)
             val ny = OppfølgingValidering.vurdering(dto)
             val jobbsøkerId = kontekst.krevJobbsøkerId(ny.personTreffId)
             val arbeidsgiverId = kontekst.krevArbeidsgiverId(ny.arbeidsgiverTreffId)
 
-            val før = repository.hentForTreff(connection, kontekst.treffDbId).firstOrNull {
-                it.personTreffId == ny.personTreffId && it.arbeidsgiverTreffId == ny.arbeidsgiverTreffId
-            }
+            val før = repository.hentVurdering(connection, jobbsøkerId, arbeidsgiverId)
 
             if (ny.harRegistrertNoe()) {
-                if (ny.personTreffId !in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)) {
+                if (!oppmøteRepository.erFremmøtt(connection, jobbsøkerId)) {
                     throw BadRequestResponse("Bare fremmøtte jobbsøkere kan få registrert vurdering")
                 }
                 repository.lagre(connection, jobbsøkerId, arbeidsgiverId, ny)

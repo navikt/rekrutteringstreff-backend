@@ -93,9 +93,9 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         stegRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
     )
     val treffgjennomføringWriter = TreffgjennomføringWriter(
-        infra.dataSource, treffkontekstRepository, stegRepository, treffgjennomføringReader,
+        infra.dataSource, treffkontekstRepository, stegRepository, treffgjennomføringReader, infra.miljø,
     )
-    val hendelseWriter = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, JacksonConfig.mapper)
+    val hendelseWriter = HendelseWriter(jobbsøkerRepository, rekrutteringstreffRepository, JacksonConfig.mapper)
 
     val jobbsøkerService = JobbsøkerService(
         dataSource = infra.dataSource,
@@ -154,7 +154,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         oppfølgingRepository = oppfølgingRepository,
         stegRepository = stegRepository,
         hendelseWriter = hendelseWriter,
-        miljø = infra.miljø,
     )
     val oppfølgingService = OppfølgingService(
         writer = treffgjennomføringWriter,
@@ -162,7 +161,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         oppmøteRepository = oppmøteRepository,
         stegRepository = stegRepository,
         hendelser = hendelseWriter,
-        miljø = infra.miljø,
     )
 
     val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService, rekrutteringstreffService)

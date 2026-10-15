@@ -188,7 +188,6 @@ class JobbsøkerhendelserScheduler(
             endretAvPersonbruker = false,
             svar = true,
             treffstatus = treffstatus,
-            endretAv = hendelse.fnr,
         ).publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
@@ -218,4 +217,3 @@ class JobbsøkerhendelserScheduler(
         val aktøridentifikasjon: String?
     )
 }
-

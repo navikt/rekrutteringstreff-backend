@@ -3,7 +3,6 @@ package no.nav.toi.treffgjennomføring.matching
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.ConflictResponse
 import no.nav.toi.HendelseWriter
-import no.nav.toi.Miljø
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -26,21 +25,19 @@ class MatchingService(
     private val oppfølgingRepository: OppfølgingRepository,
     private val stegRepository: StegRepository,
     private val hendelseWriter: HendelseWriter,
-    private val miljø: Miljø,
 ) {
 
     fun settInteresse(treffId: TreffId, dto: InteresseRequestDto): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
-            kontekst.krevWorkOpEllerLokalUtvikling(miljø)
             val person = PersonTreffId(dto.personTreffId)
             val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
             val jobbsøkerId = kontekst.krevJobbsøkerId(person)
             val arbeidsgiverId = kontekst.krevArbeidsgiverId(arbeidsgiver)
 
-            if (dto.interessert && person !in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)) {
+            if (dto.interessert && !oppmøteRepository.erFremmøtt(connection, jobbsøkerId)) {
                 throw BadRequestResponse("Bare fremmøtte jobbsøkere kan registrere interesse")
             }
-            if (!dto.interessert && oppfølgingRepository.finnesForPar(connection, jobbsøkerId, arbeidsgiverId)) {
+            if (!dto.interessert && oppfølgingRepository.harVurdering(connection, jobbsøkerId, arbeidsgiverId)) {
                 throw InteresseKanIkkeFjernesException()
             }
 
@@ -65,7 +62,7 @@ class MatchingService(
         interessert: Boolean,
     ) {
         if (!kontekst.erWorkOp) return
-        val fordelinger = repository.hentFor(connection, kontekst).intervjufordelinger
+        val fordelinger = repository.hentIntervjufordelinger(connection, kontekst)
         val erFordelingStartet = fordelinger.isNotEmpty() || gjeldendeSteg >= TreffgjennomføringSteg.FORDELING
         if (!erFordelingStartet) return
 
@@ -105,7 +102,7 @@ class MatchingService(
         kontekst: Treffkontekst,
         fordeling: ArbeidsgiverIntervjufordeling,
     ) {
-        val interesserte = repository.hentFor(connection, kontekst).interesser
+        val interesserte = repository.hentInteresser(connection, kontekst.treffDbId)
             .filter { it.arbeidsgiverTreffId == fordeling.arbeidsgiverTreffId }
             .map { it.personTreffId }
             .toSet()
