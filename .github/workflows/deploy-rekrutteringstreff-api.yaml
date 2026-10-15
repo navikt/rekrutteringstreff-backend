@@ -20,7 +20,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/formidlinger-mer-tilgang
+      deploy_dev_branch: refs/heads/refactoring-gjennomføring
     permissions:
       contents: read
       id-token: write
