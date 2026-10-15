@@ -28,7 +28,7 @@ class RegistrertFattJobbenLytter(
             }
             validate {
                 it.requireKey("stillingsId", "utførtAvNavIdent", "tidspunkt", "fnr")
-                it.require("stillingsId") { node -> node.asText().toUUID() }
+                it.require("stillingsId") { node -> node.asString().toUUID() }
             }
         }.register(this)
     }
@@ -39,9 +39,9 @@ class RegistrertFattJobbenLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry,
     ) {
-        val stillingsId = packet["stillingsId"].asText().toUUID()
-        val navIdent = packet["utførtAvNavIdent"].asText()
-        val fnr = packet["fnr"].asText()
+        val stillingsId = packet["stillingsId"].asString().toUUID()
+        val navIdent = packet["utførtAvNavIdent"].asString()
+        val fnr = packet["fnr"].asString()
 
         val aktivitetskortId = repository.hentAktivitetskortIdForDeltStilling(fnr, stillingsId)
         if (aktivitetskortId != null && repository.hentSisteAktivitetsstatus(aktivitetskortId) == AktivitetsStatus.GJENNOMFORES) {

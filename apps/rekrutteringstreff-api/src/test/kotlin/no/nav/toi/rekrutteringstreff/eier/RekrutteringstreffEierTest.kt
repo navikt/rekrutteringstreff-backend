@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.eier
 
-import com.fasterxml.jackson.core.type.TypeReference
+import tools.jackson.core.type.TypeReference
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
@@ -133,7 +133,7 @@ class RekrutteringstreffEierTest {
             )
             assertThat(response.statusCode()).isEqualTo(200)
             val json = mapper.readTree(response.body())
-            val treff = if (hentListe) json["treff"].single { it["id"].asText() == treffId.somString } else json
+            val treff = if (hentListe) json["treff"].single { it["id"].asString() == treffId.somString } else json
             val forventet = mapper.readTree(forventetJson)
             assertThat(treff["eierOgKontor"]).isEqualTo(forventet)
             assertThat(treff.has("eiere")).isFalse()

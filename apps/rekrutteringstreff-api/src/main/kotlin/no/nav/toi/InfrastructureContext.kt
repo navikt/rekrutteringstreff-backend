@@ -55,18 +55,21 @@ open class InfrastructureContext(
             AuthenticationConfiguration(
                 audience = getenv("AZURE_APP_CLIENT_ID"),
                 issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
-                jwksUri = getenv("AZURE_OPENID_CONFIG_JWKS_URI")
+                jwksUri = getenv("AZURE_OPENID_CONFIG_JWKS_URI"),
+                issuerType = IssuerType.AZURE_AD,
             ),
             AuthenticationConfiguration(
                 audience = getenv("TOKEN_X_CLIENT_ID"),
                 issuer = getenv("TOKEN_X_ISSUER"),
-                jwksUri = getenv("TOKEN_X_JWKS_URI")
+                jwksUri = getenv("TOKEN_X_JWKS_URI"),
+                issuerType = IssuerType.TOKEN_X,
             ),
             if (env["NAIS_CLUSTER_NAME"] == "dev-gcp")
                 AuthenticationConfiguration(
                     audience = "dev-gcp:toi:rekrutteringstreff-api",
                     issuer = "https://fakedings.intern.dev.nav.no/fake",
                     jwksUri = "https://fakedings.intern.dev.nav.no/fake/jwks",
+                    issuerType = IssuerType.FAKEDINGS,
                 ) else null
         )
     }

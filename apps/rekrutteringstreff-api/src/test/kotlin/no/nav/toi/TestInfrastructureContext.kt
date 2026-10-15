@@ -40,8 +40,15 @@ class TestInfrastructureContext(
         AuthenticationConfiguration(
             issuer = "http://localhost:$authPort/default",
             jwksUri = "http://localhost:$authPort/default/jwks",
-            audience = "rekrutteringstreff-audience"
-        )
+            audience = "rekrutteringstreff-audience",
+            issuerType = IssuerType.AZURE_AD,
+        ),
+        AuthenticationConfiguration(
+            issuer = "http://localhost:$authPort/tokenx",
+            jwksUri = "http://localhost:$authPort/tokenx/jwks",
+            audience = "rekrutteringstreff-audience",
+            issuerType = IssuerType.TOKEN_X,
+        ),
     )
 
     override val rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(

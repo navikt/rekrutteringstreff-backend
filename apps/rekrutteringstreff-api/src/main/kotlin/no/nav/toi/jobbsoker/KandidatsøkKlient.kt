@@ -1,6 +1,6 @@
 package no.nav.toi.kandidatsok
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
 import no.nav.toi.exception.KandidatsokOppslagFeiletException

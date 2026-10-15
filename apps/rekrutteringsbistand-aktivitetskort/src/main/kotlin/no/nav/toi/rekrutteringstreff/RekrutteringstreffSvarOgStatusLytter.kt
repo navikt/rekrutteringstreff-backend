@@ -47,8 +47,8 @@ class RekrutteringstreffSvarOgStatusLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        val fnr = packet["fnr"].asText()
-        val rekrutteringstreffId = packet["rekrutteringstreffId"].asText()
+        val fnr = packet["fnr"].asString()
+        val rekrutteringstreffId = packet["rekrutteringstreffId"].asString()
 
         val aktivitetskortId = repository.hentAktivitetskortId(
             fnr = fnr,
@@ -62,7 +62,7 @@ class RekrutteringstreffSvarOgStatusLytter(
         }
 
         val svar = packet["svar"].takeIf { !it.isMissingNode }?.asBoolean()
-        val treffstatus = packet["treffstatus"].takeIf { !it.isMissingNode }?.asText()
+        val treffstatus = packet["treffstatus"].takeIf { !it.isMissingNode && !it.isNull }?.asString()
 
         val aktivitetsStatus = beregnAktivitetsStatus(svar, treffstatus, rekrutteringstreffId, fnr) ?: return
 
@@ -72,7 +72,7 @@ class RekrutteringstreffSvarOgStatusLytter(
         repository.oppdaterAktivitetsstatus(
             aktivitetskortId = aktivitetskortId,
             aktivitetsStatus = aktivitetsStatus,
-            endretAv = packet["endretAv"].asText(),
+            endretAv = packet["endretAv"].asString(),
             endretAvType = if (endretAvPersonbruker) EndretAvType.PERSONBRUKERIDENT else EndretAvType.NAVIDENT
         )
     }

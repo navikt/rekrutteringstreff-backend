@@ -35,9 +35,9 @@ class SamtykkeForespurtLytter(
                     "forespurtAvIdent",
                     "forespurtTidspunkt",
                 )
-                it.require("stillingsId") { node -> node.asText().toUUID() }
-                it.require("svarfrist") { node -> ZonedDateTime.parse(node.asText()) }
-                it.require("forespurtTidspunkt") { node -> ZonedDateTime.parse(node.asText()) }
+                it.require("stillingsId") { node -> node.asString().toUUID() }
+                it.require("svarfrist") { node -> ZonedDateTime.parse(node.asString()) }
+                it.require("forespurtTidspunkt") { node -> ZonedDateTime.parse(node.asString()) }
             }
         }.register(this)
     }
@@ -48,15 +48,15 @@ class SamtykkeForespurtLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry,
     ) {
-        val fnr = packet["fnr"].asText()
-        val stillingId = packet["stillingsId"].asText()
+        val fnr = packet["fnr"].asString()
+        val stillingId = packet["stillingsId"].asString()
 
         val hendelseId = UUID.randomUUID()
         repository.opprettDeltStilling(
             fnr = fnr,
             stillingId = stillingId,
-            tittel = packet["stillingsTittel"].asText(),
-            opprettetAv = packet["forespurtAvIdent"].asText(),
+            tittel = packet["stillingsTittel"].asString(),
+            opprettetAv = packet["forespurtAvIdent"].asString(),
             messageId = hendelseId
         )?.let { aktivitetskortId ->
             packet["aktivitetskortuuid"] = aktivitetskortId

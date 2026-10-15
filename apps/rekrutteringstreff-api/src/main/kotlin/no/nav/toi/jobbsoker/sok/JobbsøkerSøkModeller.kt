@@ -176,5 +176,5 @@ data class MinsideHendelseSøkDto(
     val hendelsestype: String,
     val opprettetAvAktørType: String,
     val aktørIdentifikasjon: String?,
-    val hendelseData: com.fasterxml.jackson.databind.JsonNode?,
+    val hendelseData: tools.jackson.databind.JsonNode?,
 )
