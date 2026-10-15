@@ -203,7 +203,7 @@ flowchart TD
 
 **Pilotkontor-sjekk:**
 
-1. Listen styres av miljøvariabelen `WORKOP_PILOTKONTORER` (kommaseparert, satt i `.nais/dev-gcp.yaml` og `.nais/prod-gcp.yaml`). Tom liste gir bare utviklere tilgang.
+1. Listen styres av miljøvariabelen `WORKOP_PILOTKONTORER` (kommaseparert, satt i `.nais/dev-gcp.yaml` og `.nais/prod-gcp.yaml`). Tom liste gir bare utviklere tilgang. Verdien må stå i anførselstegn i YAML: usitert `0704` blir oktal `452`. Hvert enhetsnummer må være fire sifre, ellers stopper appen ved oppstart.
 2. API-et henter aktivt kontor fra modiacontextholder, ikke fra klienten.
 3. Et felles filter (`leggTilWorkOpPilotkontorsjekk`) sjekker alle ruter under `/api/rekrutteringstreff` med treff-id i stien. Er treffet WorkOp, kreves pilotkontor.
 4. Opprettelse av WorkOp sjekkes i controlleren, og søket skjuler WorkOp for brukere utenfor piloten.

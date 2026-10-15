@@ -54,4 +54,17 @@ class WorkOpPilottilgangTest {
     fun `tom pilotliste gir ingen tilgang`() {
         assertFalse(WorkOpPilottilgang(emptyList()).harPilottilgang(bruker("0403")))
     }
+
+    @Test
+    fun `ledende null beholdes`() {
+        assertTrue(WorkOpPilottilgang(listOf("0704")).harPilottilgang(bruker("0704")))
+        assertFalse(WorkOpPilottilgang(listOf("0704")).harPilottilgang(bruker("704")))
+    }
+
+    @Test
+    fun `enhetsnummer som ikke er fire sifre stopper oppstart`() {
+        listOf("452", "704", "07040", "07a4", "0704;0403").forEach { ugyldig ->
+            assertThrows<IllegalArgumentException> { WorkOpPilottilgang(listOf("0403", ugyldig)) }
+        }
+    }
 }
