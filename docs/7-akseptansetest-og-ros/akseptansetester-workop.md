@@ -189,7 +189,7 @@ Regel (se WO-14 i ROS-en): Usynlige personer vises ikke i jobbsøkerlisten, bare
 
 | #     | Gjør dette                                                                            | Forventet resultat                                                         | ✅❌ | Notat |
 | ----- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---- | ----- |
-| 7.2.1 | Eier – Flytt en person med romvalget.                                                 | Bare personen flyttes. Statusen viser «Lagrer …» mens lagringen pågår, og «Lagret» først når serveren har bekreftet. |      |       |
+| 7.2.1 | Eier – Flytt en person med romvalget.                                                 | Bare personen flyttes. Statusen viser «Lagrer...» mens lagringen pågår, og «Lagret» først når serveren har bekreftet. |      |       |
 | 7.2.2 | Eier – Flytt en annen person med dra-og-slipp. Last siden på nytt.                    | Flyttingen beholdes, uten duplikater.                                      |      |       |
 | 7.2.3 | Eier – Flytt til et rom med både lavere og høyere deltakernumre. Åpne på nytt.        | Personene står i stigende nummerrekkefølge.                                |      |       |
 | 7.2.4 | Eier – Flytt den automatisk plasserte personen til et annet rom.                      | Flyttingen lagres; andres plasseringer beholdes.                           |      |       |
@@ -336,7 +336,7 @@ Regel (se WO-14 i ROS-en): Usynlige personer vises ikke i jobbsøkerlisten, bare
 | 12.2.2 | Eier – Flytt mellom rom og i intervjurekkefølgen uten dra-og-slipp.           | Romvalg/flytteknapper gir samme flyttemuligheter.                                       |      |       |
 | 12.2.3 | Eier – Fokuser sperret oppmøte/interesse med tastatur.                        | Sperreårsaken er tilgjengelig uten mus.                                                 |      |       |
 | 12.2.4 | Eier – Bruk 200 % zoom og smalt vindu i alle seks steg/dialoger.              | Felter, feil og knapper er tilgjengelige; brede tabeller kan rulles. I smalt vindu åpnes stegindikatoren med knappen «Steg X av 6». |      |       |
-| 12.2.5 | Eier – Endre data med treg eller blokkert lagring (se oppskriften i 13.2). | Statusen viser «Lagrer …», «Lagret» og «Lagringsfeil». Radene er sperret mens lagringen pågår, og flytter seg ikke under klikk. |      |       |
+| 12.2.5 | Eier – Endre data med treg eller blokkert lagring (se oppskriften i 13.2). | Statusen viser «Lagrer...», «Lagret» og «Ikke lagret». Radene er sperret mens lagringen pågår, og flytter seg ikke under klikk. |      |       |
 
 ## 13. Hendelser, lagringsfeil og samtidighet
 

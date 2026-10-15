@@ -126,7 +126,7 @@ Regel (se WO-14 i ROS-en): Usynlige personer vises ikke i jobbsøkerlisten, bare
 
 | #     | Gjør dette                                                                            | Forventet resultat                                                         | ✅❌ | Notat |
 | ----- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---- | ----- |
-| 7.2.1 | Eier – Flytt en person med romvalget.                                                 | Bare personen flyttes. Statusen viser «Lagrer …» mens lagringen pågår, og «Lagret» først når serveren har bekreftet. |      |       |
+| 7.2.1 | Eier – Flytt en person med romvalget.                                                 | Bare personen flyttes. Statusen viser «Lagrer...» mens lagringen pågår, og «Lagret» først når serveren har bekreftet. |      |       |
 
 ### 7.3. Arbeidsgiverendringer etter romfordeling
 
@@ -187,7 +187,7 @@ Regel (se WO-14 i ROS-en): Usynlige personer vises ikke i jobbsøkerlisten, bare
 | #      | Gjør dette                                                                    | Forventet resultat                                                                      | ✅❌ | Notat |
 | ------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---- | ----- |
 | 12.2.4 | Eier – Bruk 200 % zoom og smalt vindu i alle seks steg/dialoger.              | Felter, feil og knapper er tilgjengelige; brede tabeller kan rulles. I smalt vindu åpnes stegindikatoren med knappen «Steg X av 6». |      |       |
-| 12.2.5 | Eier – Endre data med treg eller blokkert lagring (se oppskriften i 13.2). | Statusen viser «Lagrer …», «Lagret» og «Lagringsfeil». Radene er sperret mens lagringen pågår, og flytter seg ikke under klikk. |      |       |
+| 12.2.5 | Eier – Endre data med treg eller blokkert lagring (se oppskriften i 13.2). | Statusen viser «Lagrer...», «Lagret» og «Ikke lagret». Radene er sperret mens lagringen pågår, og flytter seg ikke under klikk. |      |       |
 
 Oppskrift for 12.2.5 (fra 13.2): Åpne DevTools (F12) → «Network». Velg «Slow 3G» under throttling for treg lagring, eller «Offline» for å få lagringsfeil. For feil på bare én type lagring: høyreklikk forespørselen (for eksempel `…/treffgjennomforing/oppmote`) og velg «Block request URL». Fjern blokkeringen etterpå.
 

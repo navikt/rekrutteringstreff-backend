@@ -138,7 +138,7 @@ lite sammendrag øverst («23 møtt · 5 rom · 5 arbeidsgivere») gir kontekst 
 tvers av steg. Rom-tallet vises bare for WorkOp.
 
 Stegene som lagrer fortløpende viser samme autolagringsstatus på en fast plass i
-steghodet: **Lagret**, **Lagrer …** eller **Lagringsfeil**. Statusendringer skal
+steghodet: **Lagret**, **Lagrer...** eller **Ikke lagret**. Statusendringer skal
 ikke skyve matriser, arbeidsgiverkort eller jobbsøkerrader. I steg 2 er Stepper
 og lokale navigasjonsknapper ikke interaktive mens en romendring lagres, slik at
 en lagringsfeil ikke kan skjules ved at komponenten navigeres bort.
