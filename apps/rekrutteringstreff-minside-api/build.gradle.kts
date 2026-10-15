@@ -52,4 +52,5 @@ dependencies {
     testImplementation("org.flywaydb:flyway-core:${flywayVersion}")
     testImplementation("org.flywaydb:flyway-database-postgresql:${flywayVersion}")
     testImplementation(project(":technical-libs:testrapid"))
+    testImplementation(project(":technical-libs:json-karakterisering"))
 }

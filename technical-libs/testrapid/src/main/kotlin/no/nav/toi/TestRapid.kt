@@ -112,6 +112,7 @@ class TestRapid(private val meterRegistry: io.micrometer.core.instrument.MeterRe
         val size get() = messages.size
 
         fun key(index: Int) = messages[index].first
+        fun rawMessage(index: Int) = messages[index].second
         fun message(index: Int) = jsonMessages.getOrPut(index) { objectMapper.readTree(messages[index].second) }
         fun field(index: Int, field: String) =
             requireNotNull(message(index).path(field).takeUnless { it.isMissingNode || it.isNull }) {

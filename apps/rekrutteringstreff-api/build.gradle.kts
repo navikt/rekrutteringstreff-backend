@@ -29,6 +29,7 @@ val kotestVersion = "6.2.5"
 
 dependencies {
     implementation(project(":technical-libs:logging"))
+    testImplementation(project(":technical-libs:json-karakterisering"))
     implementation("org.flywaydb:flyway-core:$flywayVersion")
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")

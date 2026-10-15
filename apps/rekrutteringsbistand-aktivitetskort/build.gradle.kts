@@ -40,5 +40,6 @@ dependencies {
     testImplementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-test:${rapidsAndRiversVersion}")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
+    testImplementation(project(":technical-libs:json-karakterisering"))
     testImplementation("org.testcontainers:testcontainers-postgresql:$testContainerVersion")
 }
