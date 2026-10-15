@@ -1,6 +1,6 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.arbeidsgiver.toi.logging.log

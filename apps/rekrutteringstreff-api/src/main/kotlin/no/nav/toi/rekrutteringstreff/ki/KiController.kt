@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.ki
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass

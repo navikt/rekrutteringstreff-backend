@@ -97,7 +97,7 @@ class WorkOpPilotkontorKomponentTest {
     private fun søkTreffIder(): List<String> {
         val respons = send(HttpRequest.newBuilder().GET(), "/api/rekrutteringstreff/sok")
         assertEquals(HTTP_OK, respons.statusCode())
-        return JacksonConfig.mapper.readTree(respons.body())["treff"].map { it["id"].asText() }
+        return JacksonConfig.mapper.readTree(respons.body())["treff"].values().map { it["id"].asString() }
     }
 
     @Test

@@ -199,7 +199,7 @@ data class FeilKøHendelse(
     val errorType: ErrorType
 )
 
-private fun String.hentMessageId() = objectMapper.readTree(this)["messageId"]?.asText()?.let {
+private fun String.hentMessageId() = objectMapper.readTree(this)["messageId"]?.asString()?.let {
     UUID.fromString(it)
 } ?: error("Kunne ikke hente messageId fra hendelse: $this")
 

@@ -40,7 +40,7 @@ class SamtykkeStatusLytter private constructor(
             }
             validate {
                 it.requireKey("fnr", "stillingsId")
-                it.require("stillingsId") { node -> node.asText().toUUID() }
+                it.require("stillingsId") { node -> node.asString().toUUID() }
             }
             hendelse.registrerValidering(this)
         }.register(this)
@@ -52,8 +52,8 @@ class SamtykkeStatusLytter private constructor(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry,
     ) {
-        val fnr = packet["fnr"].asText()
-        val stillingId = packet["stillingsId"].asText().toUUID()
+        val fnr = packet["fnr"].asString()
+        val stillingId = packet["stillingsId"].asString().toUUID()
         val aktivitetskortId = repository.hentAktivitetskortIdForDeltStilling(fnr, stillingId)
 
         if (aktivitetskortId == null) {
@@ -107,26 +107,26 @@ private object SamtykkeBesvartHendelse : SamtykkeStatusHendelse {
                 "besvartAvIdentType",
                 "besvartTidspunkt",
             )
-            it.require("samtykkeGitt") { node -> node.asText().toBooleanStrict() }
-            it.require("besvartAvIdentType") { node -> IdentType.valueOf(node.asText()) }
+            it.require("samtykkeGitt") { node -> node.asString().toBooleanStrict() }
+            it.require("besvartAvIdentType") { node -> IdentType.valueOf(node.asString()) }
             it.requireZonedDateTime("besvartTidspunkt")
         }
     }
 
     override fun aktivitetsStatus(packet: JsonMessage) =
-        if (packet["samtykkeGitt"].asText().toBooleanStrict()) {
+        if (packet["samtykkeGitt"].asString().toBooleanStrict()) {
             AktivitetsStatus.GJENNOMFORES
         } else {
             AktivitetsStatus.AVBRUTT
         }
 
-    override fun endretAv(packet: JsonMessage, fnr: String) = packet["besvartAvIdent"].asText()
+    override fun endretAv(packet: JsonMessage, fnr: String) = packet["besvartAvIdent"].asString()
 
     override fun endretAvType(packet: JsonMessage) =
-        IdentType.valueOf(packet["besvartAvIdentType"].asText()).tilEndretAvType()
+        IdentType.valueOf(packet["besvartAvIdentType"].asString()).tilEndretAvType()
 
     override fun etiketter(packet: JsonMessage) =
-        listOf(if (packet["samtykkeGitt"].asText().toBooleanStrict()) {
+        listOf(if (packet["samtykkeGitt"].asString().toBooleanStrict()) {
             AktivitetskortEtikett("Godtatt CV-deling", Sentiment.POSITIVE)
         } else {
             AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE)
@@ -159,17 +159,17 @@ private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
     override fun registrerValidering(river: River) {
         river.validate {
             it.requireKey("stillingsTittel", "trukketAvIdent", "trukketAvIdentType", "trukketTidspunkt")
-            it.require("trukketAvIdentType") { node -> IdentType.valueOf(node.asText()) }
+            it.require("trukketAvIdentType") { node -> IdentType.valueOf(node.asString()) }
             it.requireZonedDateTime("trukketTidspunkt")
         }
     }
 
     override fun aktivitetsStatus(packet: JsonMessage) = AktivitetsStatus.AVBRUTT
 
-    override fun endretAv(packet: JsonMessage, fnr: String) = packet["trukketAvIdent"].asText()
+    override fun endretAv(packet: JsonMessage, fnr: String) = packet["trukketAvIdent"].asString()
 
     override fun endretAvType(packet: JsonMessage) =
-        IdentType.valueOf(packet["trukketAvIdentType"].asText()).tilEndretAvType()
+        IdentType.valueOf(packet["trukketAvIdentType"].asString()).tilEndretAvType()
 
     override fun etiketter(packet: JsonMessage) =
         listOf(AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE))
@@ -195,5 +195,5 @@ private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {
 }
 
 private fun JsonMessage.requireZonedDateTime(key: String) {
-    require(key) { node -> ZonedDateTime.parse(node.asText()) }
+    require(key) { node -> ZonedDateTime.parse(node.asString()) }
 }

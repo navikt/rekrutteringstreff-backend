@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.ki
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
 import no.nav.toi.rekrutteringstreff.KiLoggTestInsert
 import no.nav.toi.rekrutteringstreff.TestDatabase

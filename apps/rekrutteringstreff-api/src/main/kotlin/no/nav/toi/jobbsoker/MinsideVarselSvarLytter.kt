@@ -1,6 +1,6 @@
 package no.nav.toi.jobbsoker
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
@@ -45,8 +45,8 @@ class MinsideVarselSvarLytter(
         meterRegistry: MeterRegistry
     ) {
         log.info("Mottok minsideVarselSvar men skipper foreløpig")
-        val avsenderReferanseId = packet["avsenderReferanseId"].asText()
-        val fnr = packet["fnr"].asText()
+        val avsenderReferanseId = packet["avsenderReferanseId"].asString()
+        val fnr = packet["fnr"].asString()
 
         log.info("Mottok minsideVarselSvar for rekrutteringstreffId: $avsenderReferanseId")
 
@@ -54,17 +54,17 @@ class MinsideVarselSvarLytter(
         val fødselsnummer = Fødselsnummer(fnr)
 
         val minsideVarselSvarData = MinsideVarselSvarData(
-            varselId = packet["varselId"].asText(),
+            varselId = packet["varselId"].asString(),
             avsenderReferanseId = avsenderReferanseId,
             fnr = fnr,
-            eksternStatus = packet["eksternStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            minsideStatus = packet["minsideStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            opprettet = packet["opprettet"].takeIf { !it.isNull && !it.isMissingNode }?.asText()?.let { java.time.ZonedDateTime.parse(it) },
-            avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            eksternFeilmelding = packet["eksternFeilmelding"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            eksternKanal = packet["eksternKanal"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            mal = packet["mal"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            flettedata = packet["flettedata"].takeIf { !it.isNull && !it.isMissingNode && it.isArray }?.map { it.asText() }
+            eksternStatus = packet["eksternStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asString(),
+            minsideStatus = packet["minsideStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asString(),
+            opprettet = packet["opprettet"].takeIf { !it.isNull && !it.isMissingNode }?.asString()?.let { java.time.ZonedDateTime.parse(it) },
+            avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asString(),
+            eksternFeilmelding = packet["eksternFeilmelding"].takeIf { !it.isNull && !it.isMissingNode }?.asString(),
+            eksternKanal = packet["eksternKanal"].takeIf { !it.isNull && !it.isMissingNode }?.asString(),
+            mal = packet["mal"].takeIf { !it.isNull && !it.isMissingNode }?.asString(),
+            flettedata = packet["flettedata"].takeIf { !it.isNull && !it.isMissingNode && it.isArray }?.values()?.map { it.asString() }
         )
 
         val hendelseDataJson = objectMapper.writeValueAsString(minsideVarselSvarData)

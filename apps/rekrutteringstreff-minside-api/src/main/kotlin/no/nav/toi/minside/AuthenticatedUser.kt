@@ -1,37 +1,48 @@
 package no.nav.toi.minside
 
-import com.auth0.jwk.JwkProviderBuilder
-import com.auth0.jwk.SigningKeyNotFoundException
-import com.auth0.jwt.JWT
-import com.auth0.jwt.JWTVerifier
-import com.auth0.jwt.algorithms.Algorithm
-import com.auth0.jwt.exceptions.JWTVerificationException
-import com.auth0.jwt.interfaces.DecodedJWT
-import com.auth0.jwt.interfaces.RSAKeyProvider
+import com.nimbusds.jose.jwk.source.JWKSourceBuilder
+import com.nimbusds.jose.proc.SecurityContext
+import com.nimbusds.jwt.JWTParser
 import io.javalin.http.Context
 import io.javalin.http.Header
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.http.UnauthorizedResponse
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.arbeidsgiver.toi.logging.noClassLogger
+import no.nav.security.token.support.core.exceptions.JwtTokenValidatorException
+import no.nav.security.token.support.core.jwt.JwtToken
+import no.nav.security.token.support.core.validation.DefaultConfigurableJwtValidator
+import no.nav.security.token.support.core.validation.JwtTokenValidator
 import java.net.URI
-import java.security.interfaces.RSAPublicKey
-import java.util.concurrent.TimeUnit
 
 private const val PERSON_IDENT_CLAIM = "pid"
 
 private val log = noClassLogger()
 
+/**
+ * Konfigurasjon for én TokenX-issuer. Minside tar bare imot borgertokens.
+ */
 class AuthenticationConfiguration(
     private val issuer: String,
     private val jwksUri: String,
     private val audience: String
 ) {
-    fun jwtVerifier() = JWT.require(algorithm(jwksUri))
-        .withIssuer(issuer)
-        .withAudience(audience)
-        .withClaimPresence(PERSON_IDENT_CLAIM)
-        .build()
+    internal fun lagValidator() = IssuerValidator(
+        issuer = issuer,
+        validator = DefaultConfigurableJwtValidator(
+            issuer,
+            listOf(audience),
+            emptyList(),
+            JWKSourceBuilder.create<SecurityContext>(URI(jwksUri).toURL()).build(),
+        ),
+    )
+}
+
+internal class IssuerValidator(val issuer: String, private val validator: JwtTokenValidator) {
+    fun valider(token: String): JwtToken {
+        validator.assertValidToken(token)
+        return JwtToken(token)
+    }
 }
 
 class AuthenticatedUser private constructor(
@@ -39,10 +50,11 @@ class AuthenticatedUser private constructor(
     val jwt: String
 ) {
     companion object {
-        fun fromJwt(jwt: DecodedJWT) =
+        internal fun fromJwt(token: JwtToken) =
             AuthenticatedUser(
-                pid = jwt.getClaim(PERSON_IDENT_CLAIM).asString(),
-                jwt = jwt.token,
+                pid = (token.jwtTokenClaims.get(PERSON_IDENT_CLAIM) as? String)?.takeIf { it.isNotBlank() }
+                    ?: throw UnauthorizedResponse("Token mangler gyldig claim $PERSON_IDENT_CLAIM"),
+                jwt = token.encodedToken,
             )
         fun Context.extractIdent(): String =
             attribute<AuthenticatedUser>("authenticatedUser")?.pid ?: throw UnauthorizedResponse("Not authenticated")
@@ -52,46 +64,52 @@ class AuthenticatedUser private constructor(
 
 fun JavalinDefaultRoutingApi.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>): JavalinDefaultRoutingApi {
     log.info("Starter autentiseringoppsett")
-    val verifiers = authConfigs.map { it.jwtVerifier() }
+    val validatorer = authConfigs.map { it.lagValidator() }
     before { ctx ->
         if (ctx.path().matches(Regex("""/api/rekrutteringstreff(?:$|/.*)"""))) {
             val token = ctx.header(Header.AUTHORIZATION)
                 ?.removePrefix("Bearer ")
                 ?.trim() ?: throw UnauthorizedResponse("Missing token")
-            val decoded = verifyJwt(verifiers, token)
-            ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded))
+            val validert = verifyJwt(validatorer, token)
+            val bruker = try {
+                AuthenticatedUser.fromJwt(validert)
+            } catch (e: UnauthorizedResponse) {
+                log.warn("Gyldig token manglet påkrevde claims")
+                throw e
+            } catch (e: Exception) {
+                log.warn("Kunne ikke lese claims fra token: ${e::class.simpleName}")
+                throw UnauthorizedResponse("Token verification failed")
+            }
+            ctx.attribute("authenticatedUser", bruker)
         }
     }
     return this
 }
 
-private fun verifyJwt(verifiers: List<JWTVerifier>, token: String): DecodedJWT {
-    for (verifier in verifiers) {
-        try {
-            return verifier.verify(token)
-        } catch (e: JWTVerificationException) {
-            // prøv neste verifier
-        } catch (e: SigningKeyNotFoundException) {
-            // prøv neste verifier
-        }
+/**
+ * Velger validator ut fra `iss` i det uverifiserte tokenet. Det er trygt fordi validatoren selv krever eksakt
+ * samme `iss`, og verifiserer signaturen mot JWKS for akkurat den issueren.
+ */
+internal fun verifyJwt(validatorer: List<IssuerValidator>, token: String): JwtToken {
+    val issuer = try {
+        JWTParser.parse(token).jwtClaimsSet.issuer
+    } catch (e: Exception) {
+        log.warn("Token verification failed: token kunne ikke parses (${e::class.simpleName})")
+        throw UnauthorizedResponse("Token verification failed")
     }
-    log.error("Token verification failed")
-    throw UnauthorizedResponse("Token verification failed")
-}
-
-
-private fun algorithm(jwksUri: String): Algorithm {
-    val jwkProvider = JwkProviderBuilder(URI(jwksUri).toURL())
-        .cached(10, 1, TimeUnit.HOURS)
-        .rateLimited(false)
-        .build()
-    return Algorithm.RSA256(object : RSAKeyProvider {
-        override fun getPublicKeyById(keyId: String): RSAPublicKey =
-            jwkProvider.get(keyId).publicKey as RSAPublicKey
-
-        override fun getPrivateKey() = throw UnsupportedOperationException()
-        override fun getPrivateKeyId() = throw UnsupportedOperationException()
-    })
+    val validator = validatorer.firstOrNull { it.issuer == issuer } ?: run {
+        log.warn("Token verification failed: ukjent issuer")
+        throw UnauthorizedResponse("Token verification failed")
+    }
+    return try {
+        validator.valider(token)
+    } catch (e: JwtTokenValidatorException) {
+        log.warn("Token verification failed: ${e.cause?.let { it::class.simpleName }}")
+        throw UnauthorizedResponse("Token verification failed")
+    } catch (e: Exception) {
+        log.warn("Token verification failed: ${e::class.simpleName}")
+        throw UnauthorizedResponse("Token verification failed")
+    }
 }
 
 fun Context.authenticatedUser() = attribute<AuthenticatedUser>("authenticatedUser")

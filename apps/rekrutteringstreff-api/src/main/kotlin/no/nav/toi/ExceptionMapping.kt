@@ -1,8 +1,8 @@
 package no.nav.toi
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.JsonMappingException
+import tools.jackson.core.exc.StreamReadException
+import tools.jackson.databind.DatabindException
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
@@ -45,11 +45,12 @@ data class ProblemDetails(
             hint: String? = null,
             feil: String? = null,
             feilkode: String? = null,
-            melding: String? = null
+            melding: String? = null,
+            title: String = throwable.javaClass.simpleName,
         ): ProblemDetails {
             return ProblemDetails(
                 type = type,
-                title = throwable.javaClass.simpleName, // Tas fra exceptionen eller statusen??
+                title = title, // Tas fra exceptionen eller statusen??
                 status = status.code,
                 detail = melding ?: status.message,
                 instance = ctx.req().requestURI.toString(),
@@ -69,10 +70,12 @@ object ExceptionMapping {
 
     fun JavalinDefaultRoutingApi.exceptionMapping() {
         // TODO exceptions kan også skje steder hvor disse feilmeldingene ikke gir mening.
-        exception(JsonParseException::class.java) { e, ctx ->
+        exception(StreamReadException::class.java) { e, ctx ->
             ctx.status(400).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,
+                    // Samme title som med Jackson 2, der parse-feil var JsonParseException.
+                    title = "JsonParseException",
                     status = HttpStatus.BAD_REQUEST,
                     ctx = ctx,
                     feil = "Ugyldig JSON i request-body.",
@@ -80,7 +83,7 @@ object ExceptionMapping {
                 )
             )
         }
-        exception(JsonMappingException::class.java) { e, ctx ->
+        exception(DatabindException::class.java) { e, ctx ->
             ctx.status(400).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,

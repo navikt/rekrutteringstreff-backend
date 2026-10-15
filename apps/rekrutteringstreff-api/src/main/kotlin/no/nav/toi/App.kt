@@ -3,7 +3,7 @@ package no.nav.toi
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
-import io.javalin.json.JavalinJackson
+import io.javalin.json.JavalinJackson3
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.arbeidsgiver.toi.logging.log
@@ -35,7 +35,7 @@ class App(
         kjørFlywayMigreringer(ctx.dataSource)
 
         javalin = Javalin.create { config ->
-            config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
+            config.jsonMapper(JavalinJackson3(JacksonConfig.mapper))
             configureOpenApi(config)
 
             config.routes.apply {

@@ -21,6 +21,7 @@ import java.net.HttpURLConnection.HTTP_OK
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import java.time.Instant
 import java.util.Date
+import java.util.concurrent.TimeUnit
 
 /**
  * Låser hvilke tokens autentiseringsfilteret godtar og avviser, og hvilken brukertype et gyldig token gir.
@@ -78,11 +79,13 @@ class AutentiseringFilterTest {
             issuer = "http://localhost:$authPort/azure",
             jwksUri = "http://localhost:$authPort/azure/jwks",
             audience = audience,
+            issuerType = IssuerType.AZURE_AD,
         ),
         AuthenticationConfiguration(
             issuer = "http://localhost:$authPort/tokenx",
             jwksUri = "http://localhost:$authPort/tokenx/jwks",
             audience = audience,
+            issuerType = IssuerType.TOKEN_X,
         ),
     )
 
@@ -197,5 +200,95 @@ class AutentiseringFilterTest {
     @Test
     fun `TokenX-token uten pid gir 401`() {
         assertThat(httpGet(url, tokenxToken(emptyMap()).serialize()).statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
+    }
+
+    @Test
+    fun `Azure-token med pid men uten NAVident gir 401`() {
+        assertThat(httpGet(url, azureToken(mapOf("pid" to "12345678910")).serialize()).statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
+    }
+
+    @Test
+    fun `TokenX-token med NAVident og groups gir borger, ikke Nav-ansatt`() {
+        val respons = httpGet(url, tokenxToken(navClaims + ("pid" to "12345678910")).serialize())
+        assertThat(respons.statusCode()).isEqualTo(HTTP_OK)
+        assertThat(respons.body()).isEqualTo("borger:12345678910")
+    }
+
+    @Test
+    fun `TokenX-token med NAVident men uten pid gir 401`() {
+        assertThat(httpGet(url, tokenxToken(navClaims).serialize()).statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
+    }
+
+    @Test
+    fun `Azure-token uten groups gir Nav-ansatt uten roller`() {
+        val respons = httpGet(url, azureToken(mapOf("NAVident" to "A000001")).serialize())
+        assertThat(respons.statusCode()).isEqualTo(HTTP_OK)
+        assertThat(respons.body()).isEqualTo("nav:A000001:utvikler=false")
+    }
+
+    @Test
+    fun `groups med ugyldig UUID gir 401`() {
+        val token = azureToken(mapOf("NAVident" to "A000001", "groups" to listOf("ikke-en-uuid")))
+        assertThat(httpGet(url, token.serialize()).statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
+    }
+
+    @Test
+    fun `groups som ikke er en liste gir 401`() {
+        val token = azureToken(mapOf("NAVident" to "A000001", "groups" to AzureAdRoller.utvikler.toString()))
+        assertThat(httpGet(url, token.serialize()).statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
+    }
+
+    @Test
+    fun `NAVident som ikke er en streng gir 401`() {
+        val token = azureToken(mapOf("NAVident" to 123, "groups" to listOf(AzureAdRoller.utvikler.toString())))
+        assertThat(httpGet(url, token.serialize()).statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
+    }
+
+    @Test
+    fun `gjentatte tokens med ukjent kid gir høyst én ny JWKS-henting`() {
+        assertThat(httpGet(url, azureToken(navClaims).serialize()).statusCode()).isEqualTo(HTTP_OK)
+        jwksHentinger()
+
+        val ukjentNøkkel = RSAKeyGenerator(2048).keyID("rate-limit-kid").generate()
+        repeat(5) {
+            val jwt = SignedJWT(
+                JWSHeader.Builder(JWSAlgorithm.RS256).keyID("rate-limit-kid").type(JOSEObjectType.JWT).build(),
+                claimsSet("http://localhost:$authPort/azure"),
+            )
+            jwt.sign(RSASSASigner(ukjentNøkkel))
+            assertThat(httpGet(url, jwt.serialize()).statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
+        }
+
+        assertThat(jwksHentinger()).isLessThanOrEqualTo(1)
+    }
+
+    /** Tømmer køen av forespørsler mot mock-oauth2-server og teller JWKS-hentinger for Azure-issueren. */
+    private fun jwksHentinger(): Int {
+        var antall = 0
+        while (true) {
+            val forespørsel = runCatching { authServer.takeRequest(200, TimeUnit.MILLISECONDS) }.getOrNull() ?: return antall
+            if (forespørsel.path == "/azure/jwks") antall++
+        }
+    }
+}
+
+class FakedingsKonfigurasjonTest {
+    private val env = mapOf(
+        "AZURE_APP_CLIENT_ID" to "azure-klient",
+        "AZURE_OPENID_CONFIG_ISSUER" to "https://azure.example/issuer",
+        "AZURE_OPENID_CONFIG_JWKS_URI" to "https://azure.example/jwks",
+        "TOKEN_X_CLIENT_ID" to "tokenx-klient",
+        "TOKEN_X_ISSUER" to "https://tokenx.example/issuer",
+        "TOKEN_X_JWKS_URI" to "https://tokenx.example/jwks",
+    )
+
+    @Test
+    fun `Fakedings er bare med i dev-gcp`() {
+        assertThat(InfrastructureContext(env + ("NAIS_CLUSTER_NAME" to "dev-gcp")).authConfigs.map { it.issuerType })
+            .containsExactly(IssuerType.AZURE_AD, IssuerType.TOKEN_X, IssuerType.FAKEDINGS)
+        assertThat(InfrastructureContext(env + ("NAIS_CLUSTER_NAME" to "prod-gcp")).authConfigs.map { it.issuerType })
+            .containsExactly(IssuerType.AZURE_AD, IssuerType.TOKEN_X)
+        assertThat(InfrastructureContext(env).authConfigs.map { it.issuerType })
+            .containsExactly(IssuerType.AZURE_AD, IssuerType.TOKEN_X)
     }
 }

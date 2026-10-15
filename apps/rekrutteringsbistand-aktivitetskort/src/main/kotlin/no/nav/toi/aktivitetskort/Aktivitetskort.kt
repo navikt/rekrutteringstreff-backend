@@ -1,7 +1,7 @@
 package no.nav.toi.aktivitetskort
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.core.type.TypeReference
+import tools.jackson.core.type.TypeReference
 import no.nav.toi.Repository
 import no.nav.toi.objectMapper
 import org.apache.kafka.clients.producer.Producer

@@ -40,8 +40,8 @@ class RekrutteringstreffOppdateringLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        val fnr = packet["fnr"].asText()
-        val rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID()
+        val fnr = packet["fnr"].asString()
+        val rekrutteringstreffId = packet["rekrutteringstreffId"].asString().toUUID()
 
         val startDato = packet["fraTid"].asZonedDateTime()
         val sluttDato = packet["tilTid"].asZonedDateTime()
@@ -49,13 +49,13 @@ class RekrutteringstreffOppdateringLytter(
         repository.oppdaterRekrutteringstreffAktivitetskort(
             fnr = fnr,
             rekrutteringstreffId = rekrutteringstreffId,
-            tittel = packet["tittel"].asText(),
+            tittel = packet["tittel"].asString(),
             startDato = startDato.toLocalDate(),
             sluttDato = sluttDato.toLocalDate(),
             tid = formaterTidsperiode(startDato, sluttDato),
-            gateAdresse = packet["gateadresse"].asText(),
-            postnummer = packet["postnummer"].asText(),
-            poststed = packet["poststed"].asText()
+            gateAdresse = packet["gateadresse"].asString(),
+            postnummer = packet["postnummer"].asString(),
+            poststed = packet["poststed"].asString()
         )
 
         log.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")

@@ -11,7 +11,7 @@ application {
 }
 
 val javalinVersion = "7.2.3"
-val mockOAuth2ServerVersion = "6.0.5"
+val mockOAuth2ServerVersion = "6.0.8"
 val flywayVersion = "13.10.0"
 val postgresVersion = "42.7.14"
 val hikariVersion = "7.1.0"
@@ -19,7 +19,7 @@ val testContainerVersion = "2.0.5"
 val swaggerParserVersion = "2.1.48"
 val nimbusVersion = "10.10"
 val wiremockVersion = "3.13.2"
-val jacksonVersion = "2.22.3"
+val tokenValidationVersion = "6.0.13"
 val resilience4jVersion = "2.4.0"
 val navCommonVersion = "4.2026.09.24_06.17-80dfc0eacb29"
 val openTelemetryVersion = "1.62.0" // Følg SDK-versjonen til Nais-agenten, se https://doc.nais.io/observability/reference/auto-config/
@@ -34,16 +34,14 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
-    implementation(platform("com.fasterxml.jackson:jackson-bom:$jacksonVersion"))
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310") // JavaTimeModule
+    implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("io.javalin:javalin:$javalinVersion")
 
     kapt("io.javalin.community.openapi:openapi-annotation-processor:$javalinVersion")
     implementation("io.javalin.community.openapi:javalin-openapi-plugin:$javalinVersion")
     implementation("io.javalin.community.openapi:javalin-swagger-plugin:$javalinVersion")
     implementation("io.javalin.community.openapi:openapi-specification:$javalinVersion")
-    implementation("com.auth0:java-jwt:4.6.1")
-    implementation("com.auth0:jwks-rsa:0.24.1")
+    implementation("no.nav.security:token-validation-core:$tokenValidationVersion")
     kapt("io.swagger.parser.v3:swagger-parser:$swaggerParserVersion")
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
     implementation("org.ehcache:ehcache:3.12.0")
