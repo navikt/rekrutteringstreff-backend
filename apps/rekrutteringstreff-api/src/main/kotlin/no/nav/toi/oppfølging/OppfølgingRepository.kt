@@ -26,7 +26,7 @@ class OppfølgingRepository {
         }
     }
 
-    fun hentForPar(connection: Connection, jobbsøkerId: Long, arbeidsgiverId: Long): Vurdering? {
+    fun hentVurdering(connection: Connection, jobbsøkerId: Long, arbeidsgiverId: Long): Vurdering? {
         val sql = """
             SELECT j.id::text, a.id::text, v.vurderingsstatus, v.vurderingsnotat,
                    v.avtalt_intervju, v.avtalt_intervju_dato, v.jobbtilbud
@@ -92,7 +92,7 @@ class OppfølgingRepository {
         }
     }
 
-    fun finnesForPar(connection: Connection, jobbsøkerId: Long, arbeidsgiverId: Long): Boolean =
+    fun harVurdering(connection: Connection, jobbsøkerId: Long, arbeidsgiverId: Long): Boolean =
         connection.prepareStatement("SELECT 1 FROM vurdering WHERE jobbsoker_id = ? AND arbeidsgiver_id = ?").use { stmt ->
             stmt.setLong(1, jobbsøkerId)
             stmt.setLong(2, arbeidsgiverId)

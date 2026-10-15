@@ -26,7 +26,7 @@ class OppfølgingService(
             val jobbsøkerId = kontekst.krevJobbsøkerId(ny.personTreffId)
             val arbeidsgiverId = kontekst.krevArbeidsgiverId(ny.arbeidsgiverTreffId)
 
-            val før = repository.hentForPar(connection, jobbsøkerId, arbeidsgiverId)
+            val før = repository.hentVurdering(connection, jobbsøkerId, arbeidsgiverId)
 
             if (ny.harRegistrertNoe()) {
                 if (!oppmøteRepository.erFremmøtt(connection, jobbsøkerId)) {

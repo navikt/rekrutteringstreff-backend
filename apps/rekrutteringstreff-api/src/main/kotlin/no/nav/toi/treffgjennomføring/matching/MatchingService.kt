@@ -37,7 +37,7 @@ class MatchingService(
             if (dto.interessert && !oppmøteRepository.erFremmøtt(connection, jobbsøkerId)) {
                 throw BadRequestResponse("Bare fremmøtte jobbsøkere kan registrere interesse")
             }
-            if (!dto.interessert && oppfølgingRepository.finnesForPar(connection, jobbsøkerId, arbeidsgiverId)) {
+            if (!dto.interessert && oppfølgingRepository.harVurdering(connection, jobbsøkerId, arbeidsgiverId)) {
                 throw InteresseKanIkkeFjernesException()
             }
 
