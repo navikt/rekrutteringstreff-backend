@@ -2,7 +2,7 @@ package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JacksonConfig
-import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.Miljø
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.jobbsoker.oppmøte.OppmøteService
 import no.nav.toi.oppfølging.OppfølgingRepository
@@ -55,10 +55,9 @@ class TreffgjennomføringReaderTest {
     )
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
 
-    private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, stegRepository, reader)
+    private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, stegRepository, reader, Miljø.LOKALT)
     private val hendelser = HendelseWriter(
         jobbsøkerRepository,
-        ArbeidsgiverRepository(db.dataSource, mapper),
         RekrutteringstreffRepository(db.dataSource),
         mapper,
     )

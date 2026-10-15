@@ -27,15 +27,20 @@ framover, også når registreringer angres. Arrangøren kan alltid gå tilbake o
 Tilgang krever rollen arbeidsgiverrettet, og at brukeren er eier av treffet eller
 utvikler (`krevEierEllerUtvikler`).
 
-| Miljø  | Frontend                          | Backend                                                    |
-| ------ | --------------------------------- | ---------------------------------------------------------- |
-| Prod   | Fanen er skjult, skriving stoppes | Interesse og vurdering avvises. WorkOp kan ikke opprettes. |
-| Dev    | Bare WorkOp                       | Interesse og vurdering krever WorkOp                       |
-| Lokalt | Alle treff                        | Alle treff                                                 |
+| Miljø       | Frontend    | Backend                                            |
+| ----------- | ----------- | -------------------------------------------------- |
+| Prod og dev | Bare WorkOp | Alle endepunktene avviser treff som ikke er WorkOp |
+| Lokalt      | Alle treff  | Alle treff                                         |
 
 Regelen står i `erTreffgjennomføringTilgjengelig` i frontend og i
-`Treffkontekst.krevWorkOpEllerLokalUtvikling` i backend. Rom og intervjufordeling krever
-WorkOp i alle miljøer (`krevWorkOp`).
+`Treffkontekst.krevWorkOpEllerLokalUtvikling` i backend. Backend sjekker regelen i samme
+transaksjon som resten av kallet: `TreffgjennomføringWriter.skriv` for skriving og
+`TreffgjennomføringService` for lesing. Rom og intervjufordeling krever WorkOp i alle
+miljøer (`krevWorkOp`).
+
+WorkOp er i tillegg bare åpent for pilotkontorer og utviklere. Backend leser
+pilotkontorene fra `WORKOP_PILOTKONTORER` (`WorkOpPilottilgang`). Frontend har egne lister
+i `WorkOpPilottilgang.tsx`, og lista for prod er tom.
 
 ## Koden
 
@@ -59,7 +64,7 @@ Frontend, `rekrutteringsbistand-frontend`:
 ## Skriving og lesing
 
 Alle skrivinger går gjennom `TreffgjennomføringWriter.skriv`. Den tar radlås på treffet
-(`medLåstTreff`), henter fersk kontekst og returnerer hele aggregatet. Samtidige
+(`medLåstTreff`), henter fersk kontekst, sjekker miljøregelen og returnerer hele aggregatet. Samtidige
 skrivinger på samme treff venter derfor på hverandre. Endringer i arbeidsgivere og
 sletting av jobbsøkere tar samme lås.
 

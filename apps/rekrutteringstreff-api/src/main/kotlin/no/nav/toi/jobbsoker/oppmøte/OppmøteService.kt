@@ -31,7 +31,7 @@ class OppmøteService(
             val jobbsøkerId = kontekst.krevJobbsøkerId(personTreffId)
             connection.låsJobbsøkere(treffId, listOf(personTreffId))
 
-            val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
+            val harMøtt = oppmøteRepository.erFremmøtt(connection, jobbsøkerId)
             if (oppmøteRequestDto.møtt == harMøtt) return@skriv
 
             møteplansynk.medLagretMøteplan(connection, treffId) {

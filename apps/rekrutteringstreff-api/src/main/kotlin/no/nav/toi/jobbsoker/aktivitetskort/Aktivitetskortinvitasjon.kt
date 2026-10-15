@@ -64,7 +64,6 @@ class Aktivitetskortinvitasjon private constructor(
                 "hendelseId" to hendelseId,
                 "kategori" to kategori.name,
                 "tittel" to tittel,
-                "beskrivelse" to "TODO",
                 "fraTid" to fraTid,
                 "tilTid" to tilTid,
                 "opprettetAv" to opprettetAv,

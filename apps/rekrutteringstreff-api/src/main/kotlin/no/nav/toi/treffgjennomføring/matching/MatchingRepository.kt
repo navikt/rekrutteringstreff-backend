@@ -14,7 +14,7 @@ class MatchingRepository {
         intervjufordelinger = hentIntervjufordelinger(connection, kontekst),
     )
 
-    private fun hentInteresser(connection: Connection, treffDbId: Long): List<Interesse> {
+    fun hentInteresser(connection: Connection, treffDbId: Long): List<Interesse> {
         val sql = """
             SELECT j.id::text, a.id::text
             FROM interesse i
@@ -32,7 +32,7 @@ class MatchingRepository {
     }
 
     /** Plasseringen er tidsluka, så rekkefølgen på de inkluderte er data — ikke pynt. */
-    private fun hentIntervjufordelinger(
+    fun hentIntervjufordelinger(
         connection: Connection,
         kontekst: Treffkontekst,
     ): List<ArbeidsgiverIntervjufordeling> {

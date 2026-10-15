@@ -18,17 +18,17 @@ class TreffgjennomføringService(
     private val jobbsøkerRepository: GjennomføringJobbsøkerRepository = GjennomføringJobbsøkerRepository(),
 ) {
 
-    /** Treffgjennomføring er bare åpnet for WorkOp. Vanlige treff kan bare bruke den ved lokal kjøring. */
-    fun krevWorkOpEllerLokalUtvikling(treffId: TreffId) = dataSource.executeInReadOnlyTransaction { connection ->
-        kontekstRepository.krevKontekst(connection, treffId).krevWorkOpEllerLokalUtvikling(miljø)
-    }
-
     fun hent(treffId: TreffId): TreffgjennomføringDto = dataSource.executeInReadOnlyTransaction { connection ->
-        reader.les(connection, kontekstRepository.krevKontekst(connection, treffId))
+        val kontekst = kontekstRepository.krevKontekst(connection, treffId)
+        kontekst.krevWorkOpEllerLokalUtvikling(miljø)
+        reader.les(connection, kontekst)
     }
 
     fun hentJobbsøkere(treffId: TreffId, request: GjennomføringJobbsøkereRequestDto): GjennomføringJobbsøkersideDto =
-        dataSource.executeInReadOnlyTransaction { connection -> jobbsøkerRepository.hentSide(connection, treffId, request) }
+        dataSource.executeInReadOnlyTransaction { connection ->
+            kontekstRepository.krevKontekst(connection, treffId).krevWorkOpEllerLokalUtvikling(miljø)
+            jobbsøkerRepository.hentSide(connection, treffId, request)
+        }
 
     fun settGjeldendeSteg(treffId: TreffId, steg: TreffgjennomføringSteg): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, _, rad ->
