@@ -67,6 +67,7 @@ class SamtykkeStatusLytter private constructor(
             aktivitetsStatus = hendelse.aktivitetsStatus(packet),
             endretAv = hendelse.endretAv(packet, fnr),
             endretAvType = hendelse.endretAvType(packet),
+            etiketter = hendelse.etiketter(packet)
         )
     }
 
