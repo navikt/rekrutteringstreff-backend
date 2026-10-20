@@ -1,6 +1,6 @@
 # Plan: Lagrede søk for stillingsoppdrag og rekrutteringstreff i bruker-api
 
-**Status:** Forslag, ikke implementert.
+**Status:** Leveranse 1 (rekrutteringstreff) er implementert i bruker-api og frontend, men ikke rullet ut. ROS gjenstår før produksjon. Leveranse 2 (stilling) er ikke startet.
 
 ## Kort fortalt
 
@@ -110,6 +110,74 @@ Standardvalg inngår ikke i `LagreStandardsøkDto`. Backend gjør det første s�
 
 Hvert domene får sin tabell i sin leveranse: `V9__standardsok_rekrutteringstreff.sql` først, så en egen migrering for stilling. Kolonnenavnene følger stilen i repoet (`navIdent`, som i `brukerinnstillinger`).
 
+Databasen i bruker-api etter begge leveransene. Ingen tabeller har fremmednøkler. Den stiplede linjen viser at søkene og brukerinnstillingene bruker samme `navIdent`, uten at databasen håndhever koblingen. En veileder kan ha søk uten en rad i `brukerinnstillinger`. `text_array` er `text[]`, fordi Mermaid ikke tillater klammer i typenavn.
+
+```mermaid
+erDiagram
+    brukerinnstillinger |o..o{ standardsok_rekrutteringstreff : "samme navIdent"
+    brukerinnstillinger |o..o{ standardsok_stilling : "samme navIdent"
+
+    standardsok_rekrutteringstreff {
+        uuid id PK "Ny i V9"
+        text navIdent "Ikke unik"
+        text navn "Maks 25 tegn"
+        boolean erStandard "Høyst ett per navIdent"
+        text filter "Query-streng"
+        text_array fritekst "Fødselsnumre fjernet"
+        date sistAktiv "Raden slettes etter 6 mnd"
+    }
+
+    standardsok_stilling {
+        uuid id PK "Foreslått, leveranse 2"
+        text navIdent "Ikke unik"
+        text navn "Maks 25 tegn"
+        boolean erStandard "Høyst ett per navIdent"
+        text filter "Query-streng"
+        text_array fritekst "Fødselsnumre fjernet"
+        date sistAktiv "Raden slettes etter 6 mnd"
+    }
+
+    brukerinnstillinger {
+        text navIdent PK "Finnes fra før"
+        integer antallLesteNyheter
+        boolean darkMode
+        boolean windowMode
+        text tekststorrelse
+    }
+
+    nyheter {
+        bigserial id PK "Finnes fra før"
+        uuid nyhetId UK
+        text tittel
+        text innhold
+        text status
+        timestamp opprettetDato
+        text opprettetAv
+        timestamp sistEndretDato
+        text sistEndretAv
+    }
+
+    tilbakemeldinger {
+        uuid id PK "Finnes fra før"
+        varchar navn
+        text tilbakemelding
+        timestamp dato
+        varchar status
+        varchar kategori
+        varchar trelloLenke
+    }
+```
+
+| Tabell | Status | Innhold |
+| --- | --- | --- |
+| `standardsok_rekrutteringstreff` | Ny, implementert i V9 | Lagrede søk for rekrutteringstreff |
+| `standardsok_stilling` | Foreslått, leveranse 2 | Lagrede søk for stillingsoppdrag, med samme kolonner. Data flyttes fra stilling-api. |
+| `brukerinnstillinger` | Finnes fra før | Visningsvalg per veileder |
+| `nyheter` | Finnes fra før | Nyheter i Rekrutteringsbistand |
+| `tilbakemeldinger` | Finnes fra før | Tilbakemeldinger fra veiledere |
+
+Kolonnene i begge søketabellene:
+
 | Kolonne | Type | Merknad |
 | --- | --- | --- |
 | `id` | `uuid` primærnøkkel | Søkeidenten, lages av backend |
@@ -118,11 +186,11 @@ Hvert domene får sin tabell i sin leveranse: `V9__standardsok_rekrutteringstref
 | `erStandard` | `boolean not null default false` | Delvis unik indeks på `navIdent` der `erStandard` er sann, så hver veileder har høyst ett standardsøk |
 | `filter` | `text not null` | |
 | `fritekst` | `text[] not null default '{}'` | |
-| `sistAktiv` | `date not null` | Settes ved lagring, bruk og valg som standard. Opprydningsjobben kan bruke en indeks på beregnet slettefrist, uten en egen datokolonne. |
+| `sistAktiv` | `date not null` | Settes ved lagring, bruk og valg som standard. Indeks for opprydningsjobben, som sletter rader med `sistAktiv` på eller før seneste utløpte dato. |
 
 Regler i backend:
 
-- Grensen på 10 aktive søk gjelder også ved samtidige opprettelser. Databasebasert låsing per Nav-ident og domene må sikre en oppdatert telling og innsetting i samme transaksjon, på tvers av podene. En transaksjon alene er ikke tilstrekkelig. Bruker-api har `REPEATABLE_READ`, så låsing, isolasjon og avgrenset retry må ses i sammenheng.
+- Grensen på 10 aktive søk gjelder også ved samtidige opprettelser. Opprettelse og standardbytte tar en advisory lock per tabell og Nav-ident (`pg_advisory_xact_lock`), som gjelder på tvers av podene. Transaksjonen kjører med `READ COMMITTED`, så tellingen etter låsen ser det andre kall har committet. Under `REPEATABLE READ`, som er standard i bruker-api, ville tellingen vært utdatert.
 - Bytte av standardsøk fjerner merket fra det gamle, setter det på det nye og oppdaterer det nye søkets `sistAktiv` i én transaksjon. Datoen for det gamle søket endres ikke. Den delvise unike indeksen er et siste vern mot flere standardsøk.
 - Når standardsøket slettes eller utløper, velger vi ikke et annet automatisk. Menylenken åpner vanlig søk til veilederen velger et nytt standardsøk.
 - Ett repository dekker begge tabellene. Tabellnavnet kommer fra en enum i koden, aldri fra input.
@@ -145,7 +213,7 @@ Vi lagrer en dato og ikke et tidspunkt. Det holder for sletting etter seks måne
 
 `sistAktiv` settes til i dag når veilederen lagrer søket som nytt, erstatter det, tar det i bruk eller velger «Gjør til standard». Å hente listen eller åpne menyen endrer den ikke.
 
-`POST .../bruk` oppdaterer bare når `sistAktiv` er eldre enn i dag. Det gir høyst én databaseskriving per søk i døgnet ved bruk. Frontend kan droppe kallet når datoen i cachen allerede er i dag. Ved lagring og standardbytte skriver backend de øvrige endringene som vanlig.
+`POST .../bruk` oppdaterer bare når `sistAktiv` er eldre enn i dag. Det gir høyst én databaseskriving per søk i døgnet ved bruk, selv om frontend kaller hver gang. Ved lagring og standardbytte skriver backend de øvrige endringene som vanlig.
 
 Slettefristen er seks kalendermåneder etter `sistAktiv`, og varselet starter etter fem. Finnes ikke dagen i målmåneden, brukes månedens siste dag. Søket er utløpt fra og med slettefristen. Backend bruker samme regel for svar, oppslag og opprydning, og beregner `visSlettevarsel` for frontend. Reglene testes ved månedsslutt og skuddår.
 
@@ -218,47 +286,70 @@ Vi sender ikke varsel utenfor løsningen, for eksempel e-post. Det krever mer en
 
 ## Frontend
 
-Vi beholder plasseringen av knappene. «Bruk standardsøk» blir en meny med de lagrede søkene, og diskettikonet åpner en dialog. Skissene under er et utgangspunkt for designer, ikke et ferdig design. Alt bygges med Aksel-komponenter (`ActionMenu`, `Modal`, `RadioGroup`, `TextField`, `Select`, `Table`).
+Vi beholder plasseringen under søkefeltet. «Bruk standardsøk» blir en meny med de lagrede søkene, og diskettikonet blir stående ved siden av menyen. Skissene under er et utgangspunkt for designer, ikke et ferdig design. Alt bygges med Aksel-komponenter (`ActionMenu`, `Tooltip`, `Modal`, `RadioGroup`, `TextField`, `Select`, `Link`).
 
-### Meny: «Lagrede søk»
+### Meny og statuslinje
 
-Erstatter knappen «Bruk standardsøk». Et klikk på et søk tar det i bruk. Søk med `visSlettevarsel` har en merknad. Like navn er tillatt, men hvert menyelement bruker id-en til riktig søk.
+Menyen erstatter knappen «Bruk standardsøk». Et klikk på et søk tar det i bruk og lukker menyen. Søkene er radiovalg (`ActionMenu.RadioItem`), så søket som er i bruk, er markert så lenge filtrene er uendret. Like navn er tillatt, men hvert menyelement bruker id-en til riktig søk.
 
 ```text
-[ Lagrede søk ▾ ]  [ 💾 ]
+[ Lagrede søk ▾ ] [💾]
+Valgt søk: Treff i Oslo
 
-  ┌───────────────────────────────────────────┐
-  │ ★ Treff i Oslo (standard)                 │
-  │   Treff Vestland                         │
-  │   Mine utkast            Slettes 01.11    │
-  │ ───────────────────────────────────────── │
-  │   Administrer søk …                       │
-  └───────────────────────────────────────────┘
+  ┌ Lagrede søk ──────────┐
+  │ (•) Treff i Oslo      │
+  │     Standard          │
+  │ ( ) Treff Vestland    │
+  │ ( ) Mine utkast       │
+  │     Slettes snart     │
+  │ ───────────────────── │
+  │ ⚙ Administrer søk     │
+  └───────────────────────┘
 ```
 
-Uten lagrede søk viser menyen «Du har ingen lagrede søk» og en kort forklaring om diskettikonet.
+- Under navnet står en liten grå merknad: «Standard» for standardsøket og «Slettes snart» for søk med `visSlettevarsel`. Har søket begge, skilles de med « · ». Datoen står i «Administrer søk», fordi menyen er smal.
+- Vi bruker ikke stjerne eller hake. Stjernen var ikke intuitiv, og Aksel fraråder hake i menyer fordi den ligner radiovalg.
+- Disketten er en ikonknapp på samme rad som menyen. Sidepanelet er for smalt til en tekstknapp ved siden av menyen. Knappen har tooltip og tilgjengelig navn «Lagre søk», og er deaktivert uten filter eller søkeord.
+- Statuslinjen viser navnet på søket som er i bruk, men bare så lenge filtrene og søkeordene er like det lagrede søket. Endrer veilederen noe, også med «Fjern alle filtre», forsvinner linjen og markeringen i menyen. Slik kan veilederen velge bort et søk uten en egen knapp. Linjen kommer tilbake hvis filtrene blir like søket igjen. Linjen er en `aria-live`-region.
+- Uten lagrede søk viser menyen «Du har ingen lagrede søk» og «Velg filtre og trykk på disketten.».
+- Fokus går tilbake til knappen som åpnet dialogen, også når dialogen lukkes etter lagring eller med Esc.
+
+### Smale skjermer
+
+Under 1024 px er filterpanelet skjult. Knappen «Filtrer» ved pagineringen åpner panelet i et ark, med søkefelt, lagrede søk og filtre. Kandidatsøket bruker samme mønster.
+
+Kjent feil: Esc i menyen eller en dialog inne i arket lukker hele arket. Feilen gjelder det felles arket (`Sidepanel.tsx`), der Radix og Aksel begge lytter etter Esc. Den rettes i en egen oppgave, fordi rettingen påvirker alle sidepaneler.
 
 ### Dialog: «Lagre søk»
 
-Diskettikonet åpner dialogen. Gjeldende filtre og søkeord lagres.
+Disketten åpner dialogen. Gjeldende filtre og søkeord lagres. Enter sender skjemaet.
 
 ```text
 ┌ Lagre søk ─────────────────────────────────────┐
 │ (•) Lagre som nytt søk                         │
 │ ( ) Erstatt et lagret søk                      │
-│     [ Velg søk            ▾ ]                  │
-│ Navn [_______________] (maks 25 tegn)          │
 │                                                │
-│ Søk uten aktivitet på seks måneder slettes.   │
-│ Ikke skriv personopplysninger i navnet.        │
+│ Søk som skal erstattes                         │
+│ Filtrene og søkeordene i søket byttes ut med   │
+│ dem du har valgt nå.                           │
+│ [ Velg søk            ▾ ]                      │
 │                                                │
-│ [ Lagre ]  [ Avbryt ]                          │
+│ Navn på søket                                  │
+│ Maks 25 tegn. Ikke skriv personopplysninger.   │
+│ [_______________]                              │
+│                                                │
+│ Søk du ikke har brukt på seks måneder, slettes.│
+│                                                │
+│            [ Avbryt ]  [ Lagre | Erstatt søk ] │
 └────────────────────────────────────────────────┘
 ```
 
+- Uten lagrede søk vises ikke valgene. Dialogen sier i stedet: «Det første søket du lagrer, blir standardsøk. Det brukes når du går hit fra hovedmenyen.»
 - Med 10 søk er «Lagre som nytt søk» deaktivert, med teksten «Du har 10 lagrede søk. Erstatt et søk eller slett et i Administrer søk.»
-- Er et lagret søk i bruk, er «Erstatt et lagret søk» og det søket forhåndsvalgt.
-- Navnefeltet er felles for nytt søk og erstatting og viser grensen på 25 tegn. Frontend og backend validerer lengden. Vi ber om et beskrivende navn, men validerer ikke at navnet er unikt.
+- Dialogen starter på «Lagre som nytt søk», eller på «Erstatt et lagret søk» når veilederen har 10 søk. Listen starter på «Velg søk», og veilederen må velge før lagring. Vi velger ikke søket i bruk på forhånd, så veilederen ikke overskriver et søk ved et uhell.
+- Navnet for nytt søk og navnet ved erstatting holdes hver for seg. Når veilederen velger søket som skal erstattes, fylles navnet inn og kan endres.
+- Knappen heter «Erstatt søk» ved erstatting og «Lagre» ellers.
+- Frontend og backend validerer lengden. Vi ber om et beskrivende navn, men validerer ikke at navnet er unikt.
 - Dialogen har ikke standardvalg. Det første søket blir automatisk standard, senere valg gjøres i «Administrer søk».
 
 ### Dialog: «Administrer søk»
@@ -266,15 +357,27 @@ Diskettikonet åpner dialogen. Gjeldende filtre og søkeord lagres.
 ```text
 Administrer søk (3 av 10)
 
-Navn                     Sist aktiv   Slettes
-★ Treff i Oslo           20.10.2026   20.04.2027                          [Slett]
-  Treff Vestland         12.10.2026   12.04.2027  [Gjør til standard]     [Slett]
-  Mine utkast            01.05.2026   01.11.2026  [Gjør til standard]     [Slett]
-
-                                                                          [Lukk]
+Velg et navn for å bruke søket. Standardsøket brukes når du går hit fra hovedmenyen.
+Søk du ikke har brukt på seks måneder, slettes.
+──────────────────────────────────────────────────────────────
+Treff i Oslo                                            [Slett]
+Sist brukt 20.10.2026 · Standard
+──────────────────────────────────────────────────────────────
+Treff Vestland                      [Gjør til standard] [Slett]
+Sist brukt 12.10.2026
+──────────────────────────────────────────────────────────────
+Mine utkast                         [Gjør til standard] [Slett]
+Sist brukt 01.05.2026 · Slettes 01.11.2026
+──────────────────────────────────────────────────────────────
+                                                         [Lukk]
 ```
 
-«Slett» ber om bekreftelse: «Vil du slette «Treff i Oslo»?» med knappene «Slett» og «Avbryt».
+- Søkene er en liste, ikke en tabell. På smale skjermer flytter knappene seg under navnet, så datoene ikke presses sammen.
+- Navnet er en lenke som tar søket i bruk og lukker dialogen.
+- Linjen under navnet viser «Sist brukt», «Standard» i halvfet skrift for standardsøket og «Slettes dd.mm.åååå» for søk med `visSlettevarsel`. Vi viser ikke slettedatoen for alle søk.
+- Etter «Gjør til standard» leses kvitteringen ««Treff Vestland» er nå standardsøket.» opp.
+- «Slett» bytter innholdet i dialogen til «Slett lagret søk» med spørsmålet «Vil du slette «Treff i Oslo»?» og knappene «Slett» og «Avbryt». Esc og lukkeknappen går tilbake til listen.
+- Fokus flyttes til «Avbryt» i bekreftelsen, tilbake til radens «Slett» ved avbryt og til «Lukk» etter sletting. Kvitteringen leses opp.
 
 «Gjør til standard» fornyer fristen for det valgte søket. Hvis standardsøket slettes eller utløper, åpner menylenken vanlig søk. Vi gjør ikke et annet lagret søk til standard automatisk.
 
@@ -284,7 +387,7 @@ Navn                     Sist aktiv   Slettes
 | --- | --- |
 | `components/standardsøk/` (ny) | Felles meny, lagre-dialog og administrer-dialog. Domenet sender inn hvilke parametre som lagres og hvordan et søk tas i bruk. |
 | `app/api/bruker/standardsok/[domene]/` (ny) | Proxy-rute for liste og `[id]`, SWR-hook per domene, mutasjoner, Zod-skjema og MSW-mock |
-| Treffsøket | Meny og diskettikon under søkefeltet. `RekrutteringstreffSøkContext` holder id-en til søket som er i bruk i state, ikke i URL-en. Ved `brukStandardsok` venter søket mot `/sok` på at standardsøket er kontrollert, eller at frontend har vist en feil og gått videre med vanlig søk. |
+| Treffsøket | Meny og diskett under søkefeltet, og «Filtrer» for smale skjermer. `RekrutteringstreffSøkContext` holder id-en til søket som er i bruk i state, ikke i URL-en. Ved `brukStandardsok` venter søket mot `/sok` på at standardsøket er kontrollert, eller at frontend har vist en feil og gått videre med vanlig søk. |
 | `AppSidebar.tsx` | `?brukStandardsok=true` på menylenken til rekrutteringstreff |
 | Stillingssøket (leveranse 2) | Bytter til bruker-api og de felles komponentene. Setter fritekst fra søket i `StillingsSøkContext` og fjerner blokkeringen av fritekst under `brukStandardsok`. Lagre er mulig når filteret er tomt, men fritekst finnes. Reglene for kandidat (`visKandidatnr`) og portefølje beholdes. `app/api/stilling/standardsok/` slettes. |
 
@@ -301,16 +404,15 @@ flowchart TD
     E --> H{Er søket utløpt i cachen?}
     G --> H
     H -->|Ja| X[Vis melding og oppdater listen]
-    H -->|Nei| I{sistAktiv er i dag?}
-    I -->|Ja| K[Bruk søket fra cachen]
-    I -->|Nei| J[POST .../bruk før aktivering]
+    H -->|Nei| J[POST .../bruk før aktivering]
     J --> L{Svar}
     L -->|200| M[Oppdater cachen med svaret]
     L -->|404| X
     L -->|Annen feil| Y[Vis feil, ikke aktiver lagret søk]
-    K --> N[Sett filtre i URL og fritekst i state]
-    M --> N
+    M --> N[Sett filtre i URL og fritekst i state]
 ```
+
+Frontend kaller alltid `POST .../bruk` før et søk aktiveres, også når søket er brukt i dag. Søket kan være slettet eller endret i en annen fane, og svaret gir gjeldende innhold eller `404`. Menylenken venter også til listen er hentet på nytt, så den ikke velger standardsøk fra en utdatert cache.
 
 Ved utløpt søk eller `404` fjernes søket fra cachen, listen hentes på nytt og veilederen får en melding om at søket er slettet eller utløpt. Filtre og fritekst fra det gamle søket aktiveres ikke. Ved andre feil vises en feilmelding med mulighet til å prøve igjen. Vanlig søk er fortsatt tilgjengelig. En feil ved henting av listen vises som en feil, ikke som en tom liste.
 
@@ -382,7 +484,7 @@ Rollback i leveranse 2, før stilling-api ryddes: frontend peker tilbake til sti
 
 - Tellere i bruker-api: opprettede, erstattede og slettede søk, søk der navn eller fritekst ble filtrert, og rader jobben slettet. Alle med `domene` som label.
 - Opprydningsjobben har feilteller og tidspunkt for siste vellykkede kjøring, med varsling ved uteblitt kjøring. Ingen målinger har Nav-ident, søkeident, navn eller søkeord som label.
-- Umami i frontend: søk brukt fra menyen, søk brukt fra menylenken, lagret som nytt, erstattet og slettet, per domene.
+- Umami i frontend: søk brukt fra menyen, fra «Administrer søk» og fra menylenken, lagret som nytt, erstattet og slettet, per domene.
 
 ## Åpne spørsmål
 
