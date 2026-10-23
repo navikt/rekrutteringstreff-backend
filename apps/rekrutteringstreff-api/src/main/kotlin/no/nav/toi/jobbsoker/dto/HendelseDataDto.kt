@@ -2,8 +2,8 @@ package no.nav.toi.jobbsoker.dto
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
 import io.javalin.openapi.OneOf
 import io.javalin.openapi.OpenApiName
 import no.nav.toi.JobbsøkerHendelsestype

@@ -1,13 +1,11 @@
 package no.nav.toi.minside
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.result.Result.Failure
-import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.ApplicationContext
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.InfrastructureContext
+import no.nav.toi.IssuerType
 import no.nav.toi.RolleUuidSpesifikasjon
 import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
@@ -37,7 +35,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -78,7 +75,8 @@ class MinsideTest {
                     AuthenticationConfiguration(
                         issuer = "http://localhost:$authPort/default",
                         jwksUri = "http://localhost:$authPort/default/jwks",
-                        audience = rekrutteringsTreffAudience
+                        audience = rekrutteringsTreffAudience,
+                        issuerType = IssuerType.TOKEN_X,
                     )
                 )
                 override val rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
@@ -239,18 +237,13 @@ class MinsideTest {
         val ident = "12345678910"
         val token = authServer.lagToken(authPort, pid = ident)
 
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}")
+        val response = HttpRequest.newBuilder(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}")).GET()
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readTree(result.get())
-                assertThat(dto["tittel"].asText()).isEqualTo(rekrutteringstreffMeldtPå.tittel)
-                assertThat(dto["arbeidsgivere"]).isNotEmpty
-            }
-        }
+            .let { httpClient.send(it.build(), HttpResponse.BodyHandlers.ofString()) }
+        assertThat(response.statusCode()).isEqualTo(200)
+        val dto = mapper.readTree(response.body())
+        assertThat(dto["tittel"].asString()).isEqualTo(rekrutteringstreffMeldtPå.tittel)
+        assertThat(dto["arbeidsgivere"]).isNotEmpty
     }
 
     @Test
@@ -258,19 +251,14 @@ class MinsideTest {
         val ident = "12345678910"
         val token = authServer.lagToken(authPort, pid = ident)
 
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/arbeidsgiver")
+        val response = HttpRequest.newBuilder(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/arbeidsgiver")).GET()
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readTree(result.get())
-                assertThat(dto.isArray).isTrue()
-                assertThat(dto[0]["organisasjonsnummer"].asText()).isEqualTo(arrangørOrgNr)
-                assertThat(dto[0]["navn"].asText()).isEqualTo(arrangørOrgnavn)
-            }
-        }
+            .let { httpClient.send(it.build(), HttpResponse.BodyHandlers.ofString()) }
+        assertThat(response.statusCode()).isEqualTo(200)
+        val dto = mapper.readTree(response.body())
+        assertThat(dto.isArray).isTrue()
+        assertThat(dto[0]["organisasjonsnummer"].asString()).isEqualTo(arrangørOrgNr)
+        assertThat(dto[0]["navn"].asString()).isEqualTo(arrangørOrgnavn)
     }
 
     @Test
@@ -287,7 +275,7 @@ class MinsideTest {
 
         assertThat(response.statusCode()).isEqualTo(200)
         val dto = mapper.readTree(response.body())
-        assertThat(dto["kategori"].asText()).isEqualTo(RekrutteringstreffKategori.WORKOP.name)
+        assertThat(dto["kategori"].asString()).isEqualTo(RekrutteringstreffKategori.WORKOP.name)
         assertThat(dto["arbeidsgivere"]).isEmpty()
     }
 
@@ -315,21 +303,16 @@ class MinsideTest {
         val ident = "12345678910"
         val token = authServer.lagToken(authPort, pid = ident)
 
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar")
+        val response = HttpRequest.newBuilder(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar")).GET()
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readTree(result.get())
+            .let { httpClient.send(it.build(), HttpResponse.BodyHandlers.ofString()) }
+        assertThat(response.statusCode()).isEqualTo(200)
+        val dto = mapper.readTree(response.body())
 
-                // The answer is randomly generated boolean values for now
-                assertThat(dto["erInvitert"].asText()).isIn("true", "false")
-                assertThat(dto["erPåmeldt"].asText()).isIn("true", "false")
-                assertThat(dto["harSvart"].asText()).isIn("true", "false")
-            }
-        }
+        // The answer is randomly generated boolean values for now
+        assertThat(dto["erInvitert"].asString()).isIn("true", "false")
+        assertThat(dto["erPåmeldt"].asString()).isIn("true", "false")
+        assertThat(dto["harSvart"].asString()).isIn("true", "false")
     }
 
     @Test
@@ -337,25 +320,19 @@ class MinsideTest {
         val ident = jobbsøkerFnr
         val token = authServer.lagToken(authPort, pid = ident)
 
-        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar")
+        val response = HttpRequest.newBuilder(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar"))
             .header("Authorization", "Bearer ${token.serialize()}")
-            .body("""
+            .PUT(HttpRequest.BodyPublishers.ofString("""
                 {
                     "erPåmeldt": true
                 }
-                """.trimIndent()
-            )
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readTree(result.get())
+                """.trimIndent()))
+            .let { httpClient.send(it.build(), HttpResponse.BodyHandlers.ofString()) }
+        assertThat(response.statusCode()).isEqualTo(200)
+        val dto = mapper.readTree(response.body())
 
-                assertThat(dto["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffMeldtPå.id.toString())
-                assertThat(dto["erPåmeldt"].asText()).isEqualTo("true")
-            }
-        }
+        assertThat(dto["rekrutteringstreffId"].asString()).isEqualTo(rekrutteringstreffMeldtPå.id.toString())
+        assertThat(dto["erPåmeldt"].asString()).isEqualTo("true")
     }
 
     fun endepunkter() =
@@ -366,26 +343,19 @@ class MinsideTest {
     @ParameterizedTest
     @MethodSource("endepunkter")
     fun `401 uten token`(url: String) {
-        val (_, response, result) = Fuel.get(url)
-            .responseString()
-        when (result) {
-            is Failure -> assertThat(response.statusCode).isEqualTo(401)
-            is Success -> fail { "Expected 401" }
-        }
+        val response = HttpRequest.newBuilder(URI.create(url)).GET()
+            .let { httpClient.send(it.build(), HttpResponse.BodyHandlers.ofString()) }
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("endepunkter")
     fun `401 med token uten pid`(url: String) {
         val token = authServer.lagToken(authPort, claims = mapOf())
-        val (_, response, result) = Fuel.get(url)
+        val response = HttpRequest.newBuilder(URI.create(url)).GET()
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> assertThat(response.statusCode).isEqualTo(401)
-            is Success -> fail { "Expected 401" }
-
-        }
+            .let { httpClient.send(it.build(), HttpResponse.BodyHandlers.ofString()) }
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 }
 

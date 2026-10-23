@@ -1,18 +1,23 @@
 package no.nav.toi
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.SerializationFeature
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.FailedMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.kotlinModule
 
 class TestRapid(private val meterRegistry: io.micrometer.core.instrument.MeterRegistry = io.micrometer.core.instrument.simple.SimpleMeterRegistry(), private val maxTriggedeMeldinger: Int = 10) :
     RapidsConnection() {
     private companion object {
-        private val objectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
-            .registerModule(com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        private val objectMapper = JsonMapper.builderWithJackson2Defaults()
+            .addModule(kotlinModule())
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .build()
     }
 
     private val messages = mutableListOf<Pair<String?, String>>()
@@ -112,6 +117,7 @@ class TestRapid(private val meterRegistry: io.micrometer.core.instrument.MeterRe
         val size get() = messages.size
 
         fun key(index: Int) = messages[index].first
+        fun rawMessage(index: Int) = messages[index].second
         fun message(index: Int) = jsonMessages.getOrPut(index) { objectMapper.readTree(messages[index].second) }
         fun field(index: Int, field: String) =
             requireNotNull(message(index).path(field).takeUnless { it.isMissingNode || it.isNull }) {

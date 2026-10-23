@@ -1,6 +1,6 @@
 package no.nav.toi.statistikk
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -203,9 +203,9 @@ class StatistikkKomponentTest {
 
         assertThat(response.statusCode()).isEqualTo(400)
         val feil = mapper.readTree(response.body())
-        assertThat(feil["feilkode"].asText()).isEqualTo("AKTIV_ENHET_MANGLER")
-        assertThat(feil["feil"].asText()).isEqualTo("Aktiv enhet mangler. Velg Nav-kontor og prøv igjen.")
-        assertThat(feil["detail"].asText()).isEqualTo(feil["feil"].asText())
+        assertThat(feil["feilkode"].asString()).isEqualTo("AKTIV_ENHET_MANGLER")
+        assertThat(feil["feil"].asString()).isEqualTo("Aktiv enhet mangler. Velg Nav-kontor og prøv igjen.")
+        assertThat(feil["detail"].asString()).isEqualTo(feil["feil"].asString())
     }
 
     @Test
@@ -220,7 +220,7 @@ class StatistikkKomponentTest {
         assertThat(response.statusCode()).isEqualTo(502)
         val feil = mapper.readTree(response.body())
         assertThat(feil.has("feilkode")).isFalse()
-        assertThat(feil["feil"].asText()).isEqualTo("Klarte ikke å hente aktiv enhet fra Modia. Prøv igjen senere.")
+        assertThat(feil["feil"].asString()).isEqualTo("Klarte ikke å hente aktiv enhet fra Modia. Prøv igjen senere.")
     }
 
     @Test

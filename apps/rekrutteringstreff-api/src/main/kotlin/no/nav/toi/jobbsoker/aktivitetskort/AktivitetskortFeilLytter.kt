@@ -32,9 +32,9 @@ class AktivitetskortFeilLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        val rekrutteringstreffId = TreffId(packet["rekrutteringstreffId"].asText())
-        val fødselsnummer = Fødselsnummer(packet["fnr"].asText())
-        val endretAv = packet["endretAv"].asText()
+        val rekrutteringstreffId = TreffId(packet["rekrutteringstreffId"].asString())
+        val fødselsnummer = Fødselsnummer(packet["fnr"].asString())
+        val endretAv = packet["endretAv"].asString()
 
         log.info("Mottok feilmelding for aktivitetskort for rekrutteringstreffId: $rekrutteringstreffId")
 

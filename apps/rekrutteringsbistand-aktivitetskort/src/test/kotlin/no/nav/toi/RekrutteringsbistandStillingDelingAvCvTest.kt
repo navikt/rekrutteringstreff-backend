@@ -103,7 +103,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(this[0].stillingId).isEqualTo(stillingId)
             assertThat(this[0].beskrivelse).isEqualTo("Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg.")
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
-            assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
+            assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asString().toUUID())
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].aktivitetsType).isEqualTo(DeleCvMedArbeidsgiverType.dbType)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)

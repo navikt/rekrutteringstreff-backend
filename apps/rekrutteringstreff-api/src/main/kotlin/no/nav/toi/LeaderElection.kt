@@ -1,7 +1,6 @@
 package no.nav.toi
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.arbeidsgiver.toi.logging.log
 import java.lang.System.getenv
 import java.net.InetAddress
@@ -20,7 +19,7 @@ class LeaderElection() : LeaderElectionInterface {
     private val httpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
         .build()
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = JacksonConfig.mapper
 
     init {
         log.info("Leader election, hostname: $hostname, leader: ${getLeader()}, isLeader? ${isLeader()}")

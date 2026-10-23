@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.sok
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
 import no.nav.toi.executeInReadOnlyTransaction
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori

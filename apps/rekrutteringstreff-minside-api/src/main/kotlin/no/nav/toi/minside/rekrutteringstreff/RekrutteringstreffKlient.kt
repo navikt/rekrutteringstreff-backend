@@ -1,6 +1,6 @@
 package no.nav.toi.minside.rekrutteringstreff
 
-import com.fasterxml.jackson.core.type.TypeReference
+import tools.jackson.core.type.TypeReference
 import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.minside.TokenXKlient
 import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto

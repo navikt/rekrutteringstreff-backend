@@ -297,9 +297,9 @@ class ArbeidsgiverTest {
             assertThat(treffJson["antallArbeidsgivere"].isInt).isTrue()
             assertThat(treffJson["antallArbeidsgivere"].asInt()).isEqualTo(antall)
         }
-        assertThat(treffJson["tittel"].asText()).isEqualTo("Treff hos Syntetisk Testbedrift")
-        assertThat(treffJson["beskrivelse"].asText()).isEqualTo("Syntetisk Testbedrift deltar")
-        assertThat(treffJson["gateadresse"].asText()).isEqualTo("Syntetisk treffadresse")
+        assertThat(treffJson["tittel"].asString()).isEqualTo("Treff hos Syntetisk Testbedrift")
+        assertThat(treffJson["beskrivelse"].asString()).isEqualTo("Syntetisk Testbedrift deltar")
+        assertThat(treffJson["gateadresse"].asString()).isEqualTo("Syntetisk treffadresse")
         assertThat(db.hentAlleArbeidsgivere()).hasSize(antall)
     }
 
