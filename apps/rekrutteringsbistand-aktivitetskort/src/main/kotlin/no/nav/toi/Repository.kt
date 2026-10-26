@@ -446,7 +446,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     siste_aktivitetskort.slutt_dato,
                     siste_aktivitetskort.detaljer,
                     siste_aktivitetskort.handlinger,
-                    ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?" },
+                    ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?::json" },
                     siste_aktivitetskort.oppgave,
                     siste_aktivitetskort.action_type,
                     siste_aktivitetskort.avtalt_med_nav,
@@ -474,7 +474,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 setObject(indexOffset++, UUID.randomUUID())
                 setString(indexOffset++, aktivitetsStatus.name)
                 if(etiketter != null) {
-                    setString(indexOffset++, etiketter.let { objectMapper.writeValueAsString(it) } ?: "")
+                    setString(indexOffset++, objectMapper.writeValueAsString(etiketter) )
                 }
                 setString(indexOffset++, endretAv)
                 setString(indexOffset++, endretAvType.name)
