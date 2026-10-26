@@ -1,6 +1,6 @@
 package no.nav.toi.formidling
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
@@ -501,8 +501,8 @@ class FormidlingerKomponentTest {
         assertThat(response.statusCode()).isEqualTo(403)
         val problem = mapper.readTree(response.body())
         assertThat(problem.get("status").asInt()).isEqualTo(403)
-        assertThat(problem.get("hint").asText()).isEqualTo("Jobbsøkeren har adressebeskyttelse og kan ikke formidles.")
-        assertThat(problem.get("feil").asText()).isEqualTo("Jobbsøker med adressebeskyttelse kan ikke formidles.")
+        assertThat(problem.get("hint").asString()).isEqualTo("Jobbsøkeren har adressebeskyttelse og kan ikke formidles.")
+        assertThat(problem.get("feil").asString()).isEqualTo("Jobbsøker med adressebeskyttelse kan ikke formidles.")
         assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).isEmpty()
     }
 

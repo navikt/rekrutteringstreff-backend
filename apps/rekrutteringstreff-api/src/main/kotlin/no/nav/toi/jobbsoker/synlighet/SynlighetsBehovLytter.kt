@@ -54,8 +54,8 @@ class SynlighetsBehovLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        val fodselsnummer = packet["fodselsnummer"].asText()
-        val opprettetTekst = packet["@opprettet"].asText()
+        val fodselsnummer = packet["fodselsnummer"].asString()
+        val opprettetTekst = packet["@opprettet"].asString()
         val meldingTidspunkt = parseOpprettetTidspunktAsInstant(opprettetTekst)
 
         val synlighetNode = packet["synlighetRekrutteringstreff"]

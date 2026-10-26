@@ -1,33 +1,43 @@
 package no.nav.toi.minside.svar
 
-import com.github.kittinunf.fuel.httpGet
-import com.github.kittinunf.fuel.httpPost
-import com.github.kittinunf.fuel.jackson.responseObject
-import com.github.kittinunf.result.Result.Failure
-import com.github.kittinunf.result.Result.Success
 import io.javalin.http.Header
 import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.minside.TokenXKlient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
 
-class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlient, private val rekrutteringstreffAudience: String) {
+class BorgerKlient(
+    private val url: String,
+    private val tokenXKlient: TokenXKlient,
+    private val rekrutteringstreffAudience: String,
+    private val httpClient: HttpClient,
+) {
 
      companion object {
         val log: Logger = LoggerFactory.getLogger(this::class.java)
+        private val timeout: Duration = Duration.ofSeconds(15)
     }
 
     fun jobbsøkerPath(treffId: String) = "$url/api/rekrutteringstreff/$treffId/jobbsoker"
 
     fun hentJobbsøkerMedStatuser(id: String, innkommendeToken: String): JobbsøkerMedStatuserOutboundDto {
-        val (_, response, result) = "${jobbsøkerPath(id)}/borger".httpGet()
+        val request = HttpRequest.newBuilder()
+            .uri(URI("${jobbsøkerPath(id)}/borger"))
             .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
-            .responseObject<JobbsøkerMedStatuserOutboundDto>(JacksonConfig.mapper)
+            .timeout(timeout)
+            .GET()
+            .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
-        log.info("Hentet jobbsøker med statuser for treffId: $id, status: ${response.statusCode}")
+        log.info("Hentet jobbsøker med statuser for treffId: $id, status: ${response.statusCode()}")
 
         // TODO: Kun inviterte jobbsøkere finnes i databasen. Vurder om dette skal håndteres i rekrutteringstreff-api
-        if (response.statusCode == 404) {
+        if (response.statusCode() == 404) {
             return JobbsøkerMedStatuserOutboundDto(
                 id = "ukjent",
                 treffId = id,
@@ -45,25 +55,27 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
             )
         }
 
-        return when (result) {
-            is Failure -> throw result.error
-            is Success -> result.value
+        if (response.statusCode() !in 200..299) {
+            throw RuntimeException("Henting av jobbsøker med statuser for treffId $id feilet med status ${response.statusCode()}")
         }
+
+        return JacksonConfig.mapper.readValue(response.body(), JobbsøkerMedStatuserOutboundDto::class.java)
     }
 
     fun svarPåTreff(rekrutterinstreffId: String, innkommendeToken: String, erPåmeldt: Boolean) {
         val påmeldtSomStreng = if (erPåmeldt) "ja" else "nei"
 
-        val (_, response, _) = "${jobbsøkerPath(rekrutterinstreffId)}/borger/svar-${påmeldtSomStreng}".httpPost()
-            .header(
-                Header.AUTHORIZATION,
-                "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}"
-            )
-            .response()
+        val request = HttpRequest.newBuilder()
+            .uri(URI("${jobbsøkerPath(rekrutterinstreffId)}/borger/svar-${påmeldtSomStreng}"))
+            .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
+            .timeout(timeout)
+            .POST(HttpRequest.BodyPublishers.noBody())
+            .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.discarding())
 
-        if (response.statusCode !in 200..299) {
-            log.error("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode}")
-            throw RuntimeException("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode}")
+        if (response.statusCode() !in 200..299) {
+            log.error("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode()}")
+            throw RuntimeException("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode()}")
         } else {
             log.info("Jobbsøker har svart ${påmeldtSomStreng} på rekrutteringstreff med id: $rekrutterinstreffId")
         }

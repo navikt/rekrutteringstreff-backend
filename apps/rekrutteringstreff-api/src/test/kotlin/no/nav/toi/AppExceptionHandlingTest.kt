@@ -70,7 +70,7 @@ class AppExceptionHandlingTest {
     fun stop() { infra.stop(); app.close() }
 
     @Test
-    fun `ugyldig JSON (JsonParseException) gir 400`() {
+    fun `ugyldig JSON (StreamReadException) gir 400`() {
         val request = HttpRequest.newBuilder()
             .uri(URI("http://localhost:$port/api/rekrutteringstreff/$treffId"))
             .header("Authorization", "Bearer ${infra.authServer.lagToken(infra.authPort).serialize()}")
@@ -89,7 +89,7 @@ class AppExceptionHandlingTest {
         //Nye felter fra ProblemDetails:
         body.shouldBeValidJson()
         body.shouldBeJsonObject()
-        body.shouldContainJsonKeyValue("title", "JsonParseException")
+        body.shouldContainJsonKeyValue("title", "StreamReadException")
         body.shouldContainJsonKeyValue("status", 400)
         body.shouldContainJsonKey("detail")
         body.shouldContainJsonKey("instance")
@@ -99,7 +99,7 @@ class AppExceptionHandlingTest {
     }
 
     @Test
-    fun `gyldig JSON men feil mapping (JsonMappingException) gir 400`() {
+    fun `gyldig JSON men feil mapping (DatabindException) gir 400`() {
         // tittel er påkrevd, mangler -> mapping-feil
         val json = """{
             "beskrivelse":"hei",

@@ -2,7 +2,7 @@ package no.nav.toi.minside
 
 import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
-import io.javalin.json.JavalinJackson
+import io.javalin.json.JavalinJackson3
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.arbeidsgiver.toi.logging.noClassLogger
@@ -26,7 +26,7 @@ class App(
 
     fun start() {
         javalin = Javalin.create { config ->
-            config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
+            config.jsonMapper(JavalinJackson3(JacksonConfig.mapper))
             configureOpenApi(config)
             log.info("Javalin opprettet")
 
@@ -38,7 +38,7 @@ class App(
                 rekrutteringstreffAudience = rekrutteringstreffAudience,
                 httpClient = httpClient
             )
-            val borgerKlient = BorgerKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
+            val borgerKlient = BorgerKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience, httpClient)
             config.routes.rekrutteringstreffSvarEndepunkt(rekrutteringstreffKlient, borgerKlient)
             config.routes.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
             config.routes.arbeidsgiverendepunkt(rekrutteringstreffKlient)

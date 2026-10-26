@@ -50,10 +50,10 @@ class SynlighetsLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry,
     ) {
-        val fodselsnummer = packet["fodselsnummer"].asText()
+        val fodselsnummer = packet["fodselsnummer"].asString()
         val erSynlig = packet["synlighet"]["erSynlig"].asBoolean()
         val sperret = packet["synlighet"]["sperret"]?.asBoolean() ?: false
-        val opprettetTekst = packet["@opprettet"].asText()
+        val opprettetTekst = packet["@opprettet"].asString()
         val meldingTidspunkt = parseOpprettetTidspunktAsInstant(opprettetTekst)
 
         log.info("Mottok synlighetsmelding fra event-strøm: erSynlig=$erSynlig, sperret=$sperret, tidspunkt=$opprettetTekst")

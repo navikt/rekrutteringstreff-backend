@@ -1,8 +1,8 @@
 package no.nav.toi
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.JsonMappingException
+import tools.jackson.core.exc.StreamReadException
+import tools.jackson.databind.DatabindException
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
@@ -69,7 +69,7 @@ object ExceptionMapping {
 
     fun JavalinDefaultRoutingApi.exceptionMapping() {
         // TODO exceptions kan også skje steder hvor disse feilmeldingene ikke gir mening.
-        exception(JsonParseException::class.java) { e, ctx ->
+        exception(StreamReadException::class.java) { e, ctx ->
             ctx.status(400).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,
@@ -80,7 +80,7 @@ object ExceptionMapping {
                 )
             )
         }
-        exception(JsonMappingException::class.java) { e, ctx ->
+        exception(DatabindException::class.java) { e, ctx ->
             ctx.status(400).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,

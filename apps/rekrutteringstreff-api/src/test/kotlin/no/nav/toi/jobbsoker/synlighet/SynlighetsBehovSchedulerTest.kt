@@ -60,9 +60,9 @@ class SynlighetsBehovSchedulerTest {
         // Verifiser at need-melding ble publisert
         assertThat(rapid.inspektør.size).isEqualTo(1)
         val melding = rapid.inspektør.message(0)
-        assertThat(melding["@event_name"].asText()).isEqualTo("behov")
-        assertThat(melding["@behov"].map { it.asText() }).contains("synlighetRekrutteringstreff")
-        assertThat(melding["fodselsnummer"].asText()).isEqualTo(fnr)
+        assertThat(melding["@event_name"].asString()).isEqualTo("behov")
+        assertThat(melding["@behov"].values().map { it.asString() }).contains("synlighetRekrutteringstreff")
+        assertThat(melding["fodselsnummer"].asString()).isEqualTo(fnr)
     }
 
     @Test
@@ -111,7 +111,7 @@ class SynlighetsBehovSchedulerTest {
 
         // Verifiser at need-meldinger ble publisert for begge
         assertThat(rapid.inspektør.size).isEqualTo(2)
-        val publiserteFnr = (0 until rapid.inspektør.size).map { rapid.inspektør.message(it)["fodselsnummer"].asText() }
+        val publiserteFnr = (0 until rapid.inspektør.size).map { rapid.inspektør.message(it)["fodselsnummer"].asString() }
         assertThat(publiserteFnr).containsExactlyInAnyOrder(fnr1, fnr2)
     }
 
@@ -138,7 +138,7 @@ class SynlighetsBehovSchedulerTest {
 
         // Verifiser at kun jobbsøker uten synlighet fikk need-melding
         assertThat(rapid.inspektør.size).isEqualTo(1)
-        assertThat(rapid.inspektør.message(0)["fodselsnummer"].asText()).isEqualTo(fnrUtenSynlighet)
+        assertThat(rapid.inspektør.message(0)["fodselsnummer"].asString()).isEqualTo(fnrUtenSynlighet)
     }
 
     @Test
@@ -175,7 +175,7 @@ class SynlighetsBehovSchedulerTest {
 
         // Verifiser at kun én need-melding ble publisert (DISTINCT fødselsnummer)
         assertThat(rapid.inspektør.size).isEqualTo(1)
-        assertThat(rapid.inspektør.message(0)["fodselsnummer"].asText()).isEqualTo(fnr)
+        assertThat(rapid.inspektør.message(0)["fodselsnummer"].asString()).isEqualTo(fnr)
     }
 
     @Test
