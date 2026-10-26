@@ -1,10 +1,10 @@
 # Plan: Lagrede søk for stillingsoppdrag og rekrutteringstreff i bruker-api
 
-**Status:** Leveranse 1 (rekrutteringstreff) er implementert i bruker-api og frontend, men ikke rullet ut. ROS gjenstår før produksjon. Leveranse 2 (stilling) er ikke startet.
+**Status:** Leveranse 1 (rekrutteringstreff) er implementert i bruker-api og frontend, men ikke rullet ut. Et ROS-utkast ligger i [`ros-standardsok.md`](ros-standardsok.md) og må godkjennes før produksjon. Leveranse 2 (stilling) er ikke startet.
 
 ## Kort fortalt
 
-- Rekrutteringstreff får lagrede søk i `rekrutteringsbistand-bruker-api`. Hver veileder kan lagre opptil 10 søk per domene, gi dem navn, bruke dem og slette dem. Ett av dem kan være standardsøket som menylenken åpner.
+- Rekrutteringstreff får lagrede søk i `rekrutteringsbistand-bruker-api`. Hver veileder kan lagre opptil 10 søk per domene, gi dem navn, bruke dem og slette dem. En veileder med lagrede søk har alltid nøyaktig ett standardsøk, som brukes når siden åpnes.
 - Standardsøk for stillingsoppdrag flyttes senere fra `rekrutteringsbistand-stilling-api` til samme API og får samme støtte for flere søk.
 - Vi planlegger begge nå, men leverer én applikasjon av gangen helt til produksjon. Rekrutteringstreff kommer først.
 - Hvert domene får sin egen tabell med lik oppbygning. De deler kode og opprydningsjobb.
@@ -13,7 +13,8 @@
 - Hvert søk har datoen `sistAktiv`. Lagring, bruk og «Gjør til standard» fornyer seksmånedersfristen. Ved bruk oppdateres datoen høyst én gang i døgnet.
 - Navn og fritekst lagres bare i body og database, aldri i URL-en. Backend fjerner gyldige fødselsnumre før lagring.
 - Et søk uten aktivitet på seks måneder slettes helt. Etter fem måneder får det en merknad i menyen.
-- Standardvalg gjøres bare i «Administrer søk». Det første søket blir automatisk standard. Når standardsøket slettes eller utløper, åpner menylenken vanlig søk.
+- Det første søket blir automatisk standard. Veilederen kan velge et annet i «Administrer søk». Når standardsøket slettes eller utløper, blir søket veilederen brukte sist, standard.
+- Når siden åpnes med standardsøket, viser statuslinjen «Valgt søk» med navnet. Uten lagrede søk åpnes standardvisningen, den samme som «Fjern alle filtre» gir.
 
 ## Slik virker det i dag (stillingsoppdrag)
 
@@ -71,7 +72,7 @@ Frontend kaller `/api/bruker/standardsok/{domene}`, og proxyen sender videre til
 
 | Metode | Sti | Bruk | Svar |
 | --- | --- | --- | --- |
-| `GET` | `/api/standardsok/{domene}` | Henter alle veilederens søk. Brukes av menyen, lagre-dialogen og menylenken. | `200` med liste av `StandardsøkDto`, sortert på navn og deretter id. Tom liste uten lagrede søk. |
+| `GET` | `/api/standardsok/{domene}` | Henter alle veilederens søk. Brukes av menyen, lagre-dialogen og menylenken. | `200` med liste av `StandardsøkDto`. Standardsøket står først, resten er sortert på navn (norsk alfabet) og deretter id. Tom liste uten lagrede søk. |
 | `POST` | `/api/standardsok/{domene}` | «Lagre som nytt søk» | `201` med `StandardsøkDto`. `409` når veilederen allerede har 10 søk. Like navn tillates. |
 | `PUT` | `/api/standardsok/{domene}/{id}` | «Erstatt et lagret søk». Endrer ikke standardvalget. | `200` med `StandardsøkDto` |
 | `PUT` | `/api/standardsok/{domene}/{id}/standard` | «Gjør til standard» i administrasjonen. Fjerner merket fra det forrige og fornyer fristen for det valgte søket. | `204` |
@@ -104,7 +105,7 @@ Nav-identen kommer alltid fra tokenet, aldri fra body eller sti. Hver spørring 
 | | `visSlettevarsel` | Boolean | Beregnes av backend. Sann fra fem kalendermåneder etter `sistAktiv` til søket utløper. |
 | | `fritekstFiltrert` | Boolean | Bare i svar på `POST` og `PUT`. `true` hvis backend fjernet noe fra navn eller fritekst. |
 
-Standardvalg inngår ikke i `LagreStandardsøkDto`. Backend gjør det første søket til standard når veilederen ikke har noen aktive søk fra før. Hvis andre søk finnes uten et standardsøk, blir ikke et nytt søk automatisk standard.
+Standardvalg inngår ikke i `LagreStandardsøkDto`. Backend sørger for at en veileder med aktive søk alltid har nøyaktig ett standardsøk. Det første søket blir standard. Slettes eller utløper standardsøket, blir det aktive søket med nyest `sistAktiv` standard, med navn og id som andre og tredje sorteringsnøkkel.
 
 ### Tabeller: én per domene
 
@@ -192,7 +193,7 @@ Regler i backend:
 
 - Grensen på 10 aktive søk gjelder også ved samtidige opprettelser. Opprettelse og standardbytte tar en advisory lock per tabell og Nav-ident (`pg_advisory_xact_lock`), som gjelder på tvers av podene. Transaksjonen kjører med `READ COMMITTED`, så tellingen etter låsen ser det andre kall har committet. Under `REPEATABLE READ`, som er standard i bruker-api, ville tellingen vært utdatert.
 - Bytte av standardsøk fjerner merket fra det gamle, setter det på det nye og oppdaterer det nye søkets `sistAktiv` i én transaksjon. Datoen for det gamle søket endres ikke. Den delvise unike indeksen er et siste vern mot flere standardsøk.
-- Når standardsøket slettes eller utløper, velger vi ikke et annet automatisk. Menylenken åpner vanlig søk til veilederen velger et nytt standardsøk.
+- Når veilederen sletter standardsøket, velger backend et nytt i samme transaksjon. Sletter opprydningsjobben det, velges et nytt neste gang veilederen henter listen eller oppretter et søk. Utløpte søk slettes før valget, fordi et utløpt standardsøk ellers stopper den unike indeksen.
 - Ett repository dekker begge tabellene. Tabellnavnet kommer fra en enum i koden, aldri fra input.
 - Søk slettes når veilederen sletter dem, eller etter seks måneder uten aktivitet. Se [Sletting etter seks måneder uten aktivitet](#sletting-etter-seks-måneder-uten-aktivitet).
 
@@ -213,7 +214,7 @@ Vi lagrer en dato og ikke et tidspunkt. Det holder for sletting etter seks måne
 
 `sistAktiv` settes til i dag når veilederen lagrer søket som nytt, erstatter det, tar det i bruk eller velger «Gjør til standard». Å hente listen eller åpne menyen endrer den ikke.
 
-`POST .../bruk` oppdaterer bare når `sistAktiv` er eldre enn i dag. Det gir høyst én databaseskriving per søk i døgnet ved bruk, selv om frontend kaller hver gang. Ved lagring og standardbytte skriver backend de øvrige endringene som vanlig.
+`POST .../bruk` leser søket og oppdaterer bare når `sistAktiv` er eldre enn i dag. Det gir høyst én databaseskriving per søk i døgnet ved bruk, selv om frontend kaller hver gang. Ved lagring og standardbytte skriver backend de øvrige endringene som vanlig.
 
 Slettefristen er seks kalendermåneder etter `sistAktiv`, og varselet starter etter fem. Finnes ikke dagen i målmåneden, brukes månedens siste dag. Søket er utløpt fra og med slettefristen. Backend bruker samme regel for svar, oppslag og opprydning, og beregner `visSlettevarsel` for frontend. Reglene testes ved månedsslutt og skuddår.
 
@@ -223,7 +224,7 @@ Slettefristen er seks kalendermåneder etter `sistAktiv`, og varselet starter et
 
 ### Hvorfor bare i body
 
-Fritekst ligger i React-state i begge søkene i dag, og ikke i URL-en. Det hindrer at den havner i nettleserhistorikk, tilgangslogger og Umami. Vi beholder det: fritekst og navn går bare i body på `POST` og `PUT` og i svarene fra API-et. Søkeidenten brukes i stien til API-kallene, men holdes i state på søkesiden. Når et søk brukes, legges fritekst i state og vises som chips.
+Fritekst ligger i React-state i begge søkene i dag, og ikke i URL-en. Det hindrer at den havner i nettleserhistorikk, tilgangslogger og Umami. Vi beholder det: fritekst og navn går bare i body på `POST` og `PUT` og i svarene fra API-et. Søkeidenten brukes i stien til API-kallene. På søkesiden står den i URL-en som `lagretSok`, så valgt søk overlever refresh. Id-en er en tilfeldig UUID og sier ingenting om innholdet. Når et søk brukes, legges fritekst i state og vises som chips.
 
 Backend avviser ukjente filterparametere og ugyldige verdier. `filter` kan dermed ikke brukes til å lagre navn eller fritekst som senere legges i URL-en.
 
@@ -261,10 +262,10 @@ Navn er også fritekst, så vi sletter hele søket og ikke bare søkeordene. Sø
 
 - `GET` returnerer aldri utløpte søk, selv om jobben ikke har kjørt.
 - Kall med `{id}` mot et utløpt søk gir `404`. Eierskap og utløp kontrolleres før eventuell oppdatering, så et kall ikke kan vekke søket til live.
-- `POST` sletter veilederens utløpte søk i samme transaksjon før grensen på 10 sjekkes. Da teller ikke usynlige søk med eller blokkerer automatisk standardvalg for et nytt første søk.
-- Jobben sletter raden fysisk ved neste daglige kjøring. Skjuling ved fristen og ventetiden fram til sletting må beskrives i ROS-en.
+- `POST` sletter veilederens utløpte søk i samme transaksjon før grensen på 10 sjekkes. Da teller ikke usynlige søk med, og et utløpt standardsøk erstattes før det nye søket lagres.
+- Jobben sletter raden fysisk ved neste kjøring, innen en time. Skjuling ved fristen og ventetiden fram til sletting er beskrevet i ROS-en (LS-03).
 
-Et søk som brukes, lagres eller velges som standard jevnlig, har ingen øvre grense for hvor lenge navn og søkeord blir liggende. Fødselsnummerfilteret fjerner ikke andre personopplysninger. Denne oppbevaringen må vurderes i ROS-en før produksjon.
+Et søk som brukes, lagres eller velges som standard jevnlig, har ingen øvre grense for hvor lenge navn og søkeord blir liggende. Fødselsnummerfilteret fjerner ikke andre personopplysninger. Denne oppbevaringen er vurdert i [ROS-en](ros-standardsok.md) (LS-01 og LS-02), og må godkjennes før produksjon.
 
 ### Merknad før sletting
 
@@ -272,17 +273,18 @@ Vi markerer søk fra fem kalendermåneder etter `sistAktiv`. Merknaden lagres ik
 
 - Merknaden koster ingen ny kolonne, jobb eller varsling.
 - Veilederen ser den i menyen og i «Administrer søk». Bruk, lagring eller «Gjør til standard» starter de seks månedene på nytt. Vi lager ingen egen knapp for å beholde søk.
-- Uten merknad forsvinner søk uten forvarsel. Det er særlig ille for standardsøket, som menylenken bruker.
+- Uten merknad forsvinner søk uten forvarsel. Det er særlig ille for standardsøket, som brukes når siden åpnes.
 
 Vi sender ikke varsel utenfor løsningen, for eksempel e-post. Det krever mer enn gevinsten forsvarer.
 
 ### Opprydningsjobb
 
-- Kjører én gang i døgnet i bruker-api. For hver tabell sletter den rader som har nådd slettefristen.
+- Kjører hver time i bruker-api. For hver tabell sletter den rader som har nådd slettefristen. Spørringen bruker indeksen på `sistAktiv` og koster lite.
 - Én felles jobb for alle domenetabellene.
 - Jobben er idempotent. Den kan derfor kjøre på alle podene uten leader election.
+- Jobben stopper når Javalin stopper. Gjentatte start- og stoppkall oppretter ikke flere jobber.
 - Jobben logger og teller bare antall rader, aldri innhold.
-- Feil og tidspunktet for siste vellykkede kjøring måles. Det varsles hvis forventet opprydning uteblir.
+- Feil og tidspunktet for siste vellykkede kjøring måles. Det varsles hvis jobben ikke har kjørt uten feil på seks timer. Etter en deploy varsles det bare hvis de to første kjøringene feiler.
 
 ## Frontend
 
@@ -290,7 +292,7 @@ Vi beholder plasseringen under søkefeltet. «Bruk standardsøk» blir en meny m
 
 ### Meny og statuslinje
 
-Menyen erstatter knappen «Bruk standardsøk». Et klikk på et søk tar det i bruk og lukker menyen. Søkene er radiovalg (`ActionMenu.RadioItem`), så søket som er i bruk, er markert så lenge filtrene er uendret. Like navn er tillatt, men hvert menyelement bruker id-en til riktig søk.
+Menyen erstatter knappen «Bruk standardsøk». Et klikk på et søk tar det i bruk og lukker menyen. Søkene er radiovalg (`ActionMenu.RadioItem`), så søket som er i bruk, er markert så lenge filtrene er uendret. Like navn er tillatt, men hvert menyelement bruker id-en til riktig søk. Standardsøket står øverst, og resten står i alfabetisk rekkefølge. Da står søkene på samme plass hver gang, også etter at veilederen har brukt et av dem.
 
 ```text
 [ Lagrede søk ▾ ] [💾]
@@ -313,6 +315,19 @@ Valgt søk: Treff i Oslo
 - Statuslinjen viser navnet på søket som er i bruk, men bare så lenge filtrene og søkeordene er like det lagrede søket. Endrer veilederen noe, også med «Fjern alle filtre», forsvinner linjen og markeringen i menyen. Slik kan veilederen velge bort et søk uten en egen knapp. Linjen kommer tilbake hvis filtrene blir like søket igjen. Linjen er en `aria-live`-region.
 - Uten lagrede søk viser menyen «Du har ingen lagrede søk» og «Velg filtre og trykk på disketten.».
 - Fokus går tilbake til knappen som åpnet dialogen, også når dialogen lukkes etter lagring eller med Esc.
+
+### Når siden åpnes
+
+- Siden åpnes med standardsøket når URL-en ikke har søkeparametere (`visning`, `statuser`, `publisertStatuser`, `fylker`, `kommuner`, `kontorer`, `sortering` eller `side`). Statuslinjen viser «Valgt søk» med navnet på standardsøket.
+- Har URL-en søkeparametere, for eksempel etter refresh eller fra en delt lenke, går de foran standardsøket.
+- Id-en til søket som er i bruk, står i URL-en som `lagretSok`. Ved refresh hentes søkeordene fra det lagrede søket når filtrene i URL-en er like søkets filtre. Statuslinjen viser da navnet, og søket er markert i menyen. Søket mot treffene venter til søkeordene er på plass.
+- Endrer veilederen filtre, sortering eller søkeord, fjernes `lagretSok`. Det samme skjer når søket er slettet, utløpt eller tilhører en annen veileder.
+- Menylenken legger på `?brukStandardsok=true`. Det trengs fordi siden ikke lastes på nytt når veilederen allerede står på treffsøket.
+- Uten lagrede søk åpnes standardvisningen: «Publisert», «Alle treff» og «Sist oppdaterte», uten søkeord.
+
+### Fjern alle filtre
+
+Chipen «Fjern alle filtre» står først i chip-raden over treffene. Den vises når filtre, sortering eller søkeord avviker fra standardvisningen, også når ingen av endringene vises som chip. Et klikk setter alt tilbake til standardvisningen og fjerner parameterne fra URL-en. Statuslinjen forsvinner, fordi filtrene ikke lenger er like et lagret søk. Standardvisningen tilsvarer stillingssøket, som faller tilbake til `publisert=intern&statuser=publisert`.
 
 ### Smale skjermer
 
@@ -344,11 +359,12 @@ Disketten åpner dialogen. Gjeldende filtre og søkeord lagres. Enter sender skj
 └────────────────────────────────────────────────┘
 ```
 
-- Uten lagrede søk vises ikke valgene. Dialogen sier i stedet: «Det første søket du lagrer, blir standardsøk. Det brukes når du går hit fra hovedmenyen.»
+- Uten lagrede søk vises ikke valgene. Dialogen sier i stedet: «Det første søket du lagrer, blir standardsøk. Det brukes når du åpner siden.»
 - Med 10 søk er «Lagre som nytt søk» deaktivert, med teksten «Du har 10 lagrede søk. Erstatt et søk eller slett et i Administrer søk.»
 - Dialogen starter på «Lagre som nytt søk», eller på «Erstatt et lagret søk» når veilederen har 10 søk. Listen starter på «Velg søk», og veilederen må velge før lagring. Vi velger ikke søket i bruk på forhånd, så veilederen ikke overskriver et søk ved et uhell.
 - Navnet for nytt søk og navnet ved erstatting holdes hver for seg. Når veilederen velger søket som skal erstattes, fylles navnet inn og kan endres.
 - Knappen heter «Erstatt søk» ved erstatting og «Lagre» ellers.
+- Lagre-dialogen avviser lukking mens lagring pågår, både med lukkeknappen og med Esc. Ved feil blir dialogen stående med feilmeldingen og kan lukkes eller sendes på nytt. Dette løser ikke den kjente Esc-feilen i filterarket på smale skjermer.
 - Frontend og backend validerer lengden. Vi ber om et beskrivende navn, men validerer ikke at navnet er unikt.
 - Dialogen har ikke standardvalg. Det første søket blir automatisk standard, senere valg gjøres i «Administrer søk».
 
@@ -357,7 +373,8 @@ Disketten åpner dialogen. Gjeldende filtre og søkeord lagres. Enter sender skj
 ```text
 Administrer søk (3 av 10)
 
-Velg et navn for å bruke søket. Standardsøket brukes når du går hit fra hovedmenyen.
+Velg et navn for å bruke søket. Standardsøket brukes når du åpner siden. Slettes
+standardsøket, blir søket du brukte sist, standard.
 Søk du ikke har brukt på seks måneder, slettes.
 ──────────────────────────────────────────────────────────────
 Treff i Oslo                                            [Slett]
@@ -379,16 +396,19 @@ Sist brukt 01.05.2026 · Slettes 01.11.2026
 - «Slett» bytter innholdet i dialogen til «Slett lagret søk» med spørsmålet «Vil du slette «Treff i Oslo»?» og knappene «Slett» og «Avbryt». Esc og lukkeknappen går tilbake til listen.
 - Fokus flyttes til «Avbryt» i bekreftelsen, tilbake til radens «Slett» ved avbryt og til «Lukk» etter sletting. Kvitteringen leses opp.
 
-«Gjør til standard» fornyer fristen for det valgte søket. Hvis standardsøket slettes eller utløper, åpner menylenken vanlig søk. Vi gjør ikke et annet lagret søk til standard automatisk.
+«Gjør til standard» fornyer fristen for det valgte søket. Hvis standardsøket slettes eller utløper, blir søket veilederen brukte sist, standard. Listen hentes på nytt etter sletting, så merket «Standard» flytter seg med en gang.
 
 ### Filer
 
 | Hvor | Endring |
 | --- | --- |
 | `components/standardsøk/` (ny) | Felles meny, lagre-dialog og administrer-dialog. Domenet sender inn hvilke parametre som lagres og hvordan et søk tas i bruk. |
+| `components/standardsøk/useStandardsøkFraMenylenke.ts` | Felles oppstartsflyt for standardsøket, både når siden åpnes og fra menylenken. Venter på søkelisten og starter høyst én bruk per inngang. Domenet bestemmer hvordan søket brukes og hvilke meldinger og målinger som sendes. |
+| `app/rekrutteringstreff/_utils/lagredeSøkFilter.ts` | Bygger og tolker filterstrengen med domenets typer og standardverdier. Beholder skillet mellom manglende filter og tom liste. |
 | `app/api/bruker/standardsok/[domene]/` (ny) | Proxy-rute for liste og `[id]`, SWR-hook per domene, mutasjoner, Zod-skjema og MSW-mock |
-| Treffsøket | Meny og diskett under søkefeltet, og «Filtrer» for smale skjermer. `RekrutteringstreffSøkContext` holder id-en til søket som er i bruk i state, ikke i URL-en. Ved `brukStandardsok` venter søket mot `/sok` på at standardsøket er kontrollert, eller at frontend har vist en feil og gått videre med vanlig søk. |
+| Treffsøket | Meny og diskett under søkefeltet, og «Filtrer» for smale skjermer. `RekrutteringstreffSøkContext` holder id-en til søket som er i bruk i URL-en (`lagretSok`) og søkeordene i state. Ved `brukStandardsok` venter søket mot `/sok` på at standardsøket er kontrollert, eller at frontend har vist en feil og gått videre med vanlig søk. |
 | `AppSidebar.tsx` | `?brukStandardsok=true` på menylenken til rekrutteringstreff |
+| `components/filter/ValgteFiltre.tsx` og `TømFiltre.tsx` | Valgfrie props for å vise «Fjern alle filtre» uten chips og nullstille med domenets egen funksjon. Andre søk beholder dagens oppførsel. |
 | Stillingssøket (leveranse 2) | Bytter til bruker-api og de felles komponentene. Setter fritekst fra søket i `StillingsSøkContext` og fjerner blokkeringen av fritekst under `brukStandardsok`. Lagre er mulig når filteret er tomt, men fritekst finnes. Reglene for kandidat (`visKandidatnr`) og portefølje beholdes. `app/api/stilling/standardsok/` slettes. |
 
 Slik tas et søk i bruk:
@@ -397,9 +417,9 @@ Slik tas et søk i bruk:
 flowchart TD
     A[Veileder åpner siden] --> B[GET henter listen]
     B --> C{Hvordan?}
-    C -->|Menylenken med brukStandardsok| D{Har standardsøk?}
+    C -->|Åpner siden uten søkeparametere eller fra menylenken| D{Har lagrede søk?}
     D -->|Ja| E[Bruk standardsøket]
-    D -->|Nei| F[Vanlig søk]
+    D -->|Nei| F[Standardvisning]
     C -->|Velger i menyen| G[Bruk valgt søk]
     E --> H{Er søket utløpt i cachen?}
     G --> H
@@ -409,16 +429,16 @@ flowchart TD
     L -->|200| M[Oppdater cachen med svaret]
     L -->|404| X
     L -->|Annen feil| Y[Vis feil, ikke aktiver lagret søk]
-    M --> N[Sett filtre i URL og fritekst i state]
+    M --> N[Sett filtre og lagretSok i URL, fritekst i state]
 ```
 
-Frontend kaller alltid `POST .../bruk` før et søk aktiveres, også når søket er brukt i dag. Søket kan være slettet eller endret i en annen fane, og svaret gir gjeldende innhold eller `404`. Menylenken venter også til listen er hentet på nytt, så den ikke velger standardsøk fra en utdatert cache.
+Frontend kaller alltid `POST .../bruk` før et søk aktiveres, også når søket er brukt i dag. Søket kan være slettet eller endret i en annen fane, og svaret gir gjeldende innhold eller `404`. Oppstartsflyten venter også til listen er hentet på nytt, så den ikke velger standardsøk fra en utdatert cache.
 
 Ved utløpt søk eller `404` fjernes søket fra cachen, listen hentes på nytt og veilederen får en melding om at søket er slettet eller utløpt. Filtre og fritekst fra det gamle søket aktiveres ikke. Ved andre feil vises en feilmelding med mulighet til å prøve igjen. Vanlig søk er fortsatt tilgjengelig. En feil ved henting av listen vises som en feil, ikke som en tom liste.
 
 Detaljer for treffsøket:
 
-- Lagres: `visning`, `kontorer`, `statuser`, `publisertStatuser`, `fylker`, `kommuner`, `sortering`. Lagres ikke: `side`, `visRekrutteringstreffId`, `brukStandardsok`.
+- Lagres: `visning`, `kontorer`, `statuser`, `publisertStatuser`, `fylker`, `kommuner`, `sortering`. Lagres ikke: `side`, `visRekrutteringstreffId`, `brukStandardsok`, `lagretSok`.
 - Lagret `visning=mine` blir `alle` for veiledere uten arbeidsgiverrettet rolle. `UTKAST` filtreres allerede bort for dem.
 - `visning=mitt_kontor` følger veilederens aktive kontor.
 - Diskettikonet er aktivt når søket har minst ett filter eller søkeord.
@@ -444,7 +464,7 @@ flowchart TD
     L1 --> L2
 ```
 
-**Leveranse 1** kan ikke gå til produksjon før ROS-en dekker lagring av fritekst og navn: fødselsnummerfilteret, at andre personopplysninger kan bli liggende, og sletting etter seks måneder uten aktivitet. Bruk, lagring og standardvalg fornyer fristen, så aktive søk har ingen øvre oppbevaringsgrense.
+**Leveranse 1** kan ikke gå til produksjon før [ROS-en](ros-standardsok.md) er godkjent og beslutningene der er tatt.
 
 **Leveranse 2** konverterer data med Flyway:
 
@@ -463,12 +483,12 @@ Rollback i leveranse 2, før stilling-api ryddes: frontend peker tilbake til sti
 | --- | --- |
 | Enhetstest, bruker-api | Fødselsnummerfilteret: gyldige fødselsnumre, D-, H- og syntetiske nummer, nummer med mellomrom, 11 sifre med feil kontrollsiffer (skal stå), organisasjonsnumre og vanlige ord. Testene lager syntetiske nummer selv, ingen nummer som ligner ekte. |
 | Komponenttest, bruker-api | Tom liste uten lagrede søk. Opprett, erstatt og slett. Like navn tillates, og endring eller sletting av ett søk påvirker ikke et annet med samme navn. Det ellevte aktive søket gir `409`, også ved samtidige opprettelser. |
-| Komponenttest, bruker-api | Det første søket blir standard. Erstatting endrer ikke standardvalget. Bytte av standard fjerner det gamle merket og fornyer bare det valgte søkets dato. Samtidige standardvalg gir høyst ett standardsøk. Sletting eller utløp velger ikke automatisk et annet. |
+| Komponenttest, bruker-api | Det første søket blir standard. Erstatting endrer ikke standardvalget. Bytte av standard fjerner det gamle merket og fornyer bare det valgte søkets dato. Samtidige standardvalg gir høyst ett standardsøk. Sletting av standardsøket gjør det sist brukte søket til standard, og sletting av et annet søk beholder standardvalget. Et utløpt standardsøk erstattes når listen hentes, også etter opprydningsjobben. |
 | Komponenttest, bruker-api | En veileder får `404` på `PUT`, `DELETE`, `.../standard` og `.../bruk` mot en annen veileders søk, og listen viser bare egne søk. Ukjent domene gir `404`. Manglende rolle gir `403`. Navn på 25 tegn godtas, mens 26 tegn etter trimming gir `400` ved både opprettelse og erstatting. For lang input, ugyldige filterparametere eller verdier og ugyldig JSON gir `400` uten innholdet i svaret. |
-| Komponenttest, bruker-api | Lagring, bruk og standardvalg setter `sistAktiv`. `GET` endrer den ikke. `.../bruk` skriver bare når datoen er eldre enn i dag og returnerer gjeldende søk. Jobben sletter utløpte søk. Før jobben har kjørt, skjuler `GET` slike søk, kall med id gir `404`, og de teller ikke mot grensen på 10 eller første standardvalg. |
+| Komponenttest, bruker-api | Lagring, bruk og standardvalg setter `sistAktiv`. `GET` endrer den ikke. `.../bruk` skriver bare når datoen er eldre enn i dag og returnerer gjeldende søk. Jobben sletter utløpte søk. Før jobben har kjørt, skjuler `GET` slike søk, kall med id gir `404`, og de teller ikke mot grensen på 10. |
 | Enhetstest, bruker-api | Kalenderregler for varsel etter fem måneder og utløp fra seks måneder. Test månedsslutt, skuddår og dato i `Europe/Oslo`. |
 | Enhetstest, frontend | Hvilke parametre som lagres og fjernes, og om `.../bruk` kalles. Utløpt cache eller `404` aktiverer ikke gamle filtre eller søkeord. Svaret ved bruk oppdaterer cachen. |
-| Playwright med MSW | Valg i menyen setter filtre og chips. Fritekst og navn står ikke i URL-en. Lagre som nytt og erstatt, også med like navn. Lagre-dialogen har ikke standardvalg. «Lagre som nytt» er deaktivert ved 10 søk. Sletting med bekreftelse. Varsel etter fem måneder forsvinner ved aktivitet. Menylenken åpner vanlig søk uten standard. Feil i bruker-api blokkerer ikke vanlig søk. |
+| Playwright med MSW | Valg i menyen setter filtre og chips. Fritekst og navn står ikke i URL-en. Lagre som nytt og erstatt, også med like navn. Lagre-dialogen har ikke standardvalg. «Lagre som nytt» er deaktivert ved 10 søk. Sletting med bekreftelse. Varsel etter fem måneder forsvinner ved aktivitet. Siden åpnes med standardsøket og viser «Valgt søk». Søkeparametere i URL-en går foran standardsøket. Valgt søk og søkeord beholdes ved refresh, men ikke etter endrede filtre. Uten lagrede søk åpnes standardvisningen. Sletting av standardsøket flytter merket «Standard». «Fjern alle filtre» gir standardvisningen. Feil i bruker-api blokkerer ikke vanlig søk. |
 
 ## Personvern og sikkerhet
 
@@ -484,9 +504,9 @@ Rollback i leveranse 2, før stilling-api ryddes: frontend peker tilbake til sti
 
 - Tellere i bruker-api: opprettede, erstattede og slettede søk, søk der navn eller fritekst ble filtrert, og rader jobben slettet. Alle med `domene` som label.
 - Opprydningsjobben har feilteller og tidspunkt for siste vellykkede kjøring, med varsling ved uteblitt kjøring. Ingen målinger har Nav-ident, søkeident, navn eller søkeord som label.
-- Umami i frontend: søk brukt fra menyen, fra «Administrer søk» og fra menylenken, lagret som nytt, erstattet og slettet, per domene.
+- Umami i frontend: søk brukt fra menyen, fra «Administrer søk» og som standardsøk når siden åpnes, lagret som nytt, erstattet og slettet, per domene.
 
 ## Åpne spørsmål
 
 1. Hvordan når Flyway-migreringen i bruker-api dataene i stilling-api sin database? Flyway kjører mot én database, og de to applikasjonene har hver sin. Avklares når leveranse 2 starter.
-2. Tekster, plassering og om menyen skal sorteres på navn eller siste aktivitet avklares med designer. Skissene er et utgangspunkt.
+2. Tekster og plassering avklares med designer. Skissene er et utgangspunkt.
