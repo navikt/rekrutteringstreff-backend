@@ -1,7 +1,7 @@
 package no.nav.toi.rekrutteringstreff.ki
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter

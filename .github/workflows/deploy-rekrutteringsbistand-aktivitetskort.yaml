@@ -12,7 +12,7 @@ on:
       - buildSrc/**
       - gradle/wrapper/gradle-wrapper.properties
       - technical-libs/logging/**
-      - technical-libs/testrapid/**
+      - technical-libs/testrapid-jackson2-deprekert/**
   workflow_dispatch:
 
 jobs:

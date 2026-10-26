@@ -1,6 +1,6 @@
 package no.nav.toi.jobbsoker.sok
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
@@ -363,7 +363,7 @@ class JobbsøkerSokKomponentTest {
         val respons = httpPost(gjennomføringPath(treffId), "{}").body()
         val jobbsøkere = mapper.readTree(respons)["jobbsøkere"]
         jobbsøkere.forEach { jobbsøker ->
-            assertThat(jobbsøker.fieldNames().asSequence().toList())
+            assertThat(jobbsøker.propertyNames().asSequence().toList())
                 .containsExactlyInAnyOrder("personTreffId", "fornavn", "etternavn", "status", "fødselsnummer")
         }
         assertThat(respons).doesNotContain("25555555555")
@@ -766,9 +766,9 @@ class JobbsøkerSokKomponentTest {
 
         val hendelse = dto.jobbsøkere.first().minsideHendelser.first()
         val hendelseDataNode = mapper.readTree(mapper.writeValueAsString(hendelse)).get("hendelseData")
-        assertThat(hendelseDataNode.get("varselId").asText()).isEqualTo("v1")
-        assertThat(hendelseDataNode.get("eksternKanal").asText()).isEqualTo("SMS")
-        assertThat(hendelseDataNode.get("eksternStatus").asText()).isEqualTo("SENDT")
+        assertThat(hendelseDataNode.get("varselId").asString()).isEqualTo("v1")
+        assertThat(hendelseDataNode.get("eksternKanal").asString()).isEqualTo("SMS")
+        assertThat(hendelseDataNode.get("eksternStatus").asString()).isEqualTo("SENDT")
     }
 
     @Test

@@ -81,7 +81,7 @@ class RekrutteringstreffTest {
         )
         assertThat(response.statusCode()).isEqualTo(201)
         val json = mapper.readTree(response.body())
-        val postId = json.get("id").asText()
+        val postId = json.get("id").asString()
         assertThat(postId).isNotEmpty()
 
         val rekrutteringstreff = db.hentAlleRekrutteringstreff().first()
@@ -234,11 +234,11 @@ class RekrutteringstreffTest {
         assertThat(httpPut(url, oppdatering, token).statusCode()).isEqualTo(200)
         val sokEtter = httpGet(sokUrl, token)
         assertThat(sokEtter.statusCode()).isEqualTo(200)
-        assertThat(mapper.readTree(sokEtter.body())["treff"].map { it["id"].asText() })
+        assertThat(mapper.readTree(sokEtter.body())["treff"].values().map { it["id"].asString() })
             .containsExactly(treffId.somString)
         val lagret = httpGet(url, token)
         assertThat(lagret.statusCode()).isEqualTo(200)
-        assertThat(mapper.readTree(lagret.body())["beskrivelse"].asText()).isEqualTo("Syntetisk oppdatert beskrivelse")
+        assertThat(mapper.readTree(lagret.body())["beskrivelse"].asString()).isEqualTo("Syntetisk oppdatert beskrivelse")
     }
 
     @Test

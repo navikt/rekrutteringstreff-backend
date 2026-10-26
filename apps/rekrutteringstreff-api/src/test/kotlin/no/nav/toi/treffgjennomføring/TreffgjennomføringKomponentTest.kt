@@ -1,6 +1,6 @@
 package no.nav.toi.treffgjennomføring
 
-import com.fasterxml.jackson.databind.JsonNode
+import tools.jackson.databind.JsonNode
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -125,8 +125,8 @@ class TreffgjennomføringKomponentTest {
 
         val første = aggregat(treff)
 
-        assertThat(første["gjeldendeSteg"].asText()).isEqualTo("OPPMØTE")
-        assertThat(første["starttidspunkt"].asText()).isEqualTo("10:00")
+        assertThat(første["gjeldendeSteg"].asString()).isEqualTo("OPPMØTE")
+        assertThat(første["starttidspunkt"].asString()).isEqualTo("10:00")
         assertThat(første["varighetPerMøteMinutter"].asInt()).isEqualTo(10)
         assertThat(første["oppmøte"]).isEmpty()
         assertThat(første["rom"]).isEmpty()
@@ -308,13 +308,13 @@ class TreffgjennomføringKomponentTest {
         val respons = send(HttpRequest.newBuilder().GET(), "/api/rekrutteringstreff/${treff.somString}/allehendelser", eier, listOf(arbeidsgiverrettet))
         assertThat(respons.statusCode()).isEqualTo(200)
         val hendelser = mapper.readTree(respons.body())
-        fun data(type: String) = hendelser.single { it["hendelsestype"].asText() == type }["hendelseData"]
+        fun data(type: String) = hendelser.single { it["hendelsestype"].asString() == type }["hendelseData"]
 
         assertThat(data("REGISTRERT_OPPMØTE")["deltakernummer"].asInt()).isEqualTo(1)
-        assertThat(data("VURDERT")["vurdering"].asText()).isEqualTo("AKTUELL")
-        assertThat(data("VURDERT")["arbeidsgiverTreffId"].asText()).isEqualTo(ag.somString)
-        assertThat(data("NOTAT_LAGT_TIL")["notat"].asText()).isEqualTo("AG_GODT_INNTRYKK")
-        assertThat(hendelser.filter { it["ressurs"].asText() != "JOBBSØKER" })
+        assertThat(data("VURDERT")["vurdering"].asString()).isEqualTo("AKTUELL")
+        assertThat(data("VURDERT")["arbeidsgiverTreffId"].asString()).isEqualTo(ag.somString)
+        assertThat(data("NOTAT_LAGT_TIL")["notat"].asString()).isEqualTo("AG_GODT_INNTRYKK")
+        assertThat(hendelser.filter { it["ressurs"].asString() != "JOBBSØKER" })
             .allSatisfy { assertThat(it["hendelseData"]?.isNull ?: true).isTrue() }
     }
 
@@ -345,7 +345,7 @@ class TreffgjennomføringKomponentTest {
         val respons = send(HttpRequest.newBuilder().GET(), "/api/rekrutteringstreff/${treff.somString}/allehendelser", eier, listOf(arbeidsgiverrettet))
         assertThat(respons.statusCode()).isEqualTo(200)
         val hendelser = mapper.readTree(respons.body())
-        assertThat(hendelser.map { it["hendelsestype"].asText() }).contains("REGISTRERT_OPPMØTE")
+        assertThat(hendelser.values().map { it["hendelsestype"].asString() }).contains("REGISTRERT_OPPMØTE")
         assertThat(hendelser).allSatisfy { assertThat(it["hendelseData"]?.isNull ?: true).isTrue() }
     }
 
@@ -371,12 +371,12 @@ class TreffgjennomføringKomponentTest {
         assertThat(møteoppsett(treff).statusCode()).isEqualTo(200)
 
         val svar = aggregat(treff)
-        assertThat(svar["gjeldendeSteg"].asText()).isEqualTo("ROM")
-        assertThat(svar["starttidspunkt"].asText()).isEqualTo("09:00")
+        assertThat(svar["gjeldendeSteg"].asString()).isEqualTo("ROM")
+        assertThat(svar["starttidspunkt"].asString()).isEqualTo("09:00")
         assertThat(svar["rom"]).hasSize(2)
-        assertThat(svar["rom"].flatMap { it["jobbsøkere"] }.map { it.asText() })
+        assertThat(svar["rom"].flatMap { it["jobbsøkere"] }.map { it.asString() })
             .containsExactly(p1.somString, p2.somString)
-        assertThat(svar["arbeidsgiverRekkefølge"].map { it["førsteRomnummer"].asInt() }).containsExactly(1, 2)
+        assertThat(svar["arbeidsgiverRekkefølge"].values().map { it["førsteRomnummer"].asInt() }).containsExactly(1, 2)
     }
 
     @Test
@@ -390,7 +390,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(møteoppsett(treff, start = "11:30", varighet = 20).statusCode()).isEqualTo(200)
 
         val etter = aggregat(treff)
-        assertThat(etter["starttidspunkt"].asText()).isEqualTo("11:30")
+        assertThat(etter["starttidspunkt"].asString()).isEqualTo("11:30")
         assertThat(etter["varighetPerMøteMinutter"].asInt()).isEqualTo(20)
         assertThat(etter["rom"].toString()).isEqualTo(romFørst)
     }
@@ -405,7 +405,7 @@ class TreffgjennomføringKomponentTest {
 
         assertThat(møteoppsett(treff, start = "12:00").statusCode()).isEqualTo(200)
 
-        assertThat(aggregat(treff)["starttidspunkt"].asText()).isEqualTo("12:00")
+        assertThat(aggregat(treff)["starttidspunkt"].asString()).isEqualTo("12:00")
         assertThat(antallTreffHendelser(treff, "TREFFGJENNOMFØRING_OPPRETTET")).isEqualTo(1)
         assertThat(antallTreffHendelser(treff, "TREFFGJENNOMFØRING_OPPSETT_ENDRET")).isEqualTo(1)
     }
@@ -476,7 +476,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(svar["antallRom"].asInt()).isEqualTo(3)
         assertThat(svar["rom"]).hasSize(3)
         assertThat(svar["arbeidsgiverRekkefølge"]).hasSize(3)
-        assertThat(svar["arbeidsgiverRekkefølge"].map { it["førsteRomnummer"].asInt() }.toSet()).hasSize(3)
+        assertThat(svar["arbeidsgiverRekkefølge"].values().map { it["førsteRomnummer"].asInt() }.toSet()).hasSize(3)
     }
 
     @Test
@@ -491,8 +491,8 @@ class TreffgjennomføringKomponentTest {
 
         assertThat(respons.statusCode()).isEqualTo(409)
         val feil = mapper.readTree(respons.body())
-        assertThat(feil["title"].asText()).isEqualTo("OppmøteKanIkkeFjernesException")
-        assertThat(feil["hint"].asText()).isEqualTo("Fjern registrerte interesser først.")
+        assertThat(feil["title"].asString()).isEqualTo("OppmøteKanIkkeFjernesException")
+        assertThat(feil["hint"].asString()).isEqualTo("Fjern registrerte interesser først.")
         assertThat(oppmøteliste(treff)).containsExactly(person.somString)
         assertThat(aggregat(treff)["interesser"]).hasSize(1)
     }
@@ -514,13 +514,13 @@ class TreffgjennomføringKomponentTest {
         val p2 = s.p2.somString
         val fordelte = etter["intervjufordelinger"].flatMap {
             it["inkludertePersonTreffIder"] + it["ekskludertePersonTreffIder"]
-        }.map { it.asText() }
-        assertThat(etter["gjeldendeSteg"].asText()).isEqualTo("VURDERING")
-        assertThat(etter["oppmøte"].map { it.asText() }).containsExactly(p2)
-        assertThat(etter["interesser"].map { it["personTreffId"].asText() }).containsOnly(p2).hasSize(2)
+        }.map { it.asString() }
+        assertThat(etter["gjeldendeSteg"].asString()).isEqualTo("VURDERING")
+        assertThat(etter["oppmøte"].values().map { it.asString() }).containsExactly(p2)
+        assertThat(etter["interesser"].values().map { it["personTreffId"].asString() }).containsOnly(p2).hasSize(2)
         assertThat(fordelte).containsOnly(p2).hasSize(2)
         assertThat(etter["vurderinger"]).isEmpty()
-        assertThat(etter["rom"].flatMap { it["jobbsøkere"] }.map { it.asText() }).containsExactly(p2)
+        assertThat(etter["rom"].flatMap { it["jobbsøkere"] }.map { it.asString() }).containsExactly(p2)
     }
 
     @Test
@@ -551,7 +551,7 @@ class TreffgjennomføringKomponentTest {
 
         assertThat(interesse(treff, person, ag, interessert = true).statusCode()).isEqualTo(200)
 
-        assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("INTERESSE")
+        assertThat(aggregat(treff)["gjeldendeSteg"].asString()).isEqualTo("INTERESSE")
         assertThat(aggregat(treff)["interesser"]).hasSize(1)
         assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(førJobbsøker)
         assertThat(antallArbeidsgiverhendelser(treff)).isEqualTo(førArbeidsgiver)
@@ -598,9 +598,9 @@ class TreffgjennomføringKomponentTest {
 
         val fordelinger = aggregat(treff)["intervjufordelinger"]
         assertThat(fordelinger).hasSize(1)
-        assertThat(fordelinger[0]["inkludertePersonTreffIder"].map { it.asText() })
+        assertThat(fordelinger[0]["inkludertePersonTreffIder"].values().map { it.asString() })
             .containsExactlyInAnyOrder(p1.somString, p2.somString)
-        assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("FORDELING")
+        assertThat(aggregat(treff)["gjeldendeSteg"].asString()).isEqualTo("FORDELING")
     }
 
     @Test
@@ -617,24 +617,24 @@ class TreffgjennomføringKomponentTest {
 
         val fordelingerFør = aggregat(treff)["intervjufordelinger"]
         assertThat(fordelingerFør).hasSize(1)
-        assertThat(fordelingerFør[0]["arbeidsgiverTreffId"].asText()).isEqualTo(ag1.somString)
+        assertThat(fordelingerFør[0]["arbeidsgiverTreffId"].asString()).isEqualTo(ag1.somString)
 
         assertThat(interesse(treff, p2, ag1, interessert = true).statusCode()).isEqualTo(200)
         assertThat(interesse(treff, p2, ag2, interessert = true).statusCode()).isEqualTo(200)
 
         val fordelingerEtter = aggregat(treff)["intervjufordelinger"]
-        val ag1Fordeling = fordelingerEtter.single { it["arbeidsgiverTreffId"].asText() == ag1.somString }
-        assertThat(ag1Fordeling["inkludertePersonTreffIder"].map { it.asText() })
+        val ag1Fordeling = fordelingerEtter.single { it["arbeidsgiverTreffId"].asString() == ag1.somString }
+        assertThat(ag1Fordeling["inkludertePersonTreffIder"].values().map { it.asString() })
             .containsExactly(p1.somString, p2.somString)
-        val ag2Fordeling = fordelingerEtter.firstOrNull { it["arbeidsgiverTreffId"].asText() == ag2.somString }
+        val ag2Fordeling = fordelingerEtter.firstOrNull { it["arbeidsgiverTreffId"].asString() == ag2.somString }
         assertThat(ag2Fordeling).isNotNull
-        assertThat(ag2Fordeling!!["inkludertePersonTreffIder"].map { it.asText() })
+        assertThat(ag2Fordeling!!["inkludertePersonTreffIder"].values().map { it.asString() })
             .containsExactly(p2.somString)
 
         assertThat(interesse(treff, p2, ag2, interessert = false).statusCode()).isEqualTo(200)
 
         val fordelingerEtterFjernet = aggregat(treff)["intervjufordelinger"]
-        val ag2FordelingEtterFjernet = fordelingerEtterFjernet.firstOrNull { it["arbeidsgiverTreffId"].asText() == ag2.somString }
+        val ag2FordelingEtterFjernet = fordelingerEtterFjernet.firstOrNull { it["arbeidsgiverTreffId"].asString() == ag2.somString }
         assertThat(ag2FordelingEtterFjernet?.get("inkludertePersonTreffIder")).isNullOrEmpty()
     }
 
@@ -653,8 +653,8 @@ class TreffgjennomføringKomponentTest {
         assertThat(interesse(treff, p2, ny, interessert = true).statusCode()).isEqualTo(200)
 
         val nyFordeling = aggregat(treff)["intervjufordelinger"]
-            .single { it["arbeidsgiverTreffId"].asText() == ny.somString }
-        assertThat(nyFordeling["inkludertePersonTreffIder"].map { it.asText() }).containsExactly(p2.somString)
+            .single { it["arbeidsgiverTreffId"].asString() == ny.somString }
+        assertThat(nyFordeling["inkludertePersonTreffIder"].values().map { it.asString() }).containsExactly(p2.somString)
     }
 
     @Test
@@ -675,8 +675,8 @@ class TreffgjennomføringKomponentTest {
         assertThat(interesse(treff, p2, gjeninnlagt, interessert = true).statusCode()).isEqualTo(200)
 
         val fordeling = aggregat(treff)["intervjufordelinger"]
-            .single { it["arbeidsgiverTreffId"].asText() == gjeninnlagt.somString }
-        assertThat(fordeling["inkludertePersonTreffIder"].map { it.asText() }).containsExactly(p2.somString)
+            .single { it["arbeidsgiverTreffId"].asString() == gjeninnlagt.somString }
+        assertThat(fordeling["inkludertePersonTreffIder"].values().map { it.asString() }).containsExactly(p2.somString)
     }
 
     @Test
@@ -688,7 +688,7 @@ class TreffgjennomføringKomponentTest {
         listOf(første, andre).forEach { oppmøte(treff, it, møtt = true) }
         interesse(treff, første, ag, interessert = true)
         assertThat(vurderingFor(treff, første, ag, ""","vurderingsstatus":"AKTUELL"""").statusCode()).isEqualTo(200)
-        assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("VURDERING")
+        assertThat(aggregat(treff)["gjeldendeSteg"].asString()).isEqualTo("VURDERING")
 
         assertThat(interesse(treff, andre, ag, interessert = true).statusCode()).isEqualTo(200)
 
@@ -709,7 +709,7 @@ class TreffgjennomføringKomponentTest {
 
         val lagret = aggregat(treff)["vurderinger"]
         assertThat(lagret).hasSize(1)
-        assertThat(lagret[0]["vurderingsstatus"].asText()).isEqualTo("AKTUELL")
+        assertThat(lagret[0]["vurderingsstatus"].asString()).isEqualTo("AKTUELL")
 
         vurderingFor(treff, person, ag, ""","vurderingsstatus":null,"jobbtilbud":false""")
         assertThat(aggregat(treff)["vurderinger"]).isEmpty()
@@ -765,7 +765,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(intervjufordeling(treff, ag, ekskluderte = listOf(person)).statusCode()).isEqualTo(200)
 
         val vurdering = aggregat(treff)["vurderinger"].single()
-        assertThat(vurdering["vurderingsnotat"].map { it.asText() }).containsExactly("AG_IKKE_RIKTIG_MATCH")
+        assertThat(vurdering["vurderingsnotat"].values().map { it.asString() }).containsExactly("AG_IKKE_RIKTIG_MATCH")
     }
 
     @Test
@@ -783,7 +783,7 @@ class TreffgjennomføringKomponentTest {
         }
 
         val vurdering = aggregat(treff)["vurderinger"].single()
-        assertThat(vurdering["vurderingsnotat"].map { it.asText() }).containsExactly("AG_GODT_INNTRYKK")
+        assertThat(vurdering["vurderingsnotat"].values().map { it.asString() }).containsExactly("AG_GODT_INNTRYKK")
 
         val førJobbsøker = antallJobbsøkerhendelser(treff)
         assertThat(vurderingFor(treff, person, ag, ""","vurderingsnotat":["AG_GODT_INNTRYKK"]""").statusCode()).isEqualTo(200)
@@ -825,7 +825,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(vurderingFor(treff, person, ag, ""","vurderingsstatus":"KANSKJE"""").statusCode()).isEqualTo(200)
 
         val svar = aggregat(treff)
-        assertThat(svar["gjeldendeSteg"].asText()).isEqualTo("VURDERING")
+        assertThat(svar["gjeldendeSteg"].asString()).isEqualTo("VURDERING")
         assertThat(svar["rom"]).isEmpty()
         assertThat(svar["intervjufordelinger"]).isEmpty()
         assertThat(svar["vurderinger"]).hasSize(1)
@@ -844,7 +844,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(put(treff, "/treffgjennomforing/romfordeling/${p2.somString}", flyttP2TilRom1).statusCode()).isEqualTo(200)
 
         val rom = aggregat(treff)["rom"]
-        assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
+        assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].values().map { it.asString() })
             .containsExactlyInAnyOrder(p1.somString, p2.somString)
         assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"]).isEmpty()
     }
@@ -861,7 +861,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(flyttTilRom(treff, p1, 2).statusCode()).isEqualTo(200)
         val gjentattFordeling = aggregat(treff)["rom"]
         assertThat(gjentattFordeling).isEqualTo(førsteFordeling)
-        assertThat(gjentattFordeling.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+        assertThat(gjentattFordeling.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].values().map { it.asString() })
             .containsExactly(p1.somString)
     }
 
@@ -897,7 +897,7 @@ class TreffgjennomføringKomponentTest {
         oppmøte(treff, nyPerson, møtt = true)
         assertThat(flyttTilRom(treff, nyPerson, 2).statusCode()).isEqualTo(200)
         val rom = aggregat(treff)["rom"]
-        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].values().map { it.asString() })
             .containsExactly(nyPerson.somString)
     }
 
@@ -948,16 +948,16 @@ class TreffgjennomføringKomponentTest {
         oppmøte(treff, p4, møtt = true)
 
         val før = aggregat(treff)["rom"]
-        assertThat(før.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
+        assertThat(før.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].values().map { it.asString() })
             .containsExactly(p1.somString, p3.somString)
-        assertThat(før.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+        assertThat(før.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].values().map { it.asString() })
             .containsExactly(p2.somString, p4.somString)
         assertThat(flyttTilRom(treff, p3, 2).statusCode()).isEqualTo(200)
 
         val rom = aggregat(treff)["rom"]
-        assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
+        assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].values().map { it.asString() })
             .containsExactly(p1.somString)
-        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].values().map { it.asString() })
             .containsExactly(p2.somString, p3.somString, p4.somString)
     }
 
@@ -981,8 +981,8 @@ class TreffgjennomføringKomponentTest {
         assertThat(respons.statusCode()).isEqualTo(200)
 
         val rom = aggregat(treff)["rom"]
-        val r1 = rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() }
-        val r2 = rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() }
+        val r1 = rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].values().map { it.asString() }
+        val r2 = rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].values().map { it.asString() }
         assertThat(r1).hasSize(2)
         assertThat(r2).hasSize(1)
         assertThat(r1 + r2).containsExactlyInAnyOrder(p1.somString, p2.somString, p3.somString)
@@ -1031,7 +1031,7 @@ class TreffgjennomføringKomponentTest {
 
         interesse(treff, person, ag, interessert = false)
 
-        assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("INTERESSE")
+        assertThat(aggregat(treff)["gjeldendeSteg"].asString()).isEqualTo("INTERESSE")
     }
 
     @Test
@@ -1046,14 +1046,14 @@ class TreffgjennomføringKomponentTest {
         val etterTillegg = aggregat(treff)
         assertThat(etterTillegg["antallRom"].asInt()).isEqualTo(3)
         assertThat(etterTillegg["rom"]).hasSize(3)
-        val ag3Rotasjon = etterTillegg["arbeidsgiverRekkefølge"].first { it["arbeidsgiverTreffId"].asText() == ag3.somString }
+        val ag3Rotasjon = etterTillegg["arbeidsgiverRekkefølge"].first { it["arbeidsgiverTreffId"].asString() == ag3.somString }
         val ag3Romnummer = ag3Rotasjon["førsteRomnummer"].asInt()
         assertThat(etterTillegg["rom"].first { it["romnummer"].asInt() == ag3Romnummer }["jobbsøkere"]).isEmpty()
 
         // Kan flytte person til ag3 sitt rom
         assertThat(flyttTilRom(treff, p1, ag3Romnummer).statusCode()).isEqualTo(200)
         val etterFlytt = aggregat(treff)["rom"]
-        assertThat(etterFlytt.first { it["romnummer"].asInt() == ag3Romnummer }["jobbsøkere"].map { it.asText() })
+        assertThat(etterFlytt.first { it["romnummer"].asInt() == ag3Romnummer }["jobbsøkere"].values().map { it.asString() })
             .containsExactly(p1.somString)
 
         // Kan registrere interesse for ag3
@@ -1069,7 +1069,7 @@ class TreffgjennomføringKomponentTest {
         møteoppsett(treff)
 
         val agg = aggregat(treff)
-        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asText()
+        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asString()
         val ag1 = ArbeidsgiverTreffId(ag1Id)
 
         // p1 starter i rom 1 (arbeidsgiver 1 sitt rom)
@@ -1086,7 +1086,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(problem.instance).isEqualTo("/api/rekrutteringstreff/${treff.somString}/arbeidsgiver/${ag1.somString}")
         assertThat(problem.timestamp).isNotNull()
         assertThat(problem.traceid).isNotBlank()
-        assertThat(feil.fieldNames().asSequence().toSet()).containsExactlyInAnyOrder(
+        assertThat(feil.propertyNames().asSequence().toSet()).containsExactlyInAnyOrder(
             "type", "title", "status", "detail", "instance", "timestamp", "traceid", "hint", "feil",
         )
 
@@ -1105,7 +1105,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(flyttTilRom(treff, p1, 2).statusCode()).isEqualTo(200)
 
         val agg = aggregat(treff)
-        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asText()
+        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asString()
         val ag1 = ArbeidsgiverTreffId(ag1Id)
 
         // Legg til interesse for ag1
@@ -1114,7 +1114,7 @@ class TreffgjennomføringKomponentTest {
         val slettRespons = slettArbeidsgiver(treff, ag1)
         assertThat(slettRespons.statusCode()).isEqualTo(409)
         val feil = mapper.readTree(slettRespons.body())
-        assertThat(feil["hint"].asText()).isEqualTo("Fjern registrerte interesser først.")
+        assertThat(feil["hint"].asString()).isEqualTo("Fjern registrerte interesser først.")
     }
 
     @Test
@@ -1128,7 +1128,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(flyttTilRom(treff, p1, 2).statusCode()).isEqualTo(200)
 
         val agg = aggregat(treff)
-        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asText()
+        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asString()
         val ag1 = ArbeidsgiverTreffId(ag1Id)
 
         assertThat(vurderingFor(treff, p1, ag1, ""","vurderingsstatus":"AKTUELL"""").statusCode()).isEqualTo(200)
@@ -1136,7 +1136,7 @@ class TreffgjennomføringKomponentTest {
         val slettRespons = slettArbeidsgiver(treff, ag1)
         assertThat(slettRespons.statusCode()).isEqualTo(409)
         val feil = mapper.readTree(slettRespons.body())
-        assertThat(feil["hint"].asText()).isEqualTo("Nullstill registrerte vurderinger først.")
+        assertThat(feil["hint"].asString()).isEqualTo("Nullstill registrerte vurderinger først.")
     }
 
     @Test
@@ -1147,8 +1147,8 @@ class TreffgjennomføringKomponentTest {
         møteoppsett(treff)
 
         val aggFør = aggregat(treff)
-        val ag2Id = aggFør["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 2 }["arbeidsgiverTreffId"].asText()
-        val ag3Id = aggFør["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 3 }["arbeidsgiverTreffId"].asText()
+        val ag2Id = aggFør["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 2 }["arbeidsgiverTreffId"].asString()
+        val ag3Id = aggFør["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 3 }["arbeidsgiverTreffId"].asString()
         val ag2 = ArbeidsgiverTreffId(ag2Id)
 
         // p1 er i rom 3 (ag3 sitt rom)
@@ -1165,10 +1165,10 @@ class TreffgjennomføringKomponentTest {
         val aggEtter = aggregat(treff)
         assertThat(aggEtter["antallRom"].asInt()).isEqualTo(2)
         assertThat(aggEtter["rom"]).hasSize(2)
-        val nyAg3Rotasjon = aggEtter["arbeidsgiverRekkefølge"].first { it["arbeidsgiverTreffId"].asText() == ag3Id }
+        val nyAg3Rotasjon = aggEtter["arbeidsgiverRekkefølge"].first { it["arbeidsgiverTreffId"].asString() == ag3Id }
         assertThat(nyAg3Rotasjon["førsteRomnummer"].asInt()).isEqualTo(2)
         val rom2 = aggEtter["rom"].first { it["romnummer"].asInt() == 2 }
-        assertThat(rom2["jobbsøkere"].map { it.asText() }).containsExactly(p1.somString)
+        assertThat(rom2["jobbsøkere"].values().map { it.asString() }).containsExactly(p1.somString)
     }
 
     @ParameterizedTest
@@ -1193,7 +1193,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(etter["rom"].last()["jobbsøkere"]).isEmpty()
         assertThat(flyttTilRom(treff, sen, 3).statusCode()).isEqualTo(200)
         assertThat(post(treff, "/treffgjennomforing/romfordeling/fordel").statusCode()).isEqualTo(200)
-        assertThat(aggregat(treff)["rom"].map { it["jobbsøkere"].size() }).containsExactly(1, 1, 1)
+        assertThat(aggregat(treff)["rom"].values().map { it["jobbsøkere"].size() }).containsExactly(1, 1, 1)
         assertThat(interesse(treff, sen, ny, true).statusCode()).isEqualTo(200)
         assertThat(post(treff, "/treffgjennomforing/intervjufordeling/fordel").statusCode()).isEqualTo(200)
         assertThat(vurderingFor(treff, sen, ny, ""","vurderingsstatus":"AKTUELL"""").statusCode()).isEqualTo(200)
@@ -1212,7 +1212,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(lagredeRom(treff)[sen.somString]).isEqualTo(2)
         val blokkert = slettArbeidsgiver(treff, arbeidsgiver)
         assertThat(blokkert.statusCode()).isEqualTo(409)
-        assertThat(mapper.readTree(blokkert.body())["hint"].asText()).isEqualTo("Flytt personene ut av arbeidsgiverens rom først.")
+        assertThat(mapper.readTree(blokkert.body())["hint"].asString()).isEqualTo("Flytt personene ut av arbeidsgiverens rom først.")
 
         assertThat(oppmøte(treff, sen, møtt = false).statusCode()).isEqualTo(200)
         assertThat(lagredeRom(treff)).doesNotContainKey(sen.somString)
@@ -1295,7 +1295,7 @@ class TreffgjennomføringKomponentTest {
         val respons = slettArbeidsgiver(treff, ag)
 
         assertThat(respons.statusCode()).isEqualTo(409)
-        assertThat(mapper.readTree(respons.body())["feil"].asText())
+        assertThat(mapper.readTree(respons.body())["feil"].asString())
             .isEqualTo("Treffet må alltid ha en arbeidsgiver som deltar. Legg til en ny arbeidsgiver først.")
         assertThat(lagretRotasjon(treff)).containsExactlyEntriesOf(mapOf(ag.somString to 1))
         assertThat(aggregat(treff)).isEqualTo(før)
@@ -1377,7 +1377,7 @@ class TreffgjennomføringKomponentTest {
 
         assertThat(respons.statusCode()).isEqualTo(409)
         val forventetHint = if (medVurdering) "Nullstill registrerte vurderinger først." else "Fjern registrerte interesser først."
-        assertThat(mapper.readTree(respons.body())["hint"].asText()).isEqualTo(forventetHint)
+        assertThat(mapper.readTree(respons.body())["hint"].asString()).isEqualTo(forventetHint)
         assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(2)
     }
 
@@ -1410,11 +1410,11 @@ class TreffgjennomføringKomponentTest {
         val sletting = slettArbeidsgiver(treff, ag)
         assertThat(sletting.statusCode()).isEqualTo(409)
         val arbeidsgiverFeil = mapper.readTree(sletting.body())
-        assertThat(arbeidsgiverFeil["hint"].asText()).isEqualTo(forventetHint)
+        assertThat(arbeidsgiverFeil["hint"].asString()).isEqualTo(forventetHint)
 
         val oppmøteSvar = oppmøte(treff, person, møtt = false)
         assertThat(oppmøteSvar.statusCode()).isEqualTo(409)
-        assertThat(mapper.readTree(oppmøteSvar.body())["hint"].asText()).isEqualTo(forventetHint)
+        assertThat(mapper.readTree(oppmøteSvar.body())["hint"].asString()).isEqualTo(forventetHint)
         assertThat(aggregat(treff)).isEqualTo(før)
 
         // Når interessen fjernes, forsvinner personen også fra fordelingen.
@@ -1827,15 +1827,15 @@ class TreffgjennomføringKomponentTest {
         val body = """{"status":[${status.joinToString(",") { "\"$it\"" }}]}"""
         val svar = post(treffId, "/treffgjennomforing-og-oppfolging/jobbsokere", body)
         assertThat(svar.statusCode()).isEqualTo(200)
-        return mapper.readTree(svar.body())["jobbsøkere"].map { it["personTreffId"].asText() to it["status"].asText() }
+        return mapper.readTree(svar.body())["jobbsøkere"].values().map { it["personTreffId"].asString() to it["status"].asString() }
     }
 
     private fun oppmøteliste(treffId: TreffId): List<String> =
-        aggregat(treffId)["oppmøte"].map { it.asText() }
+        aggregat(treffId)["oppmøte"].values().map { it.asString() }
 
     private fun deltakernummer(treffId: TreffId): Map<String, Int> =
         aggregat(treffId)["deltakernummer"]
-            .associate { it["personTreffId"].asText() to it["deltakernummer"].asInt() }
+            .associate { it["personTreffId"].asString() to it["deltakernummer"].asInt() }
 
     private fun antallTreffgjennomføringsrader(): Int = db.dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT COUNT(*) FROM treffgjennomforing").executeQuery().use {

@@ -1,7 +1,7 @@
 package no.nav.toi.arbeidsgiver
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.core.type.TypeReference
+import tools.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId

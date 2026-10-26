@@ -1,7 +1,7 @@
 package no.nav.toi
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.arbeidsgiver.toi.logging.log
 import java.lang.System.getenv
 import java.net.InetAddress

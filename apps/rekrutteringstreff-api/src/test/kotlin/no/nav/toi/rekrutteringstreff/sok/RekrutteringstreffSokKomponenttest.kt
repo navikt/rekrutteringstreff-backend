@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.sok
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
@@ -498,8 +498,8 @@ class RekrutteringstreffSokKomponenttest {
 
         assertThat(response.statusCode()).isEqualTo(400)
         val feil = mapper.readTree(response.body())
-        assertThat(feil["feilkode"].asText()).isEqualTo("AKTIV_ENHET_MANGLER")
-        assertThat(feil["feil"].asText()).isEqualTo("Aktiv enhet mangler. Velg Nav-kontor og prøv igjen.")
+        assertThat(feil["feilkode"].asString()).isEqualTo("AKTIV_ENHET_MANGLER")
+        assertThat(feil["feil"].asString()).isEqualTo("Aktiv enhet mangler. Velg Nav-kontor og prøv igjen.")
     }
 
     @Test
@@ -801,7 +801,7 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(body.has("type")).isTrue()
         assertThat(body.has("title")).isTrue()
         assertThat(body.get("status").asInt()).isEqualTo(400)
-        assertThat(body.get("feil").asText()).contains("Ugyldig visning")
+        assertThat(body.get("feil").asString()).contains("Ugyldig visning")
     }
 
     @Test

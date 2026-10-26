@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.ki.client
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.log
