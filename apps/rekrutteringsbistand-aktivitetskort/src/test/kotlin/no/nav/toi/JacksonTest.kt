@@ -18,7 +18,7 @@ class JacksonTest {
             }
         """.trimIndent()
 
-        val event = errorQueueObjectMapper.readValue(json, FeilKøHendelse::class.java)
+        val event = jackson3ObjectMapper.readValue(json, FeilKøHendelse::class.java)
 
         assertKnownFields(event)
     }
@@ -35,9 +35,23 @@ class JacksonTest {
             }
         """.trimIndent()
 
-        val event = errorQueueObjectMapper.readValue(json, FeilKøHendelse::class.java)
+        val event = jackson3ObjectMapper.readValue(json, FeilKøHendelse::class.java)
 
         assertKnownFields(event)
+    }
+
+    @Test
+    fun `should read elector name and ignore unknown fields`() {
+        val json = """
+            {
+                "name": "activity-card-0",
+                "additionalField": "ignored"
+            }
+        """.trimIndent()
+
+        val name = parseElectorName(json)
+
+        assertThat(name).isEqualTo("activity-card-0")
     }
 
     private fun assertKnownFields(event: FeilKøHendelse) {

@@ -29,9 +29,12 @@ class LeaderElection() : LeaderElectionInterface {
     private fun getLeader(): String {
         val request = HttpRequest.newBuilder().uri(URI.create(electorUrl)).GET().build()
         val json = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
-        return objectMapper.readValue(json, Elector::class.java).name
+        return parseElectorName(json)
     }
 }
+
+internal fun parseElectorName(json: String): String =
+    jackson3ObjectMapper.readValue(json, Elector::class.java).name
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class Elector(val name: String)

@@ -8,6 +8,6 @@ import tools.jackson.module.kotlin.jacksonMapperBuilder
 val objectMapper = jacksonObjectMapper()
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
-val errorQueueObjectMapper = jacksonMapperBuilder()
+val jackson3ObjectMapper = jacksonMapperBuilder()
     .disable(Jackson3DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     .build()
