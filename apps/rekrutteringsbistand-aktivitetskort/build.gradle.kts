@@ -19,6 +19,7 @@ val openTelemetryAnnotationsVersion = "2.26.1"
 
 dependencies {
     implementation(project(":technical-libs:logging"))
+    implementation("tools.jackson.module:jackson-module-kotlin:3.2.3")
     implementation("io.javalin:javalin:${javalinVersion}")
     implementation("io.javalin:javalin-micrometer:${javalinVersion}")
     implementation("io.prometheus:simpleclient_common:0.16.0")

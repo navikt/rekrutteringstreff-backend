@@ -18,7 +18,7 @@ class JacksonTest {
             }
         """.trimIndent()
 
-        val event = objectMapper.readValue(json, FeilKøHendelse::class.java)
+        val event = errorQueueObjectMapper.readValue(json, FeilKøHendelse::class.java)
 
         assertKnownFields(event)
     }
@@ -35,7 +35,7 @@ class JacksonTest {
             }
         """.trimIndent()
 
-        val event = objectMapper.readValue(json, FeilKøHendelse::class.java)
+        val event = errorQueueObjectMapper.readValue(json, FeilKøHendelse::class.java)
 
         assertKnownFields(event)
     }
