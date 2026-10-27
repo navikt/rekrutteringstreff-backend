@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringsbistand
 
-import com.fasterxml.jackson.databind.node.ArrayNode
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
 import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
@@ -9,10 +8,10 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
-import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
+import tools.jackson.databind.node.ArrayNode
 
 class KandidatlisteLukketLytter(
     rapidsConnection: RapidsConnection,
@@ -48,7 +47,7 @@ class KandidatlisteLukketLytter(
         meterRegistry: MeterRegistry,
     ) {
         val noenFikkJobben = !(packet["fnrFikkJobben"] as ArrayNode).isEmpty
-        val fnrFikkIkkeJobben = packet["fnrFikkIkkeJobben"].map { it.asText() }
+        val fnrFikkIkkeJobben = packet["fnrFikkIkkeJobben"].values().map { it.asText() }
         val stillingsId = packet["stillingsId"].asText().toUUID()
         val navIdent = packet["utførtAvNavIdent"].asText()
 
@@ -77,4 +76,3 @@ class KandidatlisteLukketLytter(
         throw Exception(problems.toString())
     }
 }
-
