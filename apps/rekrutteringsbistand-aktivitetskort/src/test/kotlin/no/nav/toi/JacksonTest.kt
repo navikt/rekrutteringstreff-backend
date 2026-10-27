@@ -1,13 +1,6 @@
 package no.nav.toi
 
-import no.nav.toi.aktivitetskort.AktivitetskortDetalj
-import no.nav.toi.aktivitetskort.AktivitetskortEtikett
-import no.nav.toi.aktivitetskort.AktivitetskortHandling
-import no.nav.toi.aktivitetskort.AktivitetskortOppgave
-import no.nav.toi.aktivitetskort.ErrorType
-import no.nav.toi.aktivitetskort.FeilKøHendelse
-import no.nav.toi.aktivitetskort.LenkeType
-import no.nav.toi.aktivitetskort.Sentiment
+import no.nav.toi.aktivitetskort.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -157,7 +150,7 @@ class JacksonTest {
             AktivitetskortDetalj("Tid", "10:00"),
             AktivitetskortDetalj("Sted", "Test \"location\"\nEntrance\\A")
         )
-        val expected = objectMapper.readTree(
+        val expected = jackson3ObjectMapper.readTree(
             """[
                 {"label":"Tid","verdi":"10:00"},
                 {"label":"Sted","verdi":"Test \"location\"\nEntrance\\A"}
@@ -166,7 +159,7 @@ class JacksonTest {
 
         val json = jackson3ObjectMapper.writeValueAsString(details)
 
-        assertThat(objectMapper.readTree(json)).isEqualTo(expected)
+        assertThat(jackson3ObjectMapper.readTree(json)).isEqualTo(expected)
     }
 
     @Test
@@ -174,13 +167,13 @@ class JacksonTest {
         val actions = listOf(
             AktivitetskortHandling("Open", "View details", "https://example.com/card", LenkeType.FELLES)
         )
-        val expected = objectMapper.readTree(
+        val expected = jackson3ObjectMapper.readTree(
             """[{"tekst":"Open","subtekst":"View details","url":"https://example.com/card","lenkeType":"FELLES"}]"""
         )
 
         val json = jackson3ObjectMapper.writeValueAsString(actions)
 
-        assertThat(objectMapper.readTree(json)).isEqualTo(expected)
+        assertThat(jackson3ObjectMapper.readTree(json)).isEqualTo(expected)
     }
 
     @Test
@@ -190,7 +183,7 @@ class JacksonTest {
             AktivitetskortEtikett("Accepted", Sentiment.POSITIVE, "ACCEPTED"),
             AktivitetskortEtikett("Declined", Sentiment.NEGATIVE)
         )
-        val expected = objectMapper.readTree(
+        val expected = jackson3ObjectMapper.readTree(
             """[
                 {"tekst":"Waiting","sentiment":"NEUTRAL"},
                 {"tekst":"Accepted","sentiment":"POSITIVE","kode":"ACCEPTED"},
@@ -200,14 +193,14 @@ class JacksonTest {
 
         val json = jackson3ObjectMapper.writeValueAsString(labels)
 
-        assertThat(objectMapper.readTree(json)).isEqualTo(expected)
+        assertThat(jackson3ObjectMapper.readTree(json)).isEqualTo(expected)
     }
 
     @Test
     fun `should write empty stored label list`() {
         val json = jackson3ObjectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
 
-        assertThat(objectMapper.readTree(json)).isEqualTo(objectMapper.readTree("[]"))
+        assertThat(jackson3ObjectMapper.readTree(json)).isEqualTo(jackson3ObjectMapper.readTree("[]"))
     }
 
     private fun assertKnownFields(event: FeilKøHendelse) {

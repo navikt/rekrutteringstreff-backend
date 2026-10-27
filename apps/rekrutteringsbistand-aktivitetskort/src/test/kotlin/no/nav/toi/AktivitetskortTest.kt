@@ -3,38 +3,29 @@ package no.nav.toi
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import no.nav.toi.aktivitetskort.AktivitetskortEtikett
-import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
-import no.nav.toi.aktivitetskort.AktivitetskortJobb
-import no.nav.toi.aktivitetskort.AktivitetskortType
-import no.nav.toi.aktivitetskort.DeleCvMedArbeidsgiverType
-import no.nav.toi.aktivitetskort.ErrorType
-import no.nav.toi.aktivitetskort.RekrutteringstreffType
-import no.nav.toi.aktivitetskort.Sentiment
-import no.nav.toi.aktivitetskort.WorkOpType
+import no.nav.toi.aktivitetskort.*
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
+import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortTest {
@@ -54,7 +45,7 @@ class AktivitetskortTest {
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
     private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "http://url/stilling", "topic")
-    private val objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
+    private val objectMapper = jacksonMapperBuilder().build()
 
     @BeforeEach
     fun setup() {
