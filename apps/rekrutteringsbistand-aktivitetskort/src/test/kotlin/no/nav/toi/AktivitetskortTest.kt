@@ -96,6 +96,7 @@ class AktivitetskortTest {
         AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
+        assertThat(record.key()).isEqualTo(expectedAktivitetskortId.toString())
         record.value().let (objectMapper::readTree).apply {
             assertThat(this["messageId"].asText()).isNotBlank()
             assertThat(this["source"].asText()).isEqualTo("REKRUTTERINGSBISTAND")
@@ -161,13 +162,15 @@ class AktivitetskortTest {
             )
             assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedOpprettetAv)
             assertThat(this["aktivitetskort"]["endretAv"]["identType"].asText()).isEqualTo("NAVIDENT")
-            assertThat(this["aktivitetskort"]["endretTidspunkt"].isMissingNode()).isFalse
+            assertThat(this["aktivitetskort"]["endretTidspunkt"].isTextual).isTrue()
+            assertThat(ZonedDateTime.parse(this["aktivitetskort"]["endretTidspunkt"].asText())).isNotNull()
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["detaljer"]).isEmpty()
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["etiketter"][0]["tekst"].asText()).isEqualTo("Venter svar")
             assertThat(this["aktivitetskort"]["etiketter"][0]["sentiment"].asText()).isEqualTo("NEUTRAL")
+            assertThat(this["aktivitetskort"]["etiketter"][0].has("kode")).isFalse()
             assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["handlinger"]).hasSize(1)
             assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asText()).isEqualTo("Sjekk ut stillingen")

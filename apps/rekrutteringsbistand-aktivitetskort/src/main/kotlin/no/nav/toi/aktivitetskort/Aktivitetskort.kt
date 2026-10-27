@@ -3,6 +3,7 @@ package no.nav.toi.aktivitetskort
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
 import no.nav.toi.Repository
+import no.nav.toi.jackson3ObjectMapper
 import no.nav.toi.objectMapper
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -72,7 +73,7 @@ class Aktivitetskort (
                 oppgave = oppgave,
             ),
         )
-        return objectMapper.writeValueAsString(melding)
+        return jackson3ObjectMapper.writeValueAsString(melding)
     }
 
 }
