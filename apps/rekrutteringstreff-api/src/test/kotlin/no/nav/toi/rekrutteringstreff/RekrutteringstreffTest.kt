@@ -150,6 +150,34 @@ class RekrutteringstreffTest {
     }
 
     @Test
+    fun `henting av skjult eller slettet treff skal gi 410`() {
+        val navIdent = "A123456"
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
+        val originalTittel = "Spesifikk Tittel"
+
+        val slettetTreffId = db.opprettRekrutteringstreffMedAlleFelter(
+            navIdent,
+            tittel = originalTittel,
+            status = RekrutteringstreffStatus.SLETTET
+        )
+        val skjultTreffId = db.opprettRekrutteringstreffMedAlleFelter(
+            navIdent,
+            tittel = originalTittel,
+            status = RekrutteringstreffStatus.SKJULT
+        )
+        val responseForSlettetTreff = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${slettetTreffId}",
+            token.serialize()
+        )
+        val responseForSkjultTreff = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${skjultTreffId}",
+            token.serialize()
+        )
+        assertThat(responseForSlettetTreff.statusCode()).isEqualTo(410)
+        assertThat(responseForSkjultTreff.statusCode()).isEqualTo(410)
+    }
+
+    @Test
     fun `eier skal kunne hente eget workop`() {
         val eier = "A123456"
         val treffId = db.opprettRekrutteringstreffMedEierOgKontor(

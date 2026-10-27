@@ -158,13 +158,18 @@ class RekrutteringstreffController(
                 log.info("Fant ikke rekrutteringstreff med id $treffId")
                 ctx.status(404)
             } else {
-                log.info("Hentet rekrutteringstreff med id $treffId")
-                val respons = if (bruker.skalSkjermeArbeidsgivere(rekrutteringstreff.kategori)) {
-                    rekrutteringstreff.copy(antallArbeidsgivere = null)
+                if (rekrutteringstreff.status == RekrutteringstreffStatus.SKJULT || rekrutteringstreff.status == RekrutteringstreffStatus.SLETTET) {
+                    log.info("Rekrutteringstreff med id $treffId er skjult eller slettet")
+                    ctx.status(410)
                 } else {
-                    rekrutteringstreff
+                    val respons = if (bruker.skalSkjermeArbeidsgivere(rekrutteringstreff.kategori)) {
+                        rekrutteringstreff.copy(antallArbeidsgivere = null)
+                    } else {
+                        rekrutteringstreff
+                    }
+                    log.info("Hentet rekrutteringstreff med id $treffId")
+                    ctx.status(200).json(respons)
                 }
-                ctx.status(200).json(respons)
             }
         }
     }
