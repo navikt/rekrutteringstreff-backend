@@ -1,12 +1,11 @@
 package no.nav.toi.aktivitetskort
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.core.type.TypeReference
 import no.nav.toi.Repository
 import no.nav.toi.jackson3ObjectMapper
-import no.nav.toi.objectMapper
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
+import tools.jackson.core.type.TypeReference
 import java.sql.ResultSet
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -114,7 +113,7 @@ class AktivitetskortDetalj(
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
-            objectMapper.readValue(json, object : TypeReference<List<AktivitetskortDetalj>>(){})
+            jackson3ObjectMapper.readValue(json, object : TypeReference<List<AktivitetskortDetalj>>(){})
     }
 }
 
@@ -126,7 +125,7 @@ class AktivitetskortHandling(
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
-            objectMapper.readValue(json, object : TypeReference<List<AktivitetskortHandling>>(){})
+            jackson3ObjectMapper.readValue(json, object : TypeReference<List<AktivitetskortHandling>>(){})
     }
 }
 
@@ -138,7 +137,7 @@ class AktivitetskortEtikett(
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
-            objectMapper.readValue(json, object : TypeReference<List<AktivitetskortEtikett>>(){})
+            jackson3ObjectMapper.readValue(json, object : TypeReference<List<AktivitetskortEtikett>>(){})
     }
 }
 
@@ -148,7 +147,7 @@ class AktivitetskortOppgave(
     val intern: AktivitetskortSubOppgave?,
 ) {
     companion object {
-        fun fraAkaasJson(json: String) = objectMapper.readValue(json, AktivitetskortOppgave::class.java)
+        fun fraAkaasJson(json: String) = jackson3ObjectMapper.readValue(json, AktivitetskortOppgave::class.java)
     }
 }
 
