@@ -7,7 +7,7 @@ application {
     mainClass.set("no.nav.toi.AppKt")
 }
 
-val flywayVersion = "11.20.3"
+val flywayVersion = "13.11.1"
 val postgresVersion = "42.7.13"
 val hikariVersion = "6.2.1"
 val testContainerVersion = "2.0.5"
@@ -21,7 +21,7 @@ val openTelemetryAnnotationsVersion = "2.26.1"
 dependencies {
     implementation(project(":technical-libs:logging"))
     implementation("tools.jackson.module:jackson-module-kotlin:3.2.3")
-    // Align Jackson 2 retained transitively through Flyway and Auth0.
+    // Align Jackson 2 retained transitively through Auth0.
     implementation(platform("com.fasterxml.jackson:jackson-bom:$jackson2Version"))
     implementation("io.javalin:javalin:${javalinVersion}")
     implementation("io.javalin:javalin-micrometer:${javalinVersion}")
