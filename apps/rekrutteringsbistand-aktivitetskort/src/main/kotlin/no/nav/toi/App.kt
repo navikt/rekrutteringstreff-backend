@@ -1,12 +1,11 @@
 package no.nav.toi
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.kafka.AivenConfig
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers.KafkaRapid
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.javalin.Javalin
-import io.javalin.json.JavalinJackson
+import io.javalin.json.JavalinJackson3
 import io.javalin.micrometer.MicrometerPlugin
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
@@ -33,6 +32,7 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 import java.util.Properties
 
 class App(
@@ -65,7 +65,7 @@ class App(
         }
 
         javalin = Javalin.create { config ->
-            config.jsonMapper(JavalinJackson(jacksonObjectMapper()))
+            config.jsonMapper(JavalinJackson3(jacksonMapperBuilder().build()))
             config.registerPlugin(micrometerPlugin)
             HelsesjekkController(prometheusMeterRegistry = meterRegistry, routes = config.routes, isReady = isReady, isRunning = isRunning)
         }
