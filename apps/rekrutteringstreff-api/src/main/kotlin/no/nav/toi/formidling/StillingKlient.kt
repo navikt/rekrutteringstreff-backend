@@ -1,7 +1,7 @@
 package no.nav.toi.formidling
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import no.nav.toi.AccessTokenClient

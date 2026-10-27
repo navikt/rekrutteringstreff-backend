@@ -5,20 +5,14 @@ import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
-import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.rekrutteringstreff.*
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import org.flywaydb.core.Flyway
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.Connection
-import java.sql.ResultSet
 import java.time.Instant
-import java.time.ZoneId
-import java.util.*
 import javax.sql.DataSource
 
 class TestDatabase {
@@ -190,8 +184,8 @@ class TestDatabase {
 
 
     companion object {
-        private var lokalPostgres: PostgreSQLContainer<*>? = null
-        private fun getLokalPostgres(): PostgreSQLContainer<*> =
+        private var lokalPostgres: PostgreSQLContainer? = null
+        private fun getLokalPostgres(): PostgreSQLContainer =
             lokalPostgres ?: PostgreSQLContainer(DockerImageName.parse("postgres:17.2-alpine"))
                 .withDatabaseName("dbname")
                 .withUsername("username")

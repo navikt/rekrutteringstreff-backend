@@ -72,7 +72,8 @@ class MinsideVarselSvarLytterTest {
                 "avsenderNavident": "$endretAvIdent",
                 "eksternFeilmelding": null,
                 "eksternKanal": "SMS",
-                "mal": "rekrutteringstreff-invitasjon"
+                "mal": "rekrutteringstreff-invitasjon",
+                "flettedata": ["første verdi", "andre verdi"]
             }
             """.trimIndent()
         )
@@ -104,6 +105,7 @@ class MinsideVarselSvarLytterTest {
         assertThat(hendelseDataMap.avsenderNavident).isEqualTo(endretAvIdent)
         assertThat(hendelseDataMap.eksternKanal).isEqualTo("SMS")
         assertThat(hendelseDataMap.mal).isEqualTo("rekrutteringstreff-invitasjon")
+        assertThat(hendelseDataMap.flettedata).containsExactly("første verdi", "andre verdi")
     }
 
     @Test

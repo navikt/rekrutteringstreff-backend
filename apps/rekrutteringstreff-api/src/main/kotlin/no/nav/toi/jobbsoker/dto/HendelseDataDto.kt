@@ -2,8 +2,10 @@ package no.nav.toi.jobbsoker.dto
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.Nulls
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
 import io.javalin.openapi.OneOf
 import io.javalin.openapi.OpenApiName
 import no.nav.toi.JobbsøkerHendelsestype
@@ -52,6 +54,8 @@ data class MinsideVarselSvarDataDto(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 @OpenApiName("RekrutteringstreffendringerHendelseData")
 data class RekrutteringstreffendringerDto(
+    // Jackson 3 feiler på null i EnumSet. Ukjente enum-verdier blir null og skal hoppes over som i Jackson 2
+    @JsonSetter(contentNulls = Nulls.SKIP)
     val endredeFelter: Set<Endringsfelttype>
 ) : HendelseDataDto
 

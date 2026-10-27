@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.readValue
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig

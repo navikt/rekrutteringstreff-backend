@@ -7,7 +7,7 @@ import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.Repository
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.log
-import no.nav.toi.objectMapper
+import no.nav.toi.jackson3ObjectMapper
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
@@ -138,7 +138,7 @@ class AktivitetskortFeilJobb(
 
                 records.forEach { consumerRecord ->
                     consumerRecord.value().let {
-                        val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
+                        val hendelse = jackson3ObjectMapper.readValue(it, FeilKøHendelse::class.java)
                         if (hendelse.source == "REKRUTTERINGSBISTAND") {
                             log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
                             teamLog.error("Feil ved bestilling av aktivitetskort: $it")
@@ -199,7 +199,7 @@ data class FeilKøHendelse(
     val errorType: ErrorType
 )
 
-private fun String.hentMessageId() = objectMapper.readTree(this)["messageId"]?.asText()?.let {
+private fun String.hentMessageId() = jackson3ObjectMapper.readTree(this)["messageId"]?.asString()?.let {
     UUID.fromString(it)
 } ?: error("Kunne ikke hente messageId fra hendelse: $this")
 

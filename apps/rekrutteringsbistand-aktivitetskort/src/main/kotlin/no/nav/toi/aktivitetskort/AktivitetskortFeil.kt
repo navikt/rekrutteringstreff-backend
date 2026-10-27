@@ -1,7 +1,7 @@
 package no.nav.toi.aktivitetskort
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import no.nav.toi.objectMapper
+import no.nav.toi.jackson3ObjectMapper
 
 class FellesMeldingsfelter(
     val fnr: String,
@@ -29,7 +29,7 @@ abstract class AktivitetskortFeil(
     val timestamp = fellesMeldingsfelter.timestamp
 
     fun sendTilRapid(rapidPublish: (String, String) -> Unit, markerFeilkøhendelseSomSendt: (String) -> Unit) {
-        rapidPublish(fnr, objectMapper.writeValueAsString(this))
+        rapidPublish(fnr, jackson3ObjectMapper.writeValueAsString(this))
         markerFeilkøhendelseSomSendt(messageId)
     }
 }

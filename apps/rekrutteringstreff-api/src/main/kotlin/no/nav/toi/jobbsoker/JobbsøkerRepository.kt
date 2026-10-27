@@ -1,6 +1,6 @@
 package no.nav.toi.jobbsoker
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
@@ -478,14 +478,14 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
         val hendelserRaw = mapper.readTree(json)
-        return hendelserRaw.map { h ->
-            val hendelsestype = JobbsøkerHendelsestype.valueOf(h["hendelsestype"].asText())
+        return hendelserRaw.values().map { h ->
+            val hendelsestype = JobbsøkerHendelsestype.valueOf(h["hendelsestype"].asString())
             JobbsøkerHendelse(
-                id = UUID.fromString(h["id"].asText()),
-                tidspunkt = ZonedDateTime.parse(h["tidspunkt"].asText()),
+                id = UUID.fromString(h["id"].asString()),
+                tidspunkt = ZonedDateTime.parse(h["tidspunkt"].asString()),
                 hendelsestype = hendelsestype,
-                opprettetAvAktørType = AktørType.valueOf(h["opprettetAvAktortype"].asText()),
-                aktørIdentifikasjon = h["aktøridentifikasjon"]?.takeIf { !it.isNull }?.asText(),
+                opprettetAvAktørType = AktørType.valueOf(h["opprettetAvAktortype"].asString()),
+                aktørIdentifikasjon = h["aktøridentifikasjon"]?.takeIf { !it.isNull }?.asString(),
                 hendelseData = parseHendelseData(mapper, hendelsestype, h["hendelseData"]?.takeIf { !it.isNull })
             )
         }

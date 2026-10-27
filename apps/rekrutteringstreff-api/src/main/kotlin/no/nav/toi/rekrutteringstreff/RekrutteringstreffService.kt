@@ -211,19 +211,21 @@ class RekrutteringstreffService(
                 logger.info("Registrert endring på rekrutteringstreff ${treffId.somString} for ${jobbsøkereSomSkalOppdateres.size} jobbsøkere")
             }
 
-            val jobbsøkereSomSkalVarsles = alleJobbsøkere
-                .filter { jobbsøkerService.skalVarslesOmEndringer(it) }
-                .map { it.personTreffId }
+            if(endringer.endredeFelter.isNotEmpty()) {
+                val jobbsøkereSomSkalVarsles = alleJobbsøkere
+                    .filter { jobbsøkerService.skalVarslesOmEndringer(it) }
+                    .map { it.personTreffId }
 
-            if (jobbsøkereSomSkalVarsles.isNotEmpty()) {
-                jobbsøkerRepository.leggTilHendelserForJobbsøkere(
-                    connection,
-                    JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
-                    jobbsøkereSomSkalVarsles,
-                    endretAv,
-                    hendelseData = endringerJson
-                )
-                logger.info("Registrert at varsel om oppdatert treff ${treffId.somString} skal sendes til ${jobbsøkereSomSkalVarsles.size} jobbsøkere")
+                if (jobbsøkereSomSkalVarsles.isNotEmpty()) {
+                    jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                        connection,
+                        JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
+                        jobbsøkereSomSkalVarsles,
+                        endretAv,
+                        hendelseData = endringerJson
+                    )
+                    logger.info("Registrert at varsel om oppdatert treff ${treffId.somString} skal sendes til ${jobbsøkereSomSkalVarsles.size} jobbsøkere")
+                }
             }
         }
     }
