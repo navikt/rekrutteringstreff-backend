@@ -151,6 +151,65 @@ class JacksonTest {
         assertThat(AktivitetskortEtikett.fraAkaasJson("[]")).isEmpty()
     }
 
+    @Test
+    fun `should write stored details with escaped text and preserve order`() {
+        val details = listOf(
+            AktivitetskortDetalj("Tid", "10:00"),
+            AktivitetskortDetalj("Sted", "Test \"location\"\nEntrance\\A")
+        )
+        val expected = objectMapper.readTree(
+            """[
+                {"label":"Tid","verdi":"10:00"},
+                {"label":"Sted","verdi":"Test \"location\"\nEntrance\\A"}
+            ]"""
+        )
+
+        val json = jackson3ObjectMapper.writeValueAsString(details)
+
+        assertThat(objectMapper.readTree(json)).isEqualTo(expected)
+    }
+
+    @Test
+    fun `should write stored actions with enum names`() {
+        val actions = listOf(
+            AktivitetskortHandling("Open", "View details", "https://example.com/card", LenkeType.FELLES)
+        )
+        val expected = objectMapper.readTree(
+            """[{"tekst":"Open","subtekst":"View details","url":"https://example.com/card","lenkeType":"FELLES"}]"""
+        )
+
+        val json = jackson3ObjectMapper.writeValueAsString(actions)
+
+        assertThat(objectMapper.readTree(json)).isEqualTo(expected)
+    }
+
+    @Test
+    fun `should write stored labels with enum names and omit null code`() {
+        val labels = listOf(
+            AktivitetskortEtikett("Waiting", Sentiment.NEUTRAL),
+            AktivitetskortEtikett("Accepted", Sentiment.POSITIVE, "ACCEPTED"),
+            AktivitetskortEtikett("Declined", Sentiment.NEGATIVE)
+        )
+        val expected = objectMapper.readTree(
+            """[
+                {"tekst":"Waiting","sentiment":"NEUTRAL"},
+                {"tekst":"Accepted","sentiment":"POSITIVE","kode":"ACCEPTED"},
+                {"tekst":"Declined","sentiment":"NEGATIVE"}
+            ]"""
+        )
+
+        val json = jackson3ObjectMapper.writeValueAsString(labels)
+
+        assertThat(objectMapper.readTree(json)).isEqualTo(expected)
+    }
+
+    @Test
+    fun `should write empty stored label list`() {
+        val json = jackson3ObjectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
+
+        assertThat(objectMapper.readTree(json)).isEqualTo(objectMapper.readTree("[]"))
+    }
+
     private fun assertKnownFields(event: FeilKøHendelse) {
         assertThat(event.source).isEqualTo("REKRUTTERINGSBISTAND")
         assertThat(event.failingMessage).isEqualTo("""{"messageId":"00000000-0000-0000-0000-000000000001"}""")
