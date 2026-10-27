@@ -1,5 +1,5 @@
 plugins {
-    id("toi.rapids-and-rivers-deprekert-jackson2")
+    id("toi.rapids-and-rivers")
     id("io.github.ben-manes.versions") version "0.64.0"
 }
 
@@ -13,7 +13,7 @@ val hikariVersion = "6.2.1"
 val testContainerVersion = "2.0.5"
 val javalinVersion = "7.2.3"
 val micrometerVersion = "1.17.1"
-val rapidsAndRiversVersion = "2026042913501777463400" // Må være lik versjonen i buildSrc/toi.rapids-and-rivers-deprekert-jackson2.gradle.kts
+val rapidsAndRiversVersion = "2026091610031789545782" // Må være lik versjonen i buildSrc/toi.rapids-and-rivers.gradle.kts
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.1"
 
