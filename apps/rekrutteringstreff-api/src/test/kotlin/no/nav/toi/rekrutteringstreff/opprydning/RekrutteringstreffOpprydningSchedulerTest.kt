@@ -126,11 +126,17 @@ class RekrutteringstreffOpprydningSchedulerTest {
             ANTALL_MÅNEDER_ETTER_TREFF_OPPRETTET_FOR_SKJULING_FRA_FRONTEND
         ).plusDays(1)
 
-        val treffIdForTreffSomSkalSkjules = testDatabase.opprettRekrutteringstreffMedAlleFelter(
+        val treffIdForFullførtTreffSomSkalSkjules = testDatabase.opprettRekrutteringstreffMedAlleFelter(
             navIdent = "A123456",
             opprettetAvTidspunkt = tidspunktForTreffSomSkalSkjules.minusDays(10),
             tilTid = tidspunktForTreffSomSkalSkjules,
             status = RekrutteringstreffStatus.FULLFØRT
+        )
+        val treffIdForAvlystTreffSomSkalSkjules = testDatabase.opprettRekrutteringstreffMedAlleFelter(
+            navIdent = "A123456",
+            opprettetAvTidspunkt = tidspunktForTreffSomSkalSkjules.minusDays(10),
+            tilTid = tidspunktForTreffSomSkalSkjules,
+            status = RekrutteringstreffStatus.AVLYST
         )
         val treffIdForTreffSomIkkeSkalSkjules = testDatabase.opprettRekrutteringstreffMedAlleFelter(
             navIdent = "B123456",
@@ -139,14 +145,18 @@ class RekrutteringstreffOpprydningSchedulerTest {
             status = RekrutteringstreffStatus.FULLFØRT
         )
 
-        assertThat(rekrutteringstreffRepository.hent(treffIdForTreffSomSkalSkjules)?.status)
+        assertThat(rekrutteringstreffRepository.hent(treffIdForFullførtTreffSomSkalSkjules)?.status)
             .isEqualTo(RekrutteringstreffStatus.FULLFØRT)
+        assertThat(rekrutteringstreffRepository.hent(treffIdForAvlystTreffSomSkalSkjules)?.status)
+            .isEqualTo(RekrutteringstreffStatus.AVLYST)
         assertThat(rekrutteringstreffRepository.hent(treffIdForTreffSomIkkeSkalSkjules)?.status)
             .isEqualTo(RekrutteringstreffStatus.FULLFØRT)
 
         rekrutteringstreffOpprydningScheduler.kjørJobb()
 
-        assertThat(rekrutteringstreffRepository.hent(treffIdForTreffSomSkalSkjules)?.status)
+        assertThat(rekrutteringstreffRepository.hent(treffIdForFullførtTreffSomSkalSkjules)?.status)
+            .isEqualTo(RekrutteringstreffStatus.SKJULT)
+        assertThat(rekrutteringstreffRepository.hent(treffIdForAvlystTreffSomSkalSkjules)?.status)
             .isEqualTo(RekrutteringstreffStatus.SKJULT)
         assertThat(rekrutteringstreffRepository.hent(treffIdForTreffSomIkkeSkalSkjules)?.status)
             .isEqualTo(RekrutteringstreffStatus.FULLFØRT)

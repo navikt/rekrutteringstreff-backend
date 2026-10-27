@@ -181,17 +181,19 @@ class RekrutteringstreffRepository(
             }
         }
 
-    fun hentFullførteTreffHvorTilTidErPassertMedAngittTid(måneder: Long, dager: Long): List<Rekrutteringstreff> {
+    fun hentFullførteEllerAvlysteTreffHvorTilTidErPassertMedAngittTid(måneder: Long, dager: Long): List<Rekrutteringstreff> {
         val tidsgrense = ZonedDateTime.now()
             .minusMonths(måneder)
             .minusDays(dager)
 
-        val tidsgrenseSomOffsetDateTime = tidsgrense.toOffsetDateTime();
+        val tidsgrenseSomOffsetDateTime = tidsgrense.toOffsetDateTime()
 
         return dataSource.connection.use { c ->
-            c.prepareStatement("$selectTreff WHERE $status = ? AND $tiltid < ?").use { s ->
-                s.setObject(1, RekrutteringstreffStatus.FULLFØRT.name)
-                s.setObject(2, tidsgrenseSomOffsetDateTime)
+            c.prepareStatement("$selectTreff WHERE $status IN (?, ?) AND $tiltid < ?").use { s ->
+                var i = 0
+                s.setObject(++i, RekrutteringstreffStatus.FULLFØRT.name)
+                s.setObject(++i, RekrutteringstreffStatus.AVLYST.name)
+                s.setObject(++i, tidsgrenseSomOffsetDateTime)
                 s.executeQuery().let { rs ->
                     generateSequence {
                         if (rs.next()) rs.tilRekrutteringstreff() else null
