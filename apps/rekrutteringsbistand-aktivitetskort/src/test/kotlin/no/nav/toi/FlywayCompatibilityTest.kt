@@ -12,15 +12,15 @@ import java.util.UUID
 
 class FlywayCompatibilityTest {
 
-    // Flyway still brings Jackson 2 transitively. Before upgrading Flyway to remove that
-    // dependency, check migration over existing data, not only startup with an empty database.
-    // Keep this test through the upgrade. It checks schema progression and restart behavior,
+    // Added before upgrading Flyway from 11.20.3 to 13.11.1 to remove its Jackson 2 dependency.
+    // Flyway now declares optional Jackson 3 databind. Keep checking migration over existing
+    // data, not only startup with an empty database, regardless of its JSON library.
+    // This test checks schema progression and restart behavior,
     // but every stage uses the installed Flyway version. Reading history written by an older
     // Flyway binary requires a separate old-version/new-version compatibility check.
     //
-    // After upgrading to a Flyway version that uses Jackson 3, keep the scenario and assertions:
-    // preserving data and safely restarting still matter, regardless of Flyway's JSON library.
-    // Verify the resolved dependencies, then update the Jackson-version explanation above.
+    // For future Flyway upgrades, keep the scenario and assertions. Verify the resolved
+    // dependencies and update the version explanation above if it no longer applies.
     // Adapt Flyway API calls only if required; do not weaken data-preservation or restart checks
     // to accommodate the upgrade, and do not retain Jackson 2 solely for this test.
     // If later SQL migrations are added, update the expected migration count/history and latest

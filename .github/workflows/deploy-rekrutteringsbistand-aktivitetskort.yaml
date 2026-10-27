@@ -20,7 +20,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/jackson3-iterasjon10
+      deploy_dev_branch: refs/heads/jackson3-iterasjon14
     permissions:
       contents: read
       id-token: write
