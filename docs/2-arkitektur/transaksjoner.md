@@ -254,6 +254,14 @@ Forsøk 4 viser at FK-sjekken må vente på en `FOR UPDATE`-lås, selv om A ikke
 
 `ExceptionMapping` gjør normalt `SQLException` om til HTTP 500. Unntaket er `23503`, som betyr brudd på en fremmednøkkel og gir HTTP 409. Både `40001` og `40P01` gir derfor HTTP 500. Tabellen omfatter ikke forsøk med deadlock.
 
+## Standardsøk i bruker-api
+
+Grensen på 10 søk per veileder og regelen om ett standardsøk gjelder en gruppe rader, og veilederen kan ha null rader. Da finnes det ingen rad å låse med `FOR NO KEY UPDATE`. Standardsøk tar i stedet `pg_advisory_xact_lock` på `tabell:navIdent`. Låsen gjelder på tvers av podene og slippes når transaksjonen er ferdig.
+
+- Låsen og transaksjonshjelperen `executeInTransaction` står i `standardsok/database/Låsing.kt`, og en test sjekker at `pg_advisory_xact_lock` ikke brukes i andre filer.
+- Transaksjonen kjører med `READ COMMITTED`, ellers ville tellingen etter låsen vært tatt fra et øyeblikksbilde fra før låsen. Poolen i bruker-api bruker `REPEATABLE READ` som standard.
+- Prinsippene er de samme som over: den som starter transaksjonen låser først og validerer etterpå.
+
 ## Relaterte dokumenter
 
 - [Prinsipper](prinsipper.md) - Lagdeling og feilhåndtering med `ExceptionMapping`

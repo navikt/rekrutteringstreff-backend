@@ -178,6 +178,8 @@ lagringstiden er en annen.
   tilfeldig UUID uten innhold, og bare eieren kan hente søket.
 - Backend avviser ukjente filterparametere, så filteret kan ikke brukes til
   å smugle fritekst inn i URL-en.
+- Leveranse 2: Søk som flyttes fra `lagret_sok`, renses med de samme
+  filterreglene, så gamle parametere og verdier ikke følger med inn i URL-en.
 - Backend logger ikke innholdet i søk. Feil logges uten meldingstekst.
 - Metrikkene har bare domene og type, aldri Nav-ident, søkeident, navn eller
   søkeord.

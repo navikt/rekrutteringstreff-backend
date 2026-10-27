@@ -1,6 +1,6 @@
 # Plan: Lagrede søk for stillingsoppdrag og rekrutteringstreff i bruker-api
 
-**Status:** Leveranse 1 (rekrutteringstreff) er implementert i bruker-api og frontend, men ikke rullet ut. Et ROS-utkast ligger i [`ros-standardsok.md`](ros-standardsok.md) og må godkjennes før produksjon. Leveranse 2 (stilling) er ikke startet.
+**Status:** Leveranse 1 (rekrutteringstreff) er implementert i bruker-api og frontend, men ikke rullet ut. Et ROS-utkast ligger i [`ros-standardsok.md`](ros-standardsok.md) og må godkjennes før produksjon. Leveranse 2 (stilling) er implementert i bruker-api, men frontend og konvertering fra stilling-api gjenstår.
 
 ## Kort fortalt
 
@@ -109,7 +109,7 @@ Standardvalg inngår ikke i `LagreStandardsøkDto`. Backend sørger for at en ve
 
 ### Tabeller: én per domene
 
-Hvert domene får sin tabell i sin leveranse: `V9__standardsok_rekrutteringstreff.sql` først, så en egen migrering for stilling. Kolonnenavnene følger stilen i repoet (`navIdent`, som i `brukerinnstillinger`).
+Begge tabellene opprettes i `V9__standardsok.sql`. Ingen av dem er rullet ut, så de deler migrering. Kolonnenavnene følger stilen i repoet (`navIdent`, som i `brukerinnstillinger`).
 
 Databasen i bruker-api etter begge leveransene. Ingen tabeller har fremmednøkler. Den stiplede linjen viser at søkene og brukerinnstillingene bruker samme `navIdent`, uten at databasen håndhever koblingen. En veileder kan ha søk uten en rad i `brukerinnstillinger`. `text_array` er `text[]`, fordi Mermaid ikke tillater klammer i typenavn.
 
@@ -129,7 +129,7 @@ erDiagram
     }
 
     standardsok_stilling {
-        uuid id PK "Foreslått, leveranse 2"
+        uuid id PK
         text navIdent "Ikke unik"
         text navn "Maks 25 tegn"
         boolean erStandard "Høyst ett per navIdent"
@@ -172,7 +172,7 @@ erDiagram
 | Tabell | Status | Innhold |
 | --- | --- | --- |
 | `standardsok_rekrutteringstreff` | Ny, implementert i V9 | Lagrede søk for rekrutteringstreff |
-| `standardsok_stilling` | Foreslått, leveranse 2 | Lagrede søk for stillingsoppdrag, med samme kolonner. Data flyttes fra stilling-api. |
+| `standardsok_stilling` | Ny, leveranse 2 | Lagrede søk for stillingsoppdrag, med samme kolonner. Data flyttes fra stilling-api. |
 | `brukerinnstillinger` | Finnes fra før | Visningsvalg per veileder |
 | `nyheter` | Finnes fra før | Nyheter i Rekrutteringsbistand |
 | `tilbakemeldinger` | Finnes fra før | Tilbakemeldinger fra veiledere |
@@ -249,12 +249,7 @@ sequenceDiagram
     FE-->>V: «Fødselsnummer ble fjernet fra navn eller søkeord» hvis filtrert
 ```
 
-Et tall fjernes når det er et gyldig fødselsnummer etter dagens regler:
-
-- datoen er gyldig, også for D-nummer (dag + 40), H-nummer (måned + 40) og syntetiske nummer (måned + 40 eller + 80)
-- begge kontrollsifrene stemmer med modulus 11
-
-Andre tall blir stående, også 11-sifrede tall med feil kontrollsiffer. Reglene Skatteetaten innfører i 2032 er ikke med. Blir navnet tomt etter filtrering, gir backend `400`.
+Et tall fjernes når det har 11 sifre, også med mellomrom eller punktum etter de seks første. Filteret sjekker ikke dato eller kontrollsiffer. Da fanger det D-nummer, H-nummer, syntetiske nummer og tastefeil, og nye regler fra Skatteetaten (som reglene fra 2032) krever ingen endring. Vi fjerner heller for mye enn for lite. Tall med færre eller flere sifre, som organisasjonsnumre, blir stående. Blir navnet tomt etter filtrering, gir backend `400`.
 
 ### Sletting etter seks måneder uten aktivitet
 
@@ -474,6 +469,37 @@ flowchart TD
 - Konverteringen må kjøre før frontend bytter, eller hoppe over veiledere som allerede har søk i bruker-api hvis den kjører etter.
 - Tilgang mellom databasene, lagringer under overgangen og tidspunktet for siste synkronisering avklares før leveranse 2.
 - Nav-identer skal ikke ligge i migreringsfiler i git.
+- `sok` renses med `Filterregler` for stilling før lagring, med samme regler som API-et bruker. Ukjente parametere og ugyldige verdier fjernes, og resten beholdes. Eksisterende rader kan ha parametere som ikke skal lagres (`brukStandardsok`) og eldre statusverdier (`publisert`, `utløpt`, `stoppet`). Uten rensing havner de i URL-en når søket brukes, og søket kan ikke erstattes uten at veilederen endrer det.
+
+**Backend i leveranse 2 (implementert).** Controller, service, repository, låsing, utløp, opprydningsjobb, metrikker og fødselsnummerfilter er felles for alle domener. Det som er særskilt for hvert domene, ligger i én fil i pakken `domene`. Pakkene under `standardsok`:
+
+| Pakke | Innhold |
+| --- | --- |
+| `standardsok` | `Standardsøk`, controller, service, feil og metrikker |
+| `domene` | Den abstrakte `StandardsøkDomene` (`stinavn`, `tabell`, `roller`, `filterregler`), registeret `Standardsøkdomener` med `alle` og `fraStinavn`, og én fil per domene: `RekrutteringstreffDomene` med `RekrutteringstreffFilterparameter` og `StillingDomene` med `StillingFilterparameter` |
+| `filter` | `Filterregler`, interfacet `Filterparameter`, `filterreglerFor<P>()`, felles verdiregler (`enAv`, `liste`, fylkes-, kommune- og kontornumre) og `Fødselsnummerfilter` |
+| `database` | `StandardsøkRepository` og `Låsing.kt` |
+| `utlop` | `Utløpsregler` og opprydningsjobben |
+
+- `standardsok_stilling` i `V9__standardsok.sql`, med samme kolonner og indekser som `standardsok_rekrutteringstreff`.
+- Et nytt domene er et `object` som arver `StandardsøkDomene`, en enum som implementerer `Filterparameter` og en linje i `Standardsøkdomener.alle`. Registeret står i et eget `object` og ikke i en `companion` i basisklassen, fordi en liste over objektene der kan gi `null` ved oppstart av klassene.
+- `StillingDomene` gir tilgang til alle fem rollene.
+- Komponenttestene ligger i den abstrakte `StandardsøkKomponenttest`. `RekrutteringstreffStandardsøkTest` og `StillingStandardsøkTest` kjører dem med egne filtre og har egne rolletester. `FilterreglerTest` tester mekanikken med egne testparametere, og `RekrutteringstreffFilterTest` og `StillingFilterTest` tester reglene for hvert domene.
+
+Gjenstår i backend: konverteringen fra `lagret_sok` (åpent spørsmål 1). Den skal rense `sok` med de samme `Filterregler`. Rensemetoden lages sammen med konverteringen.
+
+**Filterregler for stilling.** Parameterne og verdiene følger stillingssøket i frontend (`StillingsSøkQueryparam` og enumene som hører til):
+
+| Parameter | Regel |
+| --- | --- |
+| `portefolje` | `intern`, `visMine`, `mittKontor` eller `arbeidsplassen` |
+| `sortering` | `publiseringsdato`, `utløpsdato` eller `mestRelevant` |
+| `statuser` | Liste av statusene i statusfilteret (`VisningsStatus`): «Åpen for søkere», «Stengt for søkere», «Utløpt - Stengt for søkere», «Fullført» og «Ikke publisert» |
+| `stillingskategori` | Liste av verdiene i `Stillingskategori` |
+| `inkludering`, `inkluderingUnderkategori` | Liste av verdiene i `Hovedtag` og `Subtag` |
+| `fylker`, `kommuner` | Liste av fylkesnumre (2 sifre) og kommunenumre (4 sifre), som i rekrutteringstreff |
+
+Disse lagres ikke og avvises: `fritekst`, `side`, `brukStandardsok`, `brukKriterierFraKandidat`, `modal`, `utenOppdrag`, `visStillingId`, `finnKandidater` og `visKandidatId`. `publisert` og `felter` er heller ikke med, fordi ingen del av stillingssøket setter dem i dag. Verdisettene står i bruker-api, så en ny filterverdi i stillingssøket krever en endring i `StillingFilterparameter`. Ellers avvises lagringen med `400`.
 
 Rollback i leveranse 2, før stilling-api ryddes: frontend peker tilbake til stilling-api. Søk lagret i bruker-api i mellomtiden beholdes der, men er ikke tilgjengelige i den gamle løsningen. Flere søk kan ikke tilbakeføres direkte til dagens ene standardsøk. Rollback-vindu og håndtering av disse endringene avklares i leveranse 2 før det gamle endepunktet og tabellen fjernes.
 
@@ -481,7 +507,7 @@ Rollback i leveranse 2, før stilling-api ryddes: frontend peker tilbake til sti
 
 | Nivå | Hva |
 | --- | --- |
-| Enhetstest, bruker-api | Fødselsnummerfilteret: gyldige fødselsnumre, D-, H- og syntetiske nummer, nummer med mellomrom, 11 sifre med feil kontrollsiffer (skal stå), organisasjonsnumre og vanlige ord. Testene lager syntetiske nummer selv, ingen nummer som ligner ekte. |
+| Enhetstest, bruker-api | Fødselsnummerfilteret: tall med 11 sifre (uavhengig av dato og kontrollsiffer), nummer med mellomrom eller punktum, tall som er del av et lengre tall, organisasjonsnumre og vanlige ord. Testene bruker åpenbart falske tall. |
 | Komponenttest, bruker-api | Tom liste uten lagrede søk. Opprett, erstatt og slett. Like navn tillates, og endring eller sletting av ett søk påvirker ikke et annet med samme navn. Det ellevte aktive søket gir `409`, også ved samtidige opprettelser. |
 | Komponenttest, bruker-api | Det første søket blir standard. Erstatting endrer ikke standardvalget. Bytte av standard fjerner det gamle merket og fornyer bare det valgte søkets dato. Samtidige standardvalg gir høyst ett standardsøk. Sletting av standardsøket gjør det sist brukte søket til standard, og sletting av et annet søk beholder standardvalget. Et utløpt standardsøk erstattes når listen hentes, også etter opprydningsjobben. |
 | Komponenttest, bruker-api | En veileder får `404` på `PUT`, `DELETE`, `.../standard` og `.../bruk` mot en annen veileders søk, og listen viser bare egne søk. Ukjent domene gir `404`. Manglende rolle gir `403`. Navn på 25 tegn godtas, mens 26 tegn etter trimming gir `400` ved både opprettelse og erstatting. For lang input, ugyldige filterparametere eller verdier og ugyldig JSON gir `400` uten innholdet i svaret. |
