@@ -13,6 +13,7 @@ val hikariVersion = "6.2.1"
 val testContainerVersion = "2.0.5"
 val javalinVersion = "7.2.3"
 val micrometerVersion = "1.17.1"
+val jackson2Version = "2.22.4"
 val rapidsAndRiversVersion = "2026091610031789545782" // Må være lik versjonen i buildSrc/toi.rapids-and-rivers.gradle.kts
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.1"
@@ -20,6 +21,8 @@ val openTelemetryAnnotationsVersion = "2.26.1"
 dependencies {
     implementation(project(":technical-libs:logging"))
     implementation("tools.jackson.module:jackson-module-kotlin:3.2.3")
+    // Align Jackson 2 retained transitively through Flyway and Auth0.
+    implementation(platform("com.fasterxml.jackson:jackson-bom:$jackson2Version"))
     implementation("io.javalin:javalin:${javalinVersion}")
     implementation("io.javalin:javalin-micrometer:${javalinVersion}")
     implementation("io.prometheus:simpleclient_common:0.16.0")
