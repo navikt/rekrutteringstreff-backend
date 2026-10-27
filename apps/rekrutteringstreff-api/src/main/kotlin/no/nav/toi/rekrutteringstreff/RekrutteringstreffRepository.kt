@@ -181,6 +181,26 @@ class RekrutteringstreffRepository(
             }
         }
 
+    fun hentFullførteTreffHvorTilTidErPassertMedAngittTid(måneder: Long, dager: Long): List<Rekrutteringstreff> {
+        val tidsgrense = ZonedDateTime.now()
+            .minusMonths(måneder)
+            .minusDays(dager)
+
+        val tidsgrenseSomOffsetDateTime = tidsgrense.toOffsetDateTime();
+
+        return dataSource.connection.use { c ->
+            c.prepareStatement("$selectTreff WHERE $status = ? AND $tiltid < ?").use { s ->
+                s.setObject(1, RekrutteringstreffStatus.FULLFØRT.name)
+                s.setObject(2, tidsgrenseSomOffsetDateTime)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+    }
+
     fun hent(treff: TreffId): Rekrutteringstreff? =
         dataSource.connection.use { c -> hent(c, treff) }
 
@@ -442,6 +462,23 @@ class RekrutteringstreffRepository(
                 setString(++i, rekrutteringstreffStatus.name)
                 setObject(++i, treffId.somUuid)
             }.executeUpdate()
+    }
+
+    fun endreStatusBatch(connection: Connection, treffIder: List<TreffId>, rekrutteringstreffStatus: RekrutteringstreffStatus): Int {
+        if (treffIder.isEmpty()) return 0
+        val uuidArray = connection.createArrayOf("uuid", treffIder.map { it.somUuid }.toTypedArray())
+        return connection.prepareStatement(
+            """
+                UPDATE $tabellnavn
+                SET $status=?
+                WHERE $id=any(?)
+                """
+        ).use { s ->
+            var i = 0
+            s.setString(++i, rekrutteringstreffStatus.name)
+            s.setArray(++i, uuidArray)
+            s.executeUpdate()
+        }
     }
 
     private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(

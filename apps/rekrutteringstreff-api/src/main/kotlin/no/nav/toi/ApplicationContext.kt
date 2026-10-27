@@ -198,6 +198,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val rekrutteringstreffOpprydningScheduler by lazy {
         RekrutteringstreffOpprydningScheduler(
             kiLoggService = kiLoggService,
+            rekrutteringstreffService = rekrutteringstreffService,
             leaderElection = infra.leaderElection,
         )
     }

@@ -39,4 +39,4 @@ SELECT
               WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '[]'::jsonb) AS eier_og_kontor,
     rt.rekrutteringstreff_id
 FROM rekrutteringstreff rt
-WHERE rt.status != 'SLETTET';
+WHERE rt.status != 'SLETTET' OR rt.status != 'SKJULT';
