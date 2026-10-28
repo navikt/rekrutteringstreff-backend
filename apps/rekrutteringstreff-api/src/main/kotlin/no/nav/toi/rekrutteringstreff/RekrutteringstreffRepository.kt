@@ -181,7 +181,7 @@ class RekrutteringstreffRepository(
             }
         }
 
-    fun hentFullførteEllerAvlysteTreffHvorTilTidErPassertMedAngittTid(måneder: Long, dager: Long): List<Rekrutteringstreff> {
+    fun hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(måneder: Long, dager: Long): List<Rekrutteringstreff> {
         val tidsgrense = ZonedDateTime.now()
             .minusMonths(måneder)
             .minusDays(dager)

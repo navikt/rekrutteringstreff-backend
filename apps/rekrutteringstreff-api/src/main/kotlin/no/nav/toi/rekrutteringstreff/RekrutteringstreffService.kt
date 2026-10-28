@@ -285,7 +285,7 @@ class RekrutteringstreffService(
         return rekrutteringstreffRepository.hentPubliserteTreffHvorTilTidErPassert()
     }
 
-    fun hentPubliserteTreffHvorTilTidErPassertMedAngittTid(måneder: Long, dager: Long): List<Rekrutteringstreff> {
-        return rekrutteringstreffRepository.hentFullførteEllerAvlysteTreffHvorTilTidErPassertMedAngittTid(måneder, dager)
+    fun hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(måneder: Long, dager: Long): List<Rekrutteringstreff> {
+        return rekrutteringstreffRepository.hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(måneder, dager)
     }
 }

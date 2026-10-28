@@ -53,7 +53,7 @@ class RekrutteringstreffOpprydningScheduler(
     }
 
     private fun skjulTreffJobb() {
-        val treffSomSkalSkjules = rekrutteringstreffService.hentPubliserteTreffHvorTilTidErPassertMedAngittTid(ANTALL_MÅNEDER_ETTER_TREFF_OPPRETTET_FOR_SKJULING_FRA_FRONTEND.toLong(), 0)
+        val treffSomSkalSkjules = rekrutteringstreffService.hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(ANTALL_MÅNEDER_ETTER_TREFF_OPPRETTET_FOR_SKJULING_FRA_FRONTEND.toLong(), 0)
         if (treffSomSkalSkjules.isEmpty()) {
             log.info("Ingen treff å skjule")
             return
