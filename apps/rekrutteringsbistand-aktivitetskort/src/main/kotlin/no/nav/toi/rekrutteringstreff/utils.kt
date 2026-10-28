@@ -9,7 +9,7 @@ private val klokkeslettFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val datoMedMånedFormatter = DateTimeFormatter.ofPattern("dd.\u00A0MMMM\u00A0yyyy", Locale.forLanguageTag("no-NO"))
 
 
-fun JsonNode.asZonedDateTime() = ZonedDateTime.parse(asText())
+fun JsonNode.asZonedDateTime() = ZonedDateTime.parse(asString())
 
 fun formaterTidsperiode(startTid: ZonedDateTime, sluttTid: ZonedDateTime): String {
     val formatertStartKlokkeslett = klokkeslettFormatter.format(startTid)
