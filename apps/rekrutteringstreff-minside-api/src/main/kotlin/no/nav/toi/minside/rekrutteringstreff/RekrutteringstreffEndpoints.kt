@@ -58,13 +58,11 @@ class RekrutteringstreffEndpoints {
         when (val resultat = treffKlient.hent(id, ctx.authenticatedUser().jwt)) {
             HentTreffResultat.IkkeFunnet -> {
                 log.info("Fant ikke treff med id: $id")
-                ctx.status(404).json("{ message: \"Fant ikke treff med id: $id\" }")
-            }
+                ctx.status(404).json(mapOf("message" to "Fant ikke treff med id: $id"))            }
 
             HentTreffResultat.IkkeTilgjengelig -> {
                 log.info("Treff med id: $id er ikke lenger tilgjengelig")
-                ctx.status(410).json("{ message: \"Treff med id: $id er ikke lenger tilgjengelig\" }")
-            }
+                ctx.status(410).json(mapOf("message" to "Treff med id: $id er ikke lenger tilgjengelig"))            }
 
             is HentTreffResultat.Funnet -> {
                 val treff = resultat.rekrutteringstreff.tilDTOForBruker()
