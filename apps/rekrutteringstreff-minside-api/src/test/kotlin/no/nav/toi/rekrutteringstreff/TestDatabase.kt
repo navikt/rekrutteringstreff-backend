@@ -182,6 +182,9 @@ class TestDatabase {
             }
     }
 
+    fun endreStatus(treffId: TreffId, status: RekrutteringstreffStatus) =
+        rekrutteringstreffRepository.endreStatus(treffId, status)
+
 
     companion object {
         private var lokalPostgres: PostgreSQLContainer? = null

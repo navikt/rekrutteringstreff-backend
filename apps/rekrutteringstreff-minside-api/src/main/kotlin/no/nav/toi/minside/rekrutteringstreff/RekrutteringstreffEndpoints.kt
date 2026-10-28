@@ -55,20 +55,29 @@ class RekrutteringstreffEndpoints {
     )
     fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
         val id = ctx.pathParam(pathParamTreffId)
-        val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
-        if (treff == null) {
-            log.info("Fant ikke treff med id: $id")
-            ctx.status(404).json("{ message: \"Fant ikke treff med id: $id\" }")
-        } else {
-            val arbeidsgivere =
-                if (treff.kategori == RekrutteringstreffKategori.WORKOP) emptyList()
-                else treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)
-                    ?.map { it.tilDTOForBruker() } ?: emptyList()
-            val innlegg =
-                treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
-            log.info("Hentet rekrutteringstrefff med id: $id")
-            val treff = treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg)
-            ctx.status(200).json(treff)
+        when (val resultat = treffKlient.hent(id, ctx.authenticatedUser().jwt)) {
+            HentTreffResultat.IkkeFunnet -> {
+                log.info("Fant ikke treff med id: $id")
+                ctx.status(404).json("{ message: \"Fant ikke treff med id: $id\" }")
+            }
+
+            HentTreffResultat.IkkeTilgjengelig -> {
+                log.info("Treff med id: $id er ikke lenger tilgjengelig")
+                ctx.status(410).json("{ message: \"Treff med id: $id er ikke lenger tilgjengelig\" }")
+            }
+
+            is HentTreffResultat.Funnet -> {
+                val treff = resultat.rekrutteringstreff.tilDTOForBruker()
+                val arbeidsgivere =
+                    if (treff.kategori == RekrutteringstreffKategori.WORKOP) emptyList()
+                    else treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)
+                        ?.map { it.tilDTOForBruker() } ?: emptyList()
+                val innlegg =
+                    treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() }
+                        ?: emptyList()
+                log.info("Hentet rekrutteringstreff med id: $id")
+                ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg))
+            }
         }
     }
 }
