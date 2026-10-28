@@ -15,7 +15,7 @@ class RekrutteringstreffOpprydningScheduler(
 
     companion object {
         private const val ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING = 6
-        private const val ANTALL_MÅNEDER_ETTER_TREFF_OPPRETTET_FOR_SKJULING_FRA_FRONTEND = 6
+        private const val ANTALL_MÅNEDER_ETTER_TIL_TID_PASSERT_FOR_SKJULING_FRA_FRONTEND = 6
     }
 
     private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 1, 1, TimeUnit.DAYS)
@@ -53,7 +53,7 @@ class RekrutteringstreffOpprydningScheduler(
     }
 
     private fun skjulTreffJobb() {
-        val treffSomSkalSkjules = rekrutteringstreffService.hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(ANTALL_MÅNEDER_ETTER_TREFF_OPPRETTET_FOR_SKJULING_FRA_FRONTEND.toLong(), 0)
+        val treffSomSkalSkjules = rekrutteringstreffService.hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(ANTALL_MÅNEDER_ETTER_TIL_TID_PASSERT_FOR_SKJULING_FRA_FRONTEND.toLong(), 0)
         if (treffSomSkalSkjules.isEmpty()) {
             log.info("Ingen treff å skjule")
             return
@@ -63,6 +63,6 @@ class RekrutteringstreffOpprydningScheduler(
         log.info("Start opprydning/skjuling av treff")
 
         val skjulteTereff = rekrutteringstreffService.markerSkjultBatch(treffIder)
-        log.info("${skjulteTereff} treff eldre enn ${ANTALL_MÅNEDER_ETTER_TREFF_OPPRETTET_FOR_SKJULING_FRA_FRONTEND} måneder har fått status SKJULT")
+        log.info("${skjulteTereff} treff eldre enn ${ANTALL_MÅNEDER_ETTER_TIL_TID_PASSERT_FOR_SKJULING_FRA_FRONTEND} måneder har fått status SKJULT")
     }
 }
