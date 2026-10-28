@@ -2,7 +2,6 @@ package no.nav.toi.minside.svar
 
 import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
-import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
@@ -13,6 +12,7 @@ import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.minside.authenticatedUser
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
+import no.nav.toi.minside.rekrutteringstreff.ellerKast
 import no.nav.toi.minside.svar.SvarEndpoints.Companion.REKRUTTERINGSTREFF_SVAR_URL
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -48,26 +48,20 @@ class SvarEndpoints {
     fun hentRekrutteringstreffSvarHandler(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient): (Context) -> Unit = { ctx ->
         val rekrutteringstreffId = ctx.pathParam(PATH_PARAM_TREFFID)
 
-        // Sjekker om treffet finnes
-        val rekrutteringstreff = treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
-        if (rekrutteringstreff == null) {
-            log.info("Rekrutteringstreff med id: $rekrutteringstreffId finnes ikke, så kan ikke hente svar")
-            ctx.status(404)
-        } else {
-            log.info("Hentet rekrutteringstreff med id: $rekrutteringstreffId for å hente svar, treffet finnes")
-            // hent påmeldingsstatus for treffet
-            val jobbsøkerMedStatuser = borgerKlient.hentJobbsøkerMedStatuser(rekrutteringstreffId, ctx.authenticatedUser().jwt)
-            val statuser = jobbsøkerMedStatuser.statuser
+        treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt).ellerKast()
+        log.info("Hentet rekrutteringstreff med id: $rekrutteringstreffId for å hente svar, treffet finnes")
+        // hent påmeldingsstatus for treffet
+        val jobbsøkerMedStatuser = borgerKlient.hentJobbsøkerMedStatuser(rekrutteringstreffId, ctx.authenticatedUser().jwt)
+        val statuser = jobbsøkerMedStatuser.statuser
 
-            val svar = RekrutteringstreffSvarOutboundDto(
-                erInvitert = statuser.erInvitert,
-                erPåmeldt = statuser.erPåmeldt,
-                harSvart = statuser.harSvart,
-            )
+        val svar = RekrutteringstreffSvarOutboundDto(
+            erInvitert = statuser.erInvitert,
+            erPåmeldt = statuser.erPåmeldt,
+            harSvart = statuser.harSvart,
+        )
 
-            log.info("Jobbsøker har svart følgende på rekkrutteringstreffet med id: $rekrutteringstreffId, svar: ${svar.json()}")
-            ctx.status(200).json(svar.json())
-        }
+        log.info("Jobbsøker har svart følgende på rekkrutteringstreffet med id: $rekrutteringstreffId, svar: ${svar.json()}")
+        ctx.status(200).json(svar.json())
     }
 
     @OpenApi(
@@ -105,8 +99,7 @@ class SvarEndpoints {
         log.info("Mottatt svar for rekrutteringstreff med id: ${rekrutteringstreffId} erPåmeldt: ${inputDto.erPåmeldt}")
 
         // Sjekker om treffet finnes
-        treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
-           ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+        treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt).ellerKast()
 
 
         log.info("rekrutteringstreff funnet for id: ${rekrutteringstreffId}, skal nå lagre svar for treffet")

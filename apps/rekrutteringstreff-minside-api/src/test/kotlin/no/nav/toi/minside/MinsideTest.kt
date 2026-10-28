@@ -26,6 +26,8 @@ import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.minside.ubruktPortnrFra9000.ubruktPortnr
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
+import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.ki.client.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -214,6 +216,16 @@ class MinsideTest {
                 ))
             }.hentAlleRekrutteringstreff().first { tittel == it.tittel }
         }
+
+        private val skjultTreff = db.opprettRekrutteringstreffIDatabase(
+            navIdent = "navIdent",
+            tittel = "Skjult treff",
+        ).also { db.endreStatus(it, RekrutteringstreffStatus.SKJULT) }
+
+        private val slettetTreff = db.opprettRekrutteringstreffIDatabase(
+            navIdent = "navIdent",
+            tittel = "Slettet treff",
+        ).also { db.endreStatus(it, RekrutteringstreffStatus.SLETTET) }
     }
 
     @BeforeAll
@@ -385,6 +397,54 @@ class MinsideTest {
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
         assertThat(response.statusCode()).isEqualTo(401)
+    }
+
+    fun endepunkterForUtilgjengeligeTreff() =
+        listOf(
+            RekrutteringstreffStatus.SKJULT to skjultTreff,
+            RekrutteringstreffStatus.SLETTET to slettetTreff,
+        ).flatMap { (status, treffId) ->
+            listOf("", "/arbeidsgiver", "/svar").map { suffix ->
+                Arguments.of(status, "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somString}$suffix")
+            }
+        }
+
+    @ParameterizedTest(name = "{0}: {1}")
+    @MethodSource("endepunkterForUtilgjengeligeTreff")
+    fun `410 når treffet er skjult eller slettet`(status: RekrutteringstreffStatus, url: String) {
+        val token = authServer.lagToken(authPort, pid = jobbsøkerFnr)
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .GET()
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertThat(response.statusCode()).isEqualTo(410)
+    }
+
+    fun utilgjengeligeTreff() =
+        listOf(
+            Arguments.of(RekrutteringstreffStatus.SKJULT, skjultTreff),
+            Arguments.of(RekrutteringstreffStatus.SLETTET, slettetTreff),
+        )
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("utilgjengeligeTreff")
+    fun `410 ved svar på skjult eller slettet treff`(status: RekrutteringstreffStatus, treffId: TreffId) {
+        val token = authServer.lagToken(authPort, pid = jobbsøkerFnr)
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somString}/svar"))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .PUT(HttpRequest.BodyPublishers.ofString("""{ "erPåmeldt": true }"""))
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertThat(response.statusCode()).isEqualTo(410)
     }
 }
 

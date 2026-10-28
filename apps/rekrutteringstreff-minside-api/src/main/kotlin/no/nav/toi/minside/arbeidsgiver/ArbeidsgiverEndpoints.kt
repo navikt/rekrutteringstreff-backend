@@ -11,6 +11,7 @@ import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.minside.authenticatedUser
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
+import no.nav.toi.minside.rekrutteringstreff.ellerKast
 import no.nav.toi.minside.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.UUID
 
@@ -48,14 +49,14 @@ private const val arbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTr
     methods = [HttpMethod.GET]
 )
 private fun hentArbeidsgivereHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
-    val id = ctx.pathParam(pathParamTreffId)
+    val treffId = ctx.pathParam(pathParamTreffId)
     val jwt = ctx.authenticatedUser().jwt
-    val treff = treffKlient.hent(id, jwt) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    val treff = treffKlient.hent(treffId, ctx.authenticatedUser().jwt).ellerKast()
     if (treff.erWorkOp()) {
         // På et WorkOp møter jobbsøkeren arbeidsgiverne uten å vite hvem de er på forhånd.
         ctx.status(200).json(emptyList<ArbeidsgiverOutboundDto>())
     } else {
-        treffKlient.hentArbeidsgivere(id, jwt)?.let { ctx.status(200).json(it.map { it.tilDTOForBruker() }) }
+        treffKlient.hentArbeidsgivere(treffId, jwt)?.let { ctx.status(200).json(it.map { it.tilDTOForBruker() }) }
             ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     }
 }

@@ -6,4 +6,5 @@ enum class RekrutteringstreffStatus {
     FULLFØRT, // Treffet er gjennomført
     AVLYST,
     SLETTET,
+    SKJULT // Treffet er skjult fra frontend, men ikke slettet fra backend
 }

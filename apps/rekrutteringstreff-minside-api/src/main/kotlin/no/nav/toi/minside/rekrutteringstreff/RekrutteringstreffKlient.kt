@@ -1,5 +1,7 @@
 package no.nav.toi.minside.rekrutteringstreff
 
+import io.javalin.http.GoneResponse
+import io.javalin.http.NotFoundResponse
 import tools.jackson.core.type.TypeReference
 import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.minside.TokenXKlient
@@ -25,7 +27,7 @@ class RekrutteringstreffKlient(
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    fun hent(id: String, innkommendeToken: String): Rekrutteringstreff? {
+    fun hent(id: String, innkommendeToken: String): HentTreffResultat {
         log.info("url : $url/api/rekrutteringstreff/$id")
         val request = HttpRequest.newBuilder()
             .uri(URI("$url/api/rekrutteringstreff/$id"))
@@ -40,8 +42,9 @@ class RekrutteringstreffKlient(
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
         return when (response.statusCode()) {
-            200 -> JacksonConfig.mapper.readValue(response.body(), Rekrutteringstreff::class.java)
-            404 -> null
+            200 -> HentTreffResultat.Funnet(JacksonConfig.mapper.readValue(response.body(), Rekrutteringstreff::class.java))
+            404 -> HentTreffResultat.IkkeFunnet
+            410 -> HentTreffResultat.IkkeTilgjengelig
             else -> throw RuntimeException("Feil ved henting av rekrutteringstreff med id $id. Status: ${response.statusCode()}, body: ${response.body()}")
         }
     }
@@ -86,6 +89,18 @@ class RekrutteringstreffKlient(
         }
     }
 
+}
+
+sealed interface HentTreffResultat {
+    data class Funnet(val rekrutteringstreff: Rekrutteringstreff) : HentTreffResultat
+    data object IkkeFunnet : HentTreffResultat
+    data object IkkeTilgjengelig : HentTreffResultat
+}
+
+fun HentTreffResultat.ellerKast(): Rekrutteringstreff = when (this) {
+    is HentTreffResultat.Funnet -> rekrutteringstreff
+    HentTreffResultat.IkkeFunnet -> throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    HentTreffResultat.IkkeTilgjengelig -> throw GoneResponse("Rekrutteringstreff er ikke lenger tilgjengelig")
 }
 
 data class Rekrutteringstreff(

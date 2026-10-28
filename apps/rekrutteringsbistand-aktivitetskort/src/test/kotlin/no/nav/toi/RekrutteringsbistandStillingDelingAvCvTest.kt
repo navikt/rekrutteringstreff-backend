@@ -4,7 +4,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
-import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.DeleCvMedArbeidsgiverType
 import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.rekrutteringsbistand.IdentType

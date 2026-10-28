@@ -1,5 +1,3 @@
-import org.gradle.api.tasks.testing.Test
-
 plugins {
     id("toi.rapids-and-rivers")
     kotlin("kapt")
