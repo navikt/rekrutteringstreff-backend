@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
-import com.fasterxml.jackson.databind.JsonNode
+import tools.jackson.databind.JsonNode
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -9,7 +9,7 @@ private val klokkeslettFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val datoMedMånedFormatter = DateTimeFormatter.ofPattern("dd.\u00A0MMMM\u00A0yyyy", Locale.forLanguageTag("no-NO"))
 
 
-fun JsonNode.asZonedDateTime() = ZonedDateTime.parse(asText())
+fun JsonNode.asZonedDateTime() = ZonedDateTime.parse(asString())
 
 fun formaterTidsperiode(startTid: ZonedDateTime, sluttTid: ZonedDateTime): String {
     val formatertStartKlokkeslett = klokkeslettFormatter.format(startTid)

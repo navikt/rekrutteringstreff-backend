@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringsbistand
 
-import com.fasterxml.jackson.databind.node.ArrayNode
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
 import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
@@ -9,10 +8,10 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
-import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
+import tools.jackson.databind.node.ArrayNode
 
 class KandidatlisteLukketLytter(
     rapidsConnection: RapidsConnection,
@@ -34,7 +33,7 @@ class KandidatlisteLukketLytter(
                     "utførtAvNavIdent",
                     "tidspunkt",
                 )
-                it.require("stillingsId") { node -> node.asText().toUUID() }
+                it.require("stillingsId") { node -> node.asString().toUUID() }
                 it.require("fnrFikkJobben") { node -> if(!node.isArray) throw IllegalStateException("fnrFikkJobben må være en array") }
                 it.require("fnrFikkIkkeJobben") { node -> if(!node.isArray) throw IllegalStateException("fnrFikkIkkeJobben må være en array") }
             }
@@ -48,9 +47,9 @@ class KandidatlisteLukketLytter(
         meterRegistry: MeterRegistry,
     ) {
         val noenFikkJobben = !(packet["fnrFikkJobben"] as ArrayNode).isEmpty
-        val fnrFikkIkkeJobben = packet["fnrFikkIkkeJobben"].map { it.asText() }
-        val stillingsId = packet["stillingsId"].asText().toUUID()
-        val navIdent = packet["utførtAvNavIdent"].asText()
+        val fnrFikkIkkeJobben = packet["fnrFikkIkkeJobben"].values().map { it.asString() }
+        val stillingsId = packet["stillingsId"].asString().toUUID()
+        val navIdent = packet["utførtAvNavIdent"].asString()
 
         // Mirror kandidat-api behavior: only candidates with JA-svar are updated when list closes.
         repository.veilederLukkerKandidatliste(
@@ -77,4 +76,3 @@ class KandidatlisteLukketLytter(
         throw Exception(problems.toString())
     }
 }
-

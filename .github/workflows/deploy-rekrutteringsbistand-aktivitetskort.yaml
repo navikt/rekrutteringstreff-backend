@@ -12,7 +12,7 @@ on:
       - buildSrc/**
       - gradle/wrapper/gradle-wrapper.properties
       - technical-libs/logging/**
-      - technical-libs/testrapid-jackson2-deprekert/**
+      - technical-libs/testrapid/**
   workflow_dispatch:
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/refactoring-gjennomføring
+      deploy_dev_branch: refs/heads/jackson3-iterasjon14
     permissions:
       contents: read
       id-token: write

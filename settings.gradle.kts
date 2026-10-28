@@ -4,5 +4,5 @@ rootProject.name = "rekrutteringstreff-backend"
 enableFeaturePreview("STABLE_CONFIGURATION_CACHE")
 
 include(
-    "apps:rekrutteringstreff-api", "apps:rekrutteringstreff-minside-api", "apps:rekrutteringsbistand-aktivitetskort", "technical-libs:testrapid", "technical-libs:testrapid-jackson2-deprekert", "technical-libs:logging"
+    "apps:rekrutteringstreff-api", "apps:rekrutteringstreff-minside-api", "apps:rekrutteringsbistand-aktivitetskort", "technical-libs:testrapid", "technical-libs:logging"
 )

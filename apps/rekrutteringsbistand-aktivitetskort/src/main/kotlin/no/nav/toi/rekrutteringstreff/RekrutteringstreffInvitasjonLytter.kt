@@ -46,22 +46,22 @@ class RekrutteringstreffInvitasjonLytter(
         meterRegistry: MeterRegistry
     ) {
         log.info("Mottok $eventName")
-        val fnr = packet["fnr"].asText()
+        val fnr = packet["fnr"].asString()
 
         val startDato = packet["fraTid"].asZonedDateTime()
         val sluttDato = packet["tilTid"].asZonedDateTime()
 
         val aktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
             fnr = fnr,
-            rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
-            tittel = packet["tittel"].asText(),
+            rekrutteringstreffId = packet["rekrutteringstreffId"].asString().toUUID(),
+            tittel = packet["tittel"].asString(),
             startDato = startDato.toLocalDate(),
             sluttDato = sluttDato.toLocalDate(),
             tid = formaterTidsperiode(startDato, sluttDato),
-            endretAv = packet["opprettetAv"].asText(),
-            gateAdresse = packet["gateadresse"].asText(),
-            postnummer = packet["postnummer"].asText(),
-            poststed = packet["poststed"].asText(),
+            endretAv = packet["opprettetAv"].asString(),
+            gateAdresse = packet["gateadresse"].asString(),
+            postnummer = packet["postnummer"].asString(),
+            poststed = packet["poststed"].asString(),
             aktivitetskortType = aktivitetskortType,
         )
         if (aktivitetskortId != null) {

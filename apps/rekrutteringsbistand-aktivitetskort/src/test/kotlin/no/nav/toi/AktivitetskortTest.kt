@@ -3,38 +3,29 @@ package no.nav.toi
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import no.nav.toi.aktivitetskort.AktivitetskortEtikett
-import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
-import no.nav.toi.aktivitetskort.AktivitetskortJobb
-import no.nav.toi.aktivitetskort.AktivitetskortType
-import no.nav.toi.aktivitetskort.DeleCvMedArbeidsgiverType
-import no.nav.toi.aktivitetskort.ErrorType
-import no.nav.toi.aktivitetskort.RekrutteringstreffType
-import no.nav.toi.aktivitetskort.Sentiment
-import no.nav.toi.aktivitetskort.WorkOpType
+import no.nav.toi.aktivitetskort.*
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
+import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortTest {
@@ -54,7 +45,7 @@ class AktivitetskortTest {
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
     private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "http://url/stilling", "topic")
-    private val objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
+    private val objectMapper = jacksonMapperBuilder().build()
 
     @BeforeEach
     fun setup() {
@@ -98,18 +89,18 @@ class AktivitetskortTest {
         val record = producer.history().first()
         assertThat(record.key()).isEqualTo(expectedAktivitetskortId.toString())
         record.value().let (objectMapper::readTree).apply {
-            assertThat(this["messageId"].asText()).isNotBlank()
-            assertThat(this["source"].asText()).isEqualTo("REKRUTTERINGSBISTAND")
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo("REKRUTTERINGSTREFF")
-            assertThat(this["actionType"].asText()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
-            assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
-            assertThat(this["aktivitetskort"]["personIdent"].asText()).isEqualTo(expectedFnr)
-            assertThat(this["aktivitetskort"]["tittel"].asText()).isEqualTo(expectedTittel)
-            assertThat(this["aktivitetskort"]["aktivitetStatus"].asText()).isEqualTo("FORSLAG")
-            assertThat(this["aktivitetskort"]["startDato"].asText()).isEqualTo(expectedStartDato.toString())
-            assertThat(this["aktivitetskort"]["sluttDato"].asText()).isEqualTo(expectedSluttDato.toString())
-            assertThat(this["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(expectedBeskrivelse)
-            assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedEndretAv)
+            assertThat(this["messageId"].asString()).isNotBlank()
+            assertThat(this["source"].asString()).isEqualTo("REKRUTTERINGSBISTAND")
+            assertThat(this["aktivitetskortType"].asString()).isEqualTo("REKRUTTERINGSTREFF")
+            assertThat(this["actionType"].asString()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
+            assertThat(this["aktivitetskort"]["id"].asString()).isEqualTo(expectedAktivitetskortId.toString())
+            assertThat(this["aktivitetskort"]["personIdent"].asString()).isEqualTo(expectedFnr)
+            assertThat(this["aktivitetskort"]["tittel"].asString()).isEqualTo(expectedTittel)
+            assertThat(this["aktivitetskort"]["aktivitetStatus"].asString()).isEqualTo("FORSLAG")
+            assertThat(this["aktivitetskort"]["startDato"].asString()).isEqualTo(expectedStartDato.toString())
+            assertThat(this["aktivitetskort"]["sluttDato"].asString()).isEqualTo(expectedSluttDato.toString())
+            assertThat(this["aktivitetskort"]["beskrivelse"].asString()).isEqualTo(expectedBeskrivelse)
+            assertThat(this["aktivitetskort"]["endretAv"]["ident"].asString()).isEqualTo(expectedEndretAv)
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
             val expectedDetaljer = objectMapper.readTree("""[{"label":"Sted","verdi":"$expectedGateAdresse, $expectedPostnummer $expectedPoststed"},{"label":"Tid","verdi":"$expectedTid"}]""")
@@ -118,10 +109,10 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
             assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["handlinger"]).hasSize(1)
-            assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asText()).isEqualTo("Sjekk ut treffet")
-            assertThat(this["aktivitetskort"]["handlinger"][0]["subtekst"].asText()).isEqualTo("Sjekk ut treffet og svar")
-            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asText()).isEqualTo("http://url/rekrutteringstreff/$expectedRekrutteringstreffId")
-            assertThat(this["aktivitetskort"]["handlinger"][0]["lenkeType"].asText()).isEqualTo("FELLES")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asString()).isEqualTo("Sjekk ut treffet")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["subtekst"].asString()).isEqualTo("Sjekk ut treffet og svar")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asString()).isEqualTo("http://url/rekrutteringstreff/$expectedRekrutteringstreffId")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["lenkeType"].asString()).isEqualTo("FELLES")
             assertThat(this["aktivitetskort"]["oppgave"].isNull).isTrue()
         }
     }
@@ -147,36 +138,36 @@ class AktivitetskortTest {
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
         record.value().let(objectMapper::readTree).apply {
-            assertThat(this["messageId"].asText()).isNotBlank()
-            assertThat(this["source"].asText()).isEqualTo("REKRUTTERINGSBISTAND")
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo("DELE_CV_MED_ARBEIDSGIVER")
-            assertThat(this["actionType"].asText()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
-            assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
-            assertThat(this["aktivitetskort"]["personIdent"].asText()).isEqualTo(expectedFnr)
-            assertThat(this["aktivitetskort"]["tittel"].asText()).isEqualTo(expectedTittel)
-            assertThat(this["aktivitetskort"]["aktivitetStatus"].asText()).isEqualTo("FORSLAG")
+            assertThat(this["messageId"].asString()).isNotBlank()
+            assertThat(this["source"].asString()).isEqualTo("REKRUTTERINGSBISTAND")
+            assertThat(this["aktivitetskortType"].asString()).isEqualTo("DELE_CV_MED_ARBEIDSGIVER")
+            assertThat(this["actionType"].asString()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
+            assertThat(this["aktivitetskort"]["id"].asString()).isEqualTo(expectedAktivitetskortId.toString())
+            assertThat(this["aktivitetskort"]["personIdent"].asString()).isEqualTo(expectedFnr)
+            assertThat(this["aktivitetskort"]["tittel"].asString()).isEqualTo(expectedTittel)
+            assertThat(this["aktivitetskort"]["aktivitetStatus"].asString()).isEqualTo("FORSLAG")
             assertThat(this["aktivitetskort"]["startDato"].isNull).isTrue()
             assertThat(this["aktivitetskort"]["sluttDato"].isNull).isTrue()
-            assertThat(this["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(
+            assertThat(this["aktivitetskort"]["beskrivelse"].asString()).isEqualTo(
                 "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
             )
-            assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedOpprettetAv)
-            assertThat(this["aktivitetskort"]["endretAv"]["identType"].asText()).isEqualTo("NAVIDENT")
-            assertThat(this["aktivitetskort"]["endretTidspunkt"].isTextual).isTrue()
-            assertThat(ZonedDateTime.parse(this["aktivitetskort"]["endretTidspunkt"].asText())).isNotNull()
+            assertThat(this["aktivitetskort"]["endretAv"]["ident"].asString()).isEqualTo(expectedOpprettetAv)
+            assertThat(this["aktivitetskort"]["endretAv"]["identType"].asString()).isEqualTo("NAVIDENT")
+            assertThat(this["aktivitetskort"]["endretTidspunkt"].isString).isTrue()
+            assertThat(ZonedDateTime.parse(this["aktivitetskort"]["endretTidspunkt"].asString())).isNotNull()
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["detaljer"]).isEmpty()
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
-            assertThat(this["aktivitetskort"]["etiketter"][0]["tekst"].asText()).isEqualTo("Venter svar")
-            assertThat(this["aktivitetskort"]["etiketter"][0]["sentiment"].asText()).isEqualTo("NEUTRAL")
+            assertThat(this["aktivitetskort"]["etiketter"][0]["tekst"].asString()).isEqualTo("Venter svar")
+            assertThat(this["aktivitetskort"]["etiketter"][0]["sentiment"].asString()).isEqualTo("NEUTRAL")
             assertThat(this["aktivitetskort"]["etiketter"][0].has("kode")).isFalse()
             assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["handlinger"]).hasSize(1)
-            assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asText()).isEqualTo("Sjekk ut stillingen")
-            assertThat(this["aktivitetskort"]["handlinger"][0]["subtekst"].asText()).isEqualTo("Sjekk ut stillingen og svar")
-            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asText()).isEqualTo("http://url/stilling/$expectedStillingId") // TODO: Feil url
-            assertThat(this["aktivitetskort"]["handlinger"][0]["lenkeType"].asText()).isEqualTo("FELLES")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asString()).isEqualTo("Sjekk ut stillingen")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["subtekst"].asString()).isEqualTo("Sjekk ut stillingen og svar")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asString()).isEqualTo("http://url/stilling/$expectedStillingId") // TODO: Feil url
+            assertThat(this["aktivitetskort"]["handlinger"][0]["lenkeType"].asString()).isEqualTo("FELLES")
             assertThat(this["aktivitetskort"]["oppgave"].isNull).isTrue()
         }
     }
@@ -201,16 +192,16 @@ class AktivitetskortTest {
         AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
 
         val tree = producer.history().first().value().let(objectMapper::readTree)
-        assertThat(tree["aktivitetskortType"].asText()).isEqualTo("WORKOP")
-        assertThat(tree["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(WorkOpType.beskrivelse)
+        assertThat(tree["aktivitetskortType"].asString()).isEqualTo("WORKOP")
+        assertThat(tree["aktivitetskort"]["beskrivelse"].asString()).isEqualTo(WorkOpType.beskrivelse)
 
         val etiketter = tree["aktivitetskort"]["etiketter"]
         assertThat(etiketter).isEmpty()
 
         val handlinger = tree["aktivitetskort"]["handlinger"]
         assertThat(handlinger).hasSize(1)
-        assertThat(handlinger[0]["tekst"].asText()).isEqualTo("Sjekk ut WorkOp-en")
-        assertThat(handlinger[0]["subtekst"].asText()).isEqualTo("Sjekk ut WorkOp-en og svar")
+        assertThat(handlinger[0]["tekst"].asString()).isEqualTo("Sjekk ut WorkOp-en")
+        assertThat(handlinger[0]["subtekst"].asString()).isEqualTo("Sjekk ut WorkOp-en og svar")
     }
 
     @Test
@@ -237,8 +228,8 @@ class AktivitetskortTest {
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
         record.value().let(objectMapper::readTree).apply {
-            assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
-            assertThat(this["aktivitetskort"]["tittel"].asText()).isEqualTo(expectedTittel)
+            assertThat(this["aktivitetskort"]["id"].asString()).isEqualTo(expectedAktivitetskortId.toString())
+            assertThat(this["aktivitetskort"]["tittel"].asString()).isEqualTo(expectedTittel)
         }
     }
 
@@ -423,17 +414,17 @@ class AktivitetskortTest {
         AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).run()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
-            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-rekrutteringstreff")
-            assertThat(this["fnr"].asText()).isEqualTo(invitasjon.fnr)
-            assertThat(this["aktivitetskortId"].asText()).isEqualTo(invitasjon.aktivitetskortId.toString())
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(RekrutteringstreffType.akaasType)
+            assertThat(this["@event_name"].asString()).isEqualTo("aktivitetskort-feil-rekrutteringstreff")
+            assertThat(this["fnr"].asString()).isEqualTo(invitasjon.fnr)
+            assertThat(this["aktivitetskortId"].asString()).isEqualTo(invitasjon.aktivitetskortId.toString())
+            assertThat(this["aktivitetskortType"].asString()).isEqualTo(RekrutteringstreffType.akaasType)
             assertThat(this.has("stillingId")).isFalse()
-            assertThat(this["rekrutteringstreffId"].asText()).isEqualTo(invitasjon.rekrutteringstreffId.toString())
-            assertThat(this["endretAv"].asText()).isEqualTo(invitasjon.endretAv)
-            assertThat(this["messageId"].asText()).isEqualTo(invitasjon.messageId.toString())
-            assertThat(this["errorMessage"].asText()).isEqualTo(errorMessage)
-            assertThat(this["errorType"].asText()).isEqualTo(errorType.name)
-            assertThat(this["timestamp"].asText().let(ZonedDateTime::parse)).isCloseTo(ZonedDateTime.now(), within(1, ChronoUnit.SECONDS))
+            assertThat(this["rekrutteringstreffId"].asString()).isEqualTo(invitasjon.rekrutteringstreffId.toString())
+            assertThat(this["endretAv"].asString()).isEqualTo(invitasjon.endretAv)
+            assertThat(this["messageId"].asString()).isEqualTo(invitasjon.messageId.toString())
+            assertThat(this["errorMessage"].asString()).isEqualTo(errorMessage)
+            assertThat(this["errorType"].asString()).isEqualTo(errorType.name)
+            assertThat(this["timestamp"].asString().let(ZonedDateTime::parse)).isCloseTo(ZonedDateTime.now(), within(1, ChronoUnit.SECONDS))
         }
     }
 
@@ -458,16 +449,16 @@ class AktivitetskortTest {
 
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
-            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-deltstilling")
-            assertThat(this["fnr"].asText()).isEqualTo(deltStilling.fnr)
-            assertThat(this["aktivitetskortId"].asText()).isEqualTo(deltStilling.aktivitetskortId.toString())
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(DeleCvMedArbeidsgiverType.dbType)
-            assertThat(this["stillingId"].asText()).isEqualTo(stillingId.toString())
+            assertThat(this["@event_name"].asString()).isEqualTo("aktivitetskort-feil-deltstilling")
+            assertThat(this["fnr"].asString()).isEqualTo(deltStilling.fnr)
+            assertThat(this["aktivitetskortId"].asString()).isEqualTo(deltStilling.aktivitetskortId.toString())
+            assertThat(this["aktivitetskortType"].asString()).isEqualTo(DeleCvMedArbeidsgiverType.dbType)
+            assertThat(this["stillingId"].asString()).isEqualTo(stillingId.toString())
             assertThat(this.has("rekrutteringstreffId")).isFalse()
-            assertThat(this["endretAv"].asText()).isEqualTo(deltStilling.endretAv)
-            assertThat(this["messageId"].asText()).isEqualTo(deltStilling.messageId.toString())
-            assertThat(this["errorMessage"].asText()).isEqualTo(errorMessage)
-            assertThat(this["errorType"].asText()).isEqualTo(errorType.name)
+            assertThat(this["endretAv"].asString()).isEqualTo(deltStilling.endretAv)
+            assertThat(this["messageId"].asString()).isEqualTo(deltStilling.messageId.toString())
+            assertThat(this["errorMessage"].asString()).isEqualTo(errorMessage)
+            assertThat(this["errorType"].asString()).isEqualTo(errorType.name)
         }
     }
 

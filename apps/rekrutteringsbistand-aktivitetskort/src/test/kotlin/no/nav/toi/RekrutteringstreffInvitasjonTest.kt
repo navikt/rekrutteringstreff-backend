@@ -5,7 +5,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
-import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.RekrutteringstreffType
 import no.nav.toi.aktivitetskort.WorkOpType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
@@ -116,7 +115,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
             assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
-            assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
+            assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asString().toUUID())
             assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].aktivitetsType).isEqualTo(RekrutteringstreffType.dbType)
@@ -246,18 +245,18 @@ class RekrutteringstreffInvitasjonTest {
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
         inspektør.message(0).also { message ->
-            assertThat(message["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
-            assertThat(message["fnr"].asText()).isEqualTo(fnr)
-            assertThat(message["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffId.toString())
-            assertThat(message["tittel"].asText()).isEqualTo(tittel)
-            assertThat(message["fraTid"].asText()).isEqualTo(fraTid.toString())
-            assertThat(message["tilTid"].asText()).isEqualTo(tilTid.toString())
-            assertThat(message["opprettetAv"].asText()).isEqualTo(opprettetAv)
-            assertThat(message["opprettetTidspunkt"].asText()).isEqualTo(opprettetTidspunkt.toString())
+            assertThat(message["@event_name"].asString()).isEqualTo("rekrutteringstreffinvitasjon")
+            assertThat(message["fnr"].asString()).isEqualTo(fnr)
+            assertThat(message["rekrutteringstreffId"].asString()).isEqualTo(rekrutteringstreffId.toString())
+            assertThat(message["tittel"].asString()).isEqualTo(tittel)
+            assertThat(message["fraTid"].asString()).isEqualTo(fraTid.toString())
+            assertThat(message["tilTid"].asString()).isEqualTo(tilTid.toString())
+            assertThat(message["opprettetAv"].asString()).isEqualTo(opprettetAv)
+            assertThat(message["opprettetTidspunkt"].asString()).isEqualTo(opprettetTidspunkt.toString())
             assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
-            assertThat(message["gateadresse"].asText()).isEqualTo(gateadresse)
-            assertThat(message["postnummer"].asText()).isEqualTo(postnummer)
-            assertThat(message["poststed"].asText()).isEqualTo(poststed)
+            assertThat(message["gateadresse"].asString()).isEqualTo(gateadresse)
+            assertThat(message["postnummer"].asString()).isEqualTo(postnummer)
+            assertThat(message["poststed"].asString()).isEqualTo(poststed)
         }
     }
 
@@ -301,7 +300,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
             assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace(expectedDetaljer)
-            assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
+            assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asString().toUUID())
             assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
@@ -310,10 +309,10 @@ class RekrutteringstreffInvitasjonTest {
         }
 
         inspektør.message(0).also { message ->
-            assertThat(message["@event_name"].asText()).isEqualTo("workopinvitasjon")
-            assertThat(message["fnr"].asText()).isEqualTo(fnr)
-            assertThat(message["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffId.toString())
-            assertThat(message["tittel"].asText()).isEqualTo(tittel)
+            assertThat(message["@event_name"].asString()).isEqualTo("workopinvitasjon")
+            assertThat(message["fnr"].asString()).isEqualTo(fnr)
+            assertThat(message["rekrutteringstreffId"].asString()).isEqualTo(rekrutteringstreffId.toString())
+            assertThat(message["tittel"].asString()).isEqualTo(tittel)
             assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
         }
     }

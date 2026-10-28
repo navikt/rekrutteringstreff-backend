@@ -82,7 +82,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                         setString(8, endretAv)
                         setTimestamp(9, Timestamp.valueOf(LocalDateTime.now()))
                         setString(
-                            10, objectMapper.writeValueAsString(
+                            10, jackson3ObjectMapper.writeValueAsString(
                                 listOf(
                                     AktivitetskortDetalj("Tid", tid),
                                     AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
@@ -91,7 +91,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                         )
                         setString(
                             11,
-                            objectMapper.writeValueAsString(
+                            jackson3ObjectMapper.writeValueAsString(
                                 listOf(
                                     AktivitetskortHandling(
                                         aktivitetskortType.handlingTittel,
@@ -104,7 +104,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                         )
                         setString(
                             12,
-                            objectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
+                            jackson3ObjectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
                         )
                         setNull(13, VARCHAR)
                         setString(14, aktivitetskortType.dbType)
@@ -474,7 +474,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 setObject(indexOffset++, UUID.randomUUID())
                 setString(indexOffset++, aktivitetsStatus.name)
                 if(etiketter != null) {
-                    setString(indexOffset++, etiketter.let { objectMapper.writeValueAsString(it) } ?: "")
+                    setString(indexOffset++, etiketter.let { jackson3ObjectMapper.writeValueAsString(it) } ?: "")
                 }
                 setString(indexOffset++, endretAv)
                 setString(indexOffset++, endretAvType.name)
@@ -549,7 +549,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 setObject(3, startDato)
                 setObject(4, sluttDato)
                 setString(
-                    5, objectMapper.writeValueAsString(
+                    5, jackson3ObjectMapper.writeValueAsString(
                         listOf(
                             AktivitetskortDetalj("Tid", tid),
                             AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
@@ -627,7 +627,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     setString(8, "[]")
                     setString(
                         9,
-                        objectMapper.writeValueAsString(
+                        jackson3ObjectMapper.writeValueAsString(
                             listOf(
                                 AktivitetskortHandling(
                                     DeleCvMedArbeidsgiverType.handlingTittel,
@@ -638,7 +638,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                             )
                         )
                     )
-                    setString(10, objectMapper.writeValueAsString(
+                    setString(10, jackson3ObjectMapper.writeValueAsString(
                         listOf(
                             AktivitetskortEtikett(
                                 "Venter svar",
