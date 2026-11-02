@@ -20,11 +20,13 @@ val junitJupiterVersion = "5.14.4"
 val junitPlatformVersion = "1.14.4"
 val assertjVersion = "3.27.7"
 
-// Sikkerhetsfikser for transitive avhengigheter (logstash-logback-encoder og rapids-and-rivers).
+// Sikkerhetsfikser for transitive avhengigheter (logstash-logback-encoder, rapids-and-rivers/kafka-clients og jwks-rsa).
 // Fjern når de som drar dem inn bruker rettede versjoner.
 val jackson3Version = "3.2.3"
 val micrometerVersion = "1.16.7"
 val lz4JavaVersion = "1.11.4"
+val snappyJavaVersion = "1.1.10.9"
+val guavaVersion = "33.7.2-jre"
 
 dependencies {
     constraints {
@@ -54,6 +56,12 @@ dependencies {
         }
         implementation("at.yawk.lz4:lz4-java") {
             version { require(lz4JavaVersion) }
+        }
+        implementation("org.xerial.snappy:snappy-java") {
+            version { require(snappyJavaVersion) }
+        }
+        implementation("com.google.guava:guava") {
+            version { require(guavaVersion) }
         }
         testImplementation("org.junit.jupiter:junit-jupiter-api") {
             version { require(junitJupiterVersion) }
