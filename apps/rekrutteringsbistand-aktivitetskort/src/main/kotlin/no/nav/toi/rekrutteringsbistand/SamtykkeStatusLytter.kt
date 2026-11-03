@@ -176,7 +176,7 @@ private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
 }
 
 private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {
-    override val eventName = "samtykke-forespørsel-deling-av-cv-svarfrist-utløpt"
+    override val eventName = "samtykke-til-deling-av-cv-utlopt"
 
     override fun registrerValidering(river: River) {
         river.validate {

@@ -682,7 +682,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         stillingId: UUID,
     ) = """
         {
-            "@event_name": "samtykke-forespørsel-deling-av-cv-svarfrist-utløpt",
+            "@event_name": "samtykke-til-deling-av-cv-utlopt",
             "stillingsId": "$stillingId",
             "fnr": "$fnr",
             "svarfrist": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
