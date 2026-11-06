@@ -161,6 +161,7 @@ class TestDatabase {
         tittel: String = "Original Tittel",
         kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
         opprettetAvNavkontorEnhetId: String = "Original Kontor",
+        opprettetAvTidspunkt: ZonedDateTime = nowOslo().minusDays(10),
     ): TreffId {
         return dataSource.connection.use { connection ->
             val (id, _) = rekrutteringstreffRepository.opprett(
@@ -170,7 +171,7 @@ class TestDatabase {
                     kategori = kategori,
                     opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
                     opprettetAvPersonNavident = navIdent,
-                    opprettetAvTidspunkt = nowOslo().minusDays(10),
+                    opprettetAvTidspunkt = opprettetAvTidspunkt,
                 )
             )
             rekrutteringstreffRepository.leggTilHendelseForTreff(
@@ -196,20 +197,22 @@ class TestDatabase {
         fylkesnummer: String = "03",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
         kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
-        opprettetAvNavkontorEnhetId: String = "0315"
+        opprettetAvNavkontorEnhetId: String = "0315",
+        opprettetAvTidspunkt: ZonedDateTime = nowOslo().minusDays(10),
     ): TreffId {
         val treffId = opprettRekrutteringstreffIDatabase(
             navIdent = navIdent,
             tittel = tittel,
             kategori = kategori,
             opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
+            opprettetAvTidspunkt = opprettetAvTidspunkt,
         )
 
         dataSource.connection.use { connection ->
             rekrutteringstreffRepository.oppdater(
                 connection,
                 treffId,
-                no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
+                OppdaterRekrutteringstreffDto(
                     tittel = tittel,
                     beskrivelse = beskrivelse,
                     fraTid = fraTid,

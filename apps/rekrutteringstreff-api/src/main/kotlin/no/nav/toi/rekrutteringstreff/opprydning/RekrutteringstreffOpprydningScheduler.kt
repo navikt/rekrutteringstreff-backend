@@ -3,16 +3,19 @@ package no.nav.toi.rekrutteringstreff.opprydning
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.*
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import java.util.concurrent.TimeUnit
 
 class RekrutteringstreffOpprydningScheduler(
     private val kiLoggService: KiLoggService,
+    private val rekrutteringstreffService: RekrutteringstreffService,
     leaderElection: LeaderElectionInterface,
 ) : ScheduledTask, Scheduler {
 
     companion object {
         private const val ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING = 6
+        private const val ANTALL_MÅNEDER_ETTER_TIL_TID_PASSERT_FOR_SKJULING_FRA_FRONTEND = 6
     }
 
     private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 1, 1, TimeUnit.DAYS)
@@ -32,6 +35,12 @@ class RekrutteringstreffOpprydningScheduler(
     @WithSpan
     override fun kjørJobb() {
         log.info("Starter opprydning")
+        kiLoggSlettejobb()
+        skjulTreffJobb()
+        log.info("Opprydning ferdig")
+    }
+
+    private fun kiLoggSlettejobb() {
         val kiLoggerSomSkalSlettes = kiLoggService.hentKiLoggUuiderForScheduledSletting(ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING)
         if (kiLoggerSomSkalSlettes.isEmpty()) {
             log.info("Ingen KI-logger å slette")
@@ -40,9 +49,20 @@ class RekrutteringstreffOpprydningScheduler(
         log.info("Start opprydning/sletting av KI-logger")
 
         kiLoggService.slettKILogger(kiLoggerSomSkalSlettes)
+        log.info("${kiLoggerSomSkalSlettes.size} KI-logg(er) eldre enn ${ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING} måneder er slettet")
+    }
 
-        log.info("${kiLoggerSomSkalSlettes.size} KI-logger eldre enn ${ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING} måneder er slettet")
+    private fun skjulTreffJobb() {
+        val treffSomSkalSkjules = rekrutteringstreffService.hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(ANTALL_MÅNEDER_ETTER_TIL_TID_PASSERT_FOR_SKJULING_FRA_FRONTEND.toLong(), 0)
+        if (treffSomSkalSkjules.isEmpty()) {
+            log.info("Ingen treff å skjule")
+            return
+        }
+        val treffIder = treffSomSkalSkjules.map { it.id }
 
-        log.info("Opprydning ferdig")
+        log.info("Start opprydning/skjuling av treff")
+
+        val skjulteTereff = rekrutteringstreffService.markerSkjultBatch(treffIder)
+        log.info("${skjulteTereff} treff eldre enn ${ANTALL_MÅNEDER_ETTER_TIL_TID_PASSERT_FOR_SKJULING_FRA_FRONTEND} måneder har fått status SKJULT")
     }
 }

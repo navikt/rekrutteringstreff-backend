@@ -109,6 +109,12 @@ class RekrutteringstreffService(
         }
     }
 
+    fun markerSkjultBatch(treffIder: List<TreffId>): Int {
+        return dataSource.connection.use { connection ->
+            rekrutteringstreffRepository.endreStatusBatch(connection, treffIder, RekrutteringstreffStatus.SKJULT)
+        }
+    }
+
     fun hentRekrutteringstreff(treffId: TreffId): RekrutteringstreffDto? {
         val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
         if (rekrutteringstreff == null) {
@@ -277,5 +283,9 @@ class RekrutteringstreffService(
 
     fun hentPubliserteTreffHvorTilTidErPassert(): List<Rekrutteringstreff> {
         return rekrutteringstreffRepository.hentPubliserteTreffHvorTilTidErPassert()
+    }
+
+    fun hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(måneder: Long, dager: Long): List<Rekrutteringstreff> {
+        return rekrutteringstreffRepository.hentFullførteOgAvlysteTreffHvorTilTidErPassertMedAngittTid(måneder, dager)
     }
 }

@@ -5,7 +5,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
-import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.RekrutteringstreffType
 import no.nav.toi.aktivitetskort.WorkOpType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
