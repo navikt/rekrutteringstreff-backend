@@ -332,6 +332,9 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(hendelse.opprettetAv).isEqualTo(navIdent)
             assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
         }
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        assertThat(rapid.inspektør.message(0)["@event_name"].asString()).isEqualTo("kandidat_v2.RegistrertFåttJobben")
+        assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
     }
 
     @Test
@@ -480,6 +483,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
         assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
         assertThat(rapid.inspektør.size).isEqualTo(1)
+        assertThat(rapid.inspektør.message(0)["@event_name"].asString()).isEqualTo("kandidat_v2.LukketKandidatliste")
         assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
     }
 
@@ -714,7 +718,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         navIdent: String,
     ) = """
         {
-            "@event_name": "RegistrertFåttJobben",
+            "@event_name": "kandidat_v2.RegistrertFåttJobben",
             "stillingsId": "$stillingId",
             "fnr": "$fnr",
             "utførtAvNavIdent": "$navIdent",
@@ -748,7 +752,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         fnrFikkIkkeJobben: List<String>,
     ) = """
         {
-            "@event_name": "LukketKandidatliste",
+            "@event_name": "kandidat_v2.LukketKandidatliste",
             "stillingsId": "$stillingId",
             "utførtAvNavIdent": "$navIdent",
             "tidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
