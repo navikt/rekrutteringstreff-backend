@@ -43,6 +43,7 @@ spec:
         - application: rekrutteringsbistand-kandidat-api
           namespace: toi
           cluster: {{ fss_cluster }}
+        - application: rekrutteringsbistand-kandidat-api
         - application: modiacontextholder
           namespace: personoversikt
         - application: logging
