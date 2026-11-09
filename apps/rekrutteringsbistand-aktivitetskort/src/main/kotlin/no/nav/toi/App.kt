@@ -15,6 +15,7 @@ import no.nav.toi.aktivitetskort.SchedulerContext
 import no.nav.toi.aktivitetskort.WorkOpType
 import no.nav.toi.aktivitetskort.scheduler
 import no.nav.toi.rekrutteringsbistand.KandidatlisteLukketLytter
+import no.nav.toi.rekrutteringsbistand.RegistrertFattJobbenBehovLytter
 import no.nav.toi.rekrutteringsbistand.RegistrertFattJobbenLytter
 import no.nav.toi.rekrutteringsbistand.SamtykkeForespurtLytter
 import no.nav.toi.rekrutteringsbistand.SamtykkeStatusLytter
@@ -77,6 +78,7 @@ class App(
         if(!Miljø.fraClusterNavn(System.getenv("NAIS_CLUSTER_NAME")).erProd) {
             SamtykkeForespurtLytter(rapidsConnection, repository)
             SamtykkeStatusLytter.registrer(rapidsConnection, repository)
+            RegistrertFattJobbenBehovLytter(rapidsConnection)
             RegistrertFattJobbenLytter(rapidsConnection, repository)
             KandidatlisteLukketLytter(rapidsConnection, repository)
         }

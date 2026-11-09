@@ -20,6 +20,7 @@ import org.junit.jupiter.api.TestInstance
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
+import tools.jackson.databind.node.ObjectNode
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -319,10 +320,26 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         rapid.sendTestMessage(
             registrertFattJobbenMelding(
                 stillingId = stillingId,
-                fnr = fnr,
+                fodselsnummer = fnr,
                 navIdent = navIdent,
             )
         )
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
+        assertThat(repository.hentSisteAktivitetsstatus(checkNotNull(repository.hentAktivitetskortIdForDeltStilling(fnr, stillingId))))
+            .isEqualTo(AktivitetsStatus.GJENNOMFORES)
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        val behov = rapid.inspektør.message(0)
+        assertThat(behov["@behov"].toList().map { it.asString() }).containsExactly("fodselsnummer")
+        assertThat(behov["aktørId"].asString()).isEqualTo("1234567890123")
+        assertThat(behov.path("fnr").isMissingNode).isTrue()
+        assertThat(behov.path("fodselsnummer").isMissingNode).isTrue()
+        assertThat(behov.path("@slutt_av_hendelseskjede").isMissingNode).isTrue()
+        assertThat(rapid.inspektør.key(0)).isEqualTo(stillingId.toString())
+
+        val løsning = (behov as ObjectNode).deepCopy().put("fodselsnummer", fnr).toString()
+        rapid.reset()
+        rapid.sendTestMessage(løsning)
 
         val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger().filter { it.fnr == fnr }
         assertThat(hendelser).hasSize(3)
@@ -334,6 +351,47 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         assertThat(rapid.inspektør.size).isEqualTo(1)
         assertThat(rapid.inspektør.message(0)["@event_name"].asString()).isEqualTo("kandidat_v2.RegistrertFåttJobben")
         assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
+
+        rapid.sendTestMessage(løsning)
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(3)
+    }
+
+    @Test
+    fun `registrert fått jobben skal legge fødselsnummerbehov foran eksisterende behov`() {
+        val stillingId = UUID.randomUUID()
+
+        rapid.sendTestMessage(
+            registrertFattJobbenMelding(
+                stillingId = stillingId,
+                navIdent = "Z123456",
+                behov = listOf("annetBehov"),
+            )
+        )
+
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        val melding = rapid.inspektør.message(0)
+        assertThat(melding["@behov"].toList().map { it.asString() }).containsExactly("fodselsnummer", "annetBehov")
+        assertThat(melding["stillingsId"].asString()).isEqualTo(stillingId.toString())
+        assertThat(melding.path("@slutt_av_hendelseskjede").isMissingNode).isTrue()
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
+    }
+
+    @Test
+    fun `registrert fått jobben skal vente når fødselsnummerbehov allerede er lagt på`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, AktivitetsStatus.GJENNOMFORES)
+
+        rapid.sendTestMessage(
+            registrertFattJobbenMelding(
+                stillingId = stillingId,
+                navIdent = "Z123456",
+                behov = listOf("fodselsnummer"),
+            )
+        )
+
+        assertThat(rapid.inspektør.size).isZero()
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
     }
 
     @Test
@@ -362,7 +420,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         rapid.sendTestMessage(
             registrertFattJobbenMelding(
                 stillingId = stillingId,
-                fnr = fnr,
                 navIdent = navIdent,
             )
         )
@@ -381,7 +438,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         rapid.sendTestMessage(
             registrertFattJobbenMelding(
                 stillingId = stillingId,
-                fnr = fnr,
+                fodselsnummer = fnr,
                 navIdent = "Z123456",
             )
         )
@@ -713,13 +770,16 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     private fun registrertFattJobbenMelding(
         stillingId: UUID,
-        fnr: String,
         navIdent: String,
+        fodselsnummer: String? = null,
+        behov: List<String>? = null,
     ) = """
         {
             "@event_name": "kandidat_v2.RegistrertFåttJobben",
             "stillingsId": "$stillingId",
-            "fnr": "$fnr",
+            "aktørId": "1234567890123",
+            ${behov?.let { "\"@behov\": [${it.joinToString(",") { behov -> "\"$behov\"" }}]," } ?: ""}
+            ${fodselsnummer?.let { "\"fodselsnummer\": \"$it\"," } ?: ""}
             "utførtAvNavIdent": "$navIdent",
             "tidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
             "stillingsinfo": {
