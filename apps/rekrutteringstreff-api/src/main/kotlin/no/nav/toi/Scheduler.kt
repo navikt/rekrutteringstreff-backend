@@ -15,33 +15,33 @@ interface Scheduler {
     fun wrapJobbkjøring()
 }
 
-class DefaultScheduler (
+class DefaultScheduler(
     private val leaderElection: LeaderElectionInterface,
     private val scheduledTask: ScheduledTask,
     private val initialDelay: Long,
     private val period: Long,
     private val timeUnit: TimeUnit,
-    ) : Scheduler {
+) : Scheduler {
 
-        private val scheduler = Executors.newScheduledThreadPool(1)
-        private val isRunning = AtomicBoolean(false)
+    private val scheduler = Executors.newScheduledThreadPool(1)
+    private val isRunning = AtomicBoolean(false)
 
-        override fun start() {
-            log.info("Starter ${scheduledTask::class.simpleName}")
-            scheduler.scheduleAtFixedRate(::wrapJobbkjøring, initialDelay, period, timeUnit)
-        }
+    override fun start() {
+        log.info("Starter ${scheduledTask::class.simpleName}")
+        scheduler.scheduleAtFixedRate(::wrapJobbkjøring, initialDelay, period, timeUnit)
+    }
 
-        override fun stop() {
-            log.info("Stopper ${scheduledTask::class.simpleName}")
-            scheduler.shutdown()
-            try {
-                if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                    scheduler.shutdownNow()
-                }
-            } catch (e: InterruptedException) {
+    override fun stop() {
+        log.info("Stopper ${scheduledTask::class.simpleName}")
+        scheduler.shutdown()
+        try {
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
                 scheduler.shutdownNow()
             }
+        } catch (e: InterruptedException) {
+            scheduler.shutdownNow()
         }
+    }
 
     override fun wrapJobbkjøring() {
         log.info("Vurderer oppstart av task ${scheduledTask::class.simpleName} ")

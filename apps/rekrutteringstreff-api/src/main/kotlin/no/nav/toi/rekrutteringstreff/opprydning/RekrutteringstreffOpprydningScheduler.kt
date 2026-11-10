@@ -5,7 +5,8 @@ import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
-import java.util.concurrent.TimeUnit
+import java.time.LocalTime
+import java.time.ZoneId
 
 class RekrutteringstreffOpprydningScheduler(
     private val kiLoggService: KiLoggService,
@@ -18,7 +19,13 @@ class RekrutteringstreffOpprydningScheduler(
         private const val ANTALL_MÅNEDER_ETTER_TIL_TID_PASSERT_FOR_SKJULING_FRA_FRONTEND = 6
     }
 
-    private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 1, 1, TimeUnit.DAYS)
+    private val scheduler: Scheduler = FastTidspunktScheduler(
+        leaderElection = leaderElection,
+        scheduledTask = this,
+        kjøretidspunkt = LocalTime.of(4, 0),
+        tidssone = ZoneId.of("Europe/Oslo"),
+        gjentakelse = SchedulerGjentakelse.Daglig,
+    )
 
     override fun start() {
         scheduler.start()
