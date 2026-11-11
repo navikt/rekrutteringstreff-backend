@@ -320,7 +320,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         rapid.sendTestMessage(
             registrertFattJobbenMelding(
                 stillingId = stillingId,
-                fodselsnummer = fnr,
                 navIdent = navIdent,
             )
         )
