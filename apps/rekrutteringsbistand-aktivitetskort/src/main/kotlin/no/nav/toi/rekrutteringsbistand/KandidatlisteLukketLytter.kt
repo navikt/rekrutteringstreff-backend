@@ -11,7 +11,6 @@ import io.micrometer.core.instrument.MeterRegistry
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
-import tools.jackson.databind.node.ArrayNode
 
 class KandidatlisteLukketLytter(
     rapidsConnection: RapidsConnection,
@@ -23,19 +22,19 @@ class KandidatlisteLukketLytter(
             precondition {
                 it.requireValue("@event_name", "kandidat_v2.LukketKandidatliste")
                 it.forbidValue("@slutt_av_hendelseskjede", true)
-                it.requireKey("stillingsinfo.stillingsid")
+                it.requireKey("stillingsinfo.stillingsid", "fodselsnummerliste")
             }
             validate {
                 it.requireKey(
-                    "fnrFikkJobben",
-                    "fnrFikkIkkeJobben",
+                    "aktørIderFikkJobben",
+                    "aktørIderFikkIkkeJobben",
                     "stillingsId",
                     "utførtAvNavIdent",
                     "tidspunkt",
                 )
                 it.require("stillingsId") { node -> node.asString().toUUID() }
-                it.require("fnrFikkJobben") { node -> if(!node.isArray) throw IllegalStateException("fnrFikkJobben må være en array") }
-                it.require("fnrFikkIkkeJobben") { node -> if(!node.isArray) throw IllegalStateException("fnrFikkIkkeJobben må være en array") }
+                it.requireArray("aktørIderFikkJobben")
+                it.requireArray("aktørIderFikkIkkeJobben")
             }
         }.register(this)
     }
@@ -46,12 +45,17 @@ class KandidatlisteLukketLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry,
     ) {
-        val noenFikkJobben = !(packet["fnrFikkJobben"] as ArrayNode).isEmpty
-        val fnrFikkIkkeJobben = packet["fnrFikkIkkeJobben"].values().map { it.asString() }
+        val noenFikkJobben = !packet["aktørIderFikkJobben"].isEmpty
+        val fnrFikkIkkeJobben = packet["aktørIderFikkIkkeJobben"].toList().map { it.asString() }.distinct().map { aktørId ->
+            val fnr = packet["fodselsnummerliste"].path(aktørId)
+            require(fnr.isString && fnr.asString().isNotBlank()) {
+                "Fødselsnummerlistebehov for LukketKandidatliste mangler gyldig løsning for kandidat"
+            }
+            fnr.asString()
+        }
         val stillingsId = packet["stillingsId"].asString().toUUID()
         val navIdent = packet["utførtAvNavIdent"].asString()
 
-        // Mirror kandidat-api behavior: only candidates with JA-svar are updated when list closes.
         repository.veilederLukkerKandidatliste(
             stillingId = stillingsId,
             fnr = fnrFikkIkkeJobben,

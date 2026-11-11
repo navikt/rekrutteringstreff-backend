@@ -17,10 +17,12 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
 import tools.jackson.databind.node.ObjectNode
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -320,7 +322,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         rapid.sendTestMessage(
             registrertFattJobbenMelding(
                 stillingId = stillingId,
-                fodselsnummer = fnr,
                 navIdent = navIdent,
             )
         )
@@ -454,18 +455,42 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val navIdent = "Z999999"
         val kandidatSomHarSvartJa = "01010012345"
         val kandidatSomHarSvartNei = "02020012345"
+        val kandidatSomFikkJobben = "03030012345"
+        val aktørIdJa = "1000000000001"
+        val aktørIdNei = "1000000000002"
+        val aktørIdFikkJobben = "1000000000003"
 
         opprettDeltStilling(kandidatSomHarSvartJa, stillingId, AktivitetsStatus.GJENNOMFORES)
         opprettDeltStilling(kandidatSomHarSvartNei, stillingId, AktivitetsStatus.AVBRUTT)
+        opprettDeltStilling(kandidatSomFikkJobben, stillingId, AktivitetsStatus.GJENNOMFORES)
 
         rapid.sendTestMessage(
             lukketKandidatlisteMelding(
                 stillingId = stillingId,
                 navIdent = navIdent,
-                fnrFikkJobben = listOf("9999"),
-                fnrFikkIkkeJobben = listOf(kandidatSomHarSvartJa, kandidatSomHarSvartNei),
+                aktørIderFikkJobben = listOf(aktørIdFikkJobben),
+                aktørIderFikkIkkeJobben = listOf(aktørIdJa, aktørIdNei),
+                behov = listOf("annetBehov"),
             )
         )
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(6)
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        val behov = rapid.inspektør.message(0)
+        assertThat(behov["@behov"].toList().map { it.asString() }).containsExactly("fodselsnummerliste", "annetBehov")
+        assertThat(behov["aktørIder"].toList().map { it.asString() }).containsExactly(aktørIdJa, aktørIdNei)
+        assertThat(behov["aktørIderFikkJobben"].toList().map { it.asString() }).containsExactly(aktørIdFikkJobben)
+        assertThat(behov.path("@slutt_av_hendelseskjede").isMissingNode).isTrue()
+        assertThat(rapid.inspektør.key(0)).isEqualTo(stillingId.toString())
+
+        val løsning = (behov as ObjectNode).deepCopy().apply {
+            putObject("fodselsnummerliste")
+                .put(aktørIdJa, kandidatSomHarSvartJa)
+                .put(aktørIdNei, kandidatSomHarSvartNei)
+                .put(aktørIdFikkJobben, kandidatSomFikkJobben)
+        }.toString()
+        rapid.reset()
+        rapid.sendTestMessage(løsning)
 
         val jaKandidatHendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
             .filter { it.fnr == kandidatSomHarSvartJa }
@@ -479,6 +504,17 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
         // Kandidat med NEI skal ikke oppdateres pa nytt ved lukking av liste.
         assertThat(neiKandidatHendelser).hasSize(2)
+
+        // Kandidat som fikk jobben trenger ikke oppdateres pa nytt ved lukking av liste.
+        val fikkJobbenHendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+            .filter { it.fnr == kandidatSomFikkJobben }
+        assertThat(fikkJobbenHendelser).hasSize(2)
+        assertThat(fikkJobbenHendelser.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
+
+        rapid.sendTestMessage(løsning)
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(7)
     }
 
     @Test
@@ -486,6 +522,10 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val stillingId = UUID.randomUUID()
         val fnr1 = "01010012345"
         val fnr2 = "02020012345"
+        val aktørId1 = "1000000000001"
+        val aktørId2 = "1000000000002"
+        val aktørIdUtenKort = "1000000000003"
+        val fødselsnumre = mapOf(aktørId1 to fnr1, aktørId2 to fnr2, aktørIdUtenKort to "03030012345")
 
         listOf(fnr1, fnr2).forEach { fnr ->
             opprettDeltStilling(fnr, stillingId, AktivitetsStatus.GJENNOMFORES)
@@ -495,8 +535,9 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             lukketKandidatlisteMelding(
                 stillingId = stillingId,
                 navIdent = "Z999999",
-                fnrFikkJobben = emptyList(),
-                fnrFikkIkkeJobben = listOf(fnr1, fnr1, fnr2, "ukjent-fnr"),
+                aktørIderFikkJobben = emptyList(),
+                aktørIderFikkIkkeJobben = listOf(aktørId1, aktørId1, aktørId2, aktørIdUtenKort),
+                fodselsnummerliste = fødselsnumre,
             )
         )
 
@@ -514,8 +555,9 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             lukketKandidatlisteMelding(
                 stillingId = stillingId,
                 navIdent = "Z888888",
-                fnrFikkJobben = emptyList(),
-                fnrFikkIkkeJobben = listOf(fnr1, fnr2),
+                aktørIderFikkJobben = emptyList(),
+                aktørIderFikkIkkeJobben = listOf(aktørId1, aktørId2),
+                fodselsnummerliste = fødselsnumre,
             )
         )
 
@@ -527,13 +569,61 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
-    fun `lukket kandidatliste uten kandidater skal ikke oppdatere databasen men markere hendelseskjeden som ferdig`() {
+    fun `lukket kandidatliste skal vente når fødselsnummerliste allerede er etterspurt`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, AktivitetsStatus.GJENNOMFORES)
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
+
         rapid.sendTestMessage(
+            lukketKandidatlisteMelding(
+                stillingId = stillingId,
+                navIdent = "Z999999",
+                aktørIderFikkJobben = emptyList(),
+                aktørIderFikkIkkeJobben = listOf("1000000000001"),
+                behov = listOf("fodselsnummerliste", "annetBehov"),
+            )
+        )
+
+        assertThat(rapid.inspektør.size).isZero()
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
+    }
+
+    @Test
+    fun `lukket kandidatliste skal ignorere ferdige og andre hendelser`() {
+        val melding = jacksonObjectMapper().readTree(
             lukketKandidatlisteMelding(
                 stillingId = UUID.randomUUID(),
                 navIdent = "Z999999",
-                fnrFikkJobben = emptyList(),
-                fnrFikkIkkeJobben = emptyList(),
+                aktørIderFikkJobben = emptyList(),
+                aktørIderFikkIkkeJobben = listOf("1000000000001"),
+            )
+        ) as ObjectNode
+
+        rapid.sendTestMessage(melding.deepCopy().put("@slutt_av_hendelseskjede", true).toString())
+        rapid.sendTestMessage(melding.deepCopy().put("@event_name", "annenHendelse").toString())
+        rapid.sendTestMessage(
+            melding.deepCopy().apply {
+                put("@slutt_av_hendelseskjede", true)
+                putObject("fodselsnummerliste").put("1000000000001", "01010012345")
+            }.toString()
+        )
+
+        assertThat(rapid.inspektør.size).isZero()
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
+    }
+
+    @Test
+    fun `lukket kandidatliste uten kandidater skal ikke oppdatere databasen men markere hendelseskjeden som ferdig`() {
+        val stillingId = UUID.randomUUID()
+        rapid.sendTestMessage(
+            lukketKandidatlisteMelding(
+                stillingId = stillingId,
+                navIdent = "Z999999",
+                aktørIderFikkJobben = emptyList(),
+                aktørIderFikkIkkeJobben = emptyList(),
+                fodselsnummerliste = emptyMap(),
             )
         )
 
@@ -807,16 +897,20 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     private fun lukketKandidatlisteMelding(
         stillingId: UUID,
         navIdent: String,
-        fnrFikkJobben: List<String>,
-        fnrFikkIkkeJobben: List<String>,
+        aktørIderFikkJobben: List<String>,
+        aktørIderFikkIkkeJobben: List<String>,
+        fodselsnummerliste: Map<String, String?>? = null,
+        behov: List<String>? = null,
     ) = """
         {
             "@event_name": "kandidat_v2.LukketKandidatliste",
             "stillingsId": "$stillingId",
             "utførtAvNavIdent": "$navIdent",
             "tidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
-            "fnrFikkJobben": [${fnrFikkJobben.joinToString(",") { "\"$it\"" }}],
-            "fnrFikkIkkeJobben": [${fnrFikkIkkeJobben.joinToString(",") { "\"$it\"" }}],
+            "aktørIderFikkJobben": [${aktørIderFikkJobben.joinToString(",") { "\"$it\"" }}],
+            "aktørIderFikkIkkeJobben": [${aktørIderFikkIkkeJobben.joinToString(",") { "\"$it\"" }}],
+            ${fodselsnummerliste?.let { "\"fodselsnummerliste\": ${jacksonObjectMapper().writeValueAsString(it)}," } ?: ""}
+            ${behov?.let { "\"@behov\": ${jacksonObjectMapper().writeValueAsString(it)}," } ?: ""}
             "stillingsinfo": {
               "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
               "stillingsid": "$stillingId",

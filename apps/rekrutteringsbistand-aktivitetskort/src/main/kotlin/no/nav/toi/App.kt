@@ -14,6 +14,7 @@ import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.SchedulerContext
 import no.nav.toi.aktivitetskort.WorkOpType
 import no.nav.toi.aktivitetskort.scheduler
+import no.nav.toi.rekrutteringsbistand.KandidatlisteLukketBehovLytter
 import no.nav.toi.rekrutteringsbistand.KandidatlisteLukketLytter
 import no.nav.toi.rekrutteringsbistand.RegistrertFattJobbenBehovLytter
 import no.nav.toi.rekrutteringsbistand.RegistrertFattJobbenLytter
@@ -80,6 +81,7 @@ class App(
             SamtykkeStatusLytter.registrer(rapidsConnection, repository)
             RegistrertFattJobbenBehovLytter(rapidsConnection)
             RegistrertFattJobbenLytter(rapidsConnection, repository)
+            KandidatlisteLukketBehovLytter(rapidsConnection)
             KandidatlisteLukketLytter(rapidsConnection, repository)
         }
         // Rekrutteringstreff
