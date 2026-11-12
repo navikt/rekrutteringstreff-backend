@@ -15,6 +15,10 @@ class RekrutteringstreffSokController(
 ) : RuteRegistrerer {
     companion object {
         private const val sokPath = "/api/rekrutteringstreff/sok"
+
+        // Stopper for store requester. Lagrede søk i rekrutteringsbistand-bruker-api har samme grense.
+        internal const val MAKS_ANTALL_SØKEORD = 20
+        internal const val MAKS_SØKEORDTEGN = 400
     }
 
     override fun registrer(routes: JavalinDefaultRoutingApi) {
@@ -35,7 +39,7 @@ class RekrutteringstreffSokController(
             OpenApiParam(name = "fylkesnumre", type = String::class, required = false, description = "Kommaseparert liste av fylkesnumre, for eksempel 03,11", example = "03,11"),
             OpenApiParam(name = "kommunenumre", type = String::class, required = false, description = "Kommaseparert liste av kommunenumre, for eksempel 0301,1103", example = "0301,1103"),
             OpenApiParam(name = "fritekst", type = Array<String>::class, required = false,
-                description = "Søkeord. Kan gjentas: ?fritekst=bygg&fritekst=anlegg. Alle ordene må matche.",
+                description = "Søkeord. Kan gjentas: ?fritekst=bygg&fritekst=anlegg. Alle ordene må matche. Maks 20 søkeord med til sammen 400 tegn.",
                 example = "bygg"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
@@ -176,11 +180,11 @@ class RekrutteringstreffSokController(
             .takeIf { it.isNotEmpty() }
 
         if (fritekst != null) {
-            if (fritekst.size > 10) {
-                throw IllegalArgumentException("fritekst kan ikke ha flere enn 10 søkeord")
+            if (fritekst.size > MAKS_ANTALL_SØKEORD) {
+                throw IllegalArgumentException("fritekst kan ikke ha flere enn $MAKS_ANTALL_SØKEORD søkeord")
             }
-            if (fritekst.sumOf { it.length } > 200) { // 200 tegn totalt, ca. 30–40 ord. Grensen er valgt for å stoppe for store requester
-                throw IllegalArgumentException("fritekst kan ikke være lengre enn 200 tegn totalt")
+            if (fritekst.sumOf { it.length } > MAKS_SØKEORDTEGN) {
+                throw IllegalArgumentException("fritekst kan ikke være lengre enn $MAKS_SØKEORDTEGN tegn totalt")
             }
         }
 

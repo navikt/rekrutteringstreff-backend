@@ -15,8 +15,9 @@ class GjennomføringJobbsøkerRepository {
         private const val QUERY_TIMEOUT_SECONDS = 10
 
         private const val FRA = "FROM jobbsoker j JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id"
+        // Sperrede jobbsøkere vises aldri, uansett synlighet. Usynlige vises bare på WorkOp.
         private const val VISES =
-            "rt.id = ? AND j.status != 'SLETTET' AND (j.er_synlig = true OR (rt.kategori = 'WORKOP' AND j.sperret = false))"
+            "rt.id = ? AND j.status != 'SLETTET' AND j.sperret = false AND (j.er_synlig = true OR rt.kategori = 'WORKOP')"
     }
 
     fun hentSide(
