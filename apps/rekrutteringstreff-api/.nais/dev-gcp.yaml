@@ -8,7 +8,6 @@ kafka_pool: nav-dev
     "https://rekrutteringstreff-api.intern.dev.nav.no/isready"
 ]
 cluster: dev-gcp
-fss_cluster: dev-fss
 min_replicas: 2
 max_replicas: 2
 gcp_db_tier: db-f1-micro
@@ -29,7 +28,6 @@ stilling_api_scope: "api://dev-gcp.toi.rekrutteringsbistand-stilling-api/.defaul
 kafka_consumer_group_id: rekrutteringstreff-rapid-1
 modiacontextholder_url: "http://modiacontextholder.personoversikt"
 modiacontextholder_scope: "api://dev-gcp.personoversikt.modiacontextholder/.default"
-kandidat_api_host: "rekrutteringsbistand-kandidat-api.dev-fss-pub.nais.io"
 kandidat_api_url: "http://rekrutteringsbistand-kandidat-api/rekrutteringsbistand-kandidat-api/rest/veileder"
 kandidat_api_scope: "api://dev-gcp.toi.rekrutteringsbistand-kandidat-api/.default"
 workop_pilotkontorer: "0403, 0602, 0135, 0211, 1001, 0300"
