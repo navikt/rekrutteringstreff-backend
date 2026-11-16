@@ -95,6 +95,7 @@ enum class AktuellForTreffStatus {
     VURDERES,
     KONTAKTET,
     AKTUELL,
+    VENTELISTE,
     IKKE_AKTUELL,
 }
 
