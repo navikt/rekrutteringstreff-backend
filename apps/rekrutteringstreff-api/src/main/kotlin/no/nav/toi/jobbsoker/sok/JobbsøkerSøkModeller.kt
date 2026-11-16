@@ -74,6 +74,7 @@ enum class JobbsøkerSorteringsfelt {
     private fun aktuellForTreffStatusSorteringSql(retning: JobbsøkerSorteringsretning): String {
         val sortertRekkefølge = listOf(
             AktuellForTreffStatus.AKTUELL,
+            AktuellForTreffStatus.VENTELISTE,
             AktuellForTreffStatus.KONTAKTET,
             AktuellForTreffStatus.VURDERES,
             AktuellForTreffStatus.IKKE_AKTUELL,
