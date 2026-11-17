@@ -21,6 +21,7 @@ class TestInfrastructureContext(
     stillingKlientUrl: String = "",
     kandidatKlient: KandidatKlient? = null,
     kandidatKlientUrl: String = "",
+    openAiBaseUrl: String = "http://localhost:1",
     val authPort: Int = ubruktPortnr(),
     override val miljø: Miljø = Miljø.LOKALT,
 ) : InfrastructureContext() {
@@ -83,7 +84,7 @@ class TestInfrastructureContext(
     )
 
     override val openAiProperties: OpenAiProperties = OpenAiProperties(
-        apiUrl = "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
+        apiUrl = "$openAiBaseUrl/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
         apiKey = "test-key",
         kiVersjon =  "toi-gpt-4.1",
     )
