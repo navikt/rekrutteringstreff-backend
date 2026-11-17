@@ -33,6 +33,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '25'
+          cache: gradle
       - name: Gradle test and build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
