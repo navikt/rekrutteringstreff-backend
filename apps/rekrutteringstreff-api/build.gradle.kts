@@ -65,5 +65,5 @@ dependencies {
 
 tasks.test {
     // Hver fork starter sin egen Postgres-container (se TestDatabase), så testklasser i ulike forks deler ikke database.
-    maxParallelForks = 2
+    maxParallelForks = 3
 }
