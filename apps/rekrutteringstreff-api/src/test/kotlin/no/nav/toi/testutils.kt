@@ -151,6 +151,4 @@ enum class UautentifiserendeTestCase(val leggPåToken: HttpRequest.Builder.(Mock
 object ubruktPortnrFra10000 {
     // OS-et velger en ledig port, slik at parallelle test-forks (egne JVM-er) ikke får samme port.
     fun ubruktPortnr(): Int = ServerSocket(0).use { it.localPort }
-
-    val openAiWireMockPort: Int = ubruktPortnr()
 }

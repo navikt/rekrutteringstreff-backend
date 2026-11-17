@@ -12,7 +12,6 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
-import no.nav.toi.ubruktPortnrFra10000
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -38,7 +37,7 @@ class KiTest {
         @JvmStatic
         @RegisterExtension
         val wireMockServer: WireMockExtension = WireMockExtension.newInstance()
-            .options(WireMockConfiguration.options().port(ubruktPortnrFra10000.openAiWireMockPort))
+            .options(WireMockConfiguration.options().dynamicPort())
             .build()
     }
 
@@ -53,7 +52,11 @@ class KiTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
+        infra = TestInfrastructureContext(
+            dataSource = db.dataSource,
+            modiaKlientUrl = wmInfo.httpBaseUrl,
+            openAiBaseUrl = wireMockServer.baseUrl(),
+        ).also { it.start() }
         app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
     }
 
