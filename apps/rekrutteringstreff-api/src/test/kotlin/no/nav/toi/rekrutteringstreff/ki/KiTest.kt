@@ -12,6 +12,7 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
+import no.nav.toi.ubruktPortnrFra10000
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -37,7 +38,7 @@ class KiTest {
         @JvmStatic
         @RegisterExtension
         val wireMockServer: WireMockExtension = WireMockExtension.newInstance()
-            .options(WireMockConfiguration.options().port(9955))
+            .options(WireMockConfiguration.options().port(ubruktPortnrFra10000.openAiWireMockPort))
             .build()
     }
 

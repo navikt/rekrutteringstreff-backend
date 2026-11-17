@@ -17,6 +17,7 @@ import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.ki.KiLoggInsert
 import no.nav.toi.rekrutteringstreff.ki.TEST_OPENAI_PATH
 import no.nav.toi.rekrutteringstreff.ki.ValiderMedLoggRequestUtenTreffIdDto
+import no.nav.toi.ubruktPortnrFra10000
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -43,7 +44,7 @@ class KiAutorisasjonsTest {
         @JvmStatic
         @RegisterExtension
         val wireMockServer: WireMockExtension = WireMockExtension.newInstance()
-            .options(WireMockConfiguration.options().port(9955))
+            .options(WireMockConfiguration.options().port(ubruktPortnrFra10000.openAiWireMockPort))
             .build()
     }
     private val database = TestDatabase()

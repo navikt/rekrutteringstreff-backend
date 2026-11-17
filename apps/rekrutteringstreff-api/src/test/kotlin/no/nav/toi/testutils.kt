@@ -3,12 +3,12 @@ package no.nav.toi
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import org.junit.jupiter.params.provider.Arguments
+import java.net.ServerSocket
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 
 object AzureAdRoller {
     val modiaGenerell: UUID = UUID.randomUUID()
@@ -149,6 +149,8 @@ enum class UautentifiserendeTestCase(val leggPåToken: HttpRequest.Builder.(Mock
 }
 
 object ubruktPortnrFra10000 {
-    private val portnr = AtomicInteger(10000)
-    fun ubruktPortnr(): Int = portnr.andIncrement
+    // OS-et velger en ledig port, slik at parallelle test-forks (egne JVM-er) ikke får samme port.
+    fun ubruktPortnr(): Int = ServerSocket(0).use { it.localPort }
+
+    val openAiWireMockPort: Int = ubruktPortnr()
 }

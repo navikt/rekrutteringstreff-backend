@@ -83,7 +83,7 @@ class TestInfrastructureContext(
     )
 
     override val openAiProperties: OpenAiProperties = OpenAiProperties(
-        apiUrl = "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
+        apiUrl = "http://localhost:${ubruktPortnrFra10000.openAiWireMockPort}/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
         apiKey = "test-key",
         kiVersjon =  "toi-gpt-4.1",
     )
