@@ -261,6 +261,7 @@ object SelvbetjentDeleCvMedArbeidsgiverType: AktivitetskortType {
     override val handlingSubtekst = "Sjekk ut stillingen og status på samtykke"
     override val dbType = "DELE_CV_MED_ARBEIDSGIVER"
     override val akaasType = "DELE_CV_MED_ARBEIDSGIVER"
+    val etiketter = listOf(AktivitetskortEtikett("Venter på å bli kontaktet", Sentiment.POSITIVE))
 
     override fun tilFeil(
         fellesMeldingsfelter: FellesMeldingsfelter,

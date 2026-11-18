@@ -11,6 +11,9 @@ import io.micrometer.core.instrument.MeterRegistry
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
+import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.EndretAvType
+import no.nav.toi.aktivitetskort.SelvbetjentDeleCvMedArbeidsgiverType
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -48,12 +51,36 @@ class SelvbetjentAktivitetskortLytter (
 
         val hendelseId = UUID.randomUUID()
 
-        repository.opprettDeltStillingForSelvbetjent(
+        val opprettetAktivitetskortId = repository.opprettDeltStillingForSelvbetjent(
             fnr = fnr,
             stillingId = stillingId,
             tittel = packet["stillingsTittel"].asString(),
             opprettetAv = fnr,
             messageId = hendelseId
+        )
+
+        if (opprettetAktivitetskortId == null) {
+            flyttEksisterendeAktivitetskortTilGjennomføres(fnr, stillingId.toUUID())
+        }
+    }
+
+    private fun flyttEksisterendeAktivitetskortTilGjennomføres(fnr: String, stillingId: UUID) {
+        val aktivitetskortId = repository.hentAktivitetskortIdForDeltStilling(fnr, stillingId)
+        if (aktivitetskortId == null) {
+            log.error("Fant ikke eksisterende aktivitetskort for delt stilling med id $stillingId (se secure log)")
+            teamlog(log).error("Fant ikke eksisterende aktivitetskort for delt stilling med id $stillingId for personbruker $fnr")
+            return
+        }
+
+        // Kun kort som venter på svar flyttes. Avbrutte eller fullførte kort skal ikke gjenåpnes.
+        repository.oppdaterAktivitetsstatus(
+            aktivitetskortId = aktivitetskortId,
+            aktivitetsStatus = AktivitetsStatus.GJENNOMFORES,
+            endretAv = fnr,
+            endretAvType = EndretAvType.PERSONBRUKERIDENT,
+            forventetSisteAktivitetsstatus = AktivitetsStatus.FORSLAG,
+            etiketter = SelvbetjentDeleCvMedArbeidsgiverType.etiketter,
+            handlinger = repository.selvbetjentDeltStillingHandlinger(stillingId.toString()),
         )
     }
 

@@ -6,6 +6,7 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.DeleCvMedArbeidsgiverType
 import no.nav.toi.aktivitetskort.EndretAvType
+import no.nav.toi.aktivitetskort.SelvbetjentDeleCvMedArbeidsgiverType
 import no.nav.toi.rekrutteringsbistand.IdentType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
@@ -609,6 +609,112 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         assertThat(rapid.inspektør.size).isEqualTo(1)
         assertThat(rapid.inspektør.message(0)["@event_name"].asString()).isEqualTo("kandidat_v2.LukketKandidatliste")
         assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt skal opprette aktivitetskort i gjennomføres`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        val før = ZonedDateTime.now()
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+
+        val aktivitetskort = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(aktivitetskort).hasSize(1)
+        assertThat(rapid.inspektør.size).isZero()
+
+        aktivitetskort.single().apply {
+            assertThat(this.fnr).isEqualTo(fnr)
+            assertThat(this.stillingId).isEqualTo(stillingId)
+            assertThat(tittel).isEqualTo("Test Stilling")
+            assertThat(beskrivelse).isEqualTo(SelvbetjentDeleCvMedArbeidsgiverType.beskrivelse)
+            assertThat(detaljer).isEqualToIgnoringWhitespace("[]")
+            assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
+            assertThat(aktivitetsType).isEqualTo(SelvbetjentDeleCvMedArbeidsgiverType.dbType)
+            assertThat(opprettetAv).isEqualTo(fnr)
+            assertThat(opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
+            assertThat(opprettetTidspunkt).isBetween(før, ZonedDateTime.now())
+            assertThat(feil).isNull()
+
+            val etikett = jacksonObjectMapper().readTree(etiketter).single()
+            assertThat(etikett["tekst"].asString()).isEqualTo("Venter på å bli kontaktet")
+            assertThat(etikett["sentiment"].asString()).isEqualTo("POSITIVE")
+
+            val handling = jacksonObjectMapper().readTree(handlinger).single()
+            assertThat(handling["tekst"].asString()).isEqualTo(SelvbetjentDeleCvMedArbeidsgiverType.handlingTittel)
+            assertThat(handling["subtekst"].asString()).isEqualTo(SelvbetjentDeleCvMedArbeidsgiverType.handlingSubtekst)
+            assertThat(handling["url"].asString()).isEqualTo("http://url/stilling/$stillingId")
+            assertThat(handling["lenkeType"].asString()).isEqualTo("FELLES")
+        }
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt for samme kandidat og stilling skal ignoreres`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+        val første = testRepository.hentAlleRekrutteringsbistandStillinger()
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+
+        val etterpå = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(etterpå).hasSize(1)
+        assertThat(etterpå.single()).usingRecursiveComparison().isEqualTo(første.single())
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt skal flytte eksisterende aktivitetskort fra veileder til gjennomføres`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId)
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser.map { it.aktivitetskortId }.distinct()).hasSize(1)
+        hendelser.last().apply {
+            assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
+            assertThat(opprettetAv).isEqualTo(fnr)
+            assertThat(opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
+            val etikett = jacksonObjectMapper().readTree(etiketter).single()
+            assertThat(etikett["tekst"].asString()).isEqualTo("Venter på å bli kontaktet")
+            assertThat(etikett["sentiment"].asString()).isEqualTo("POSITIVE")
+            val handling = jacksonObjectMapper().readTree(handlinger).single()
+            assertThat(handling["subtekst"].asString()).isEqualTo("Sjekk ut stillingen og status på samtykke")
+            assertThat(handling["url"].asString()).isEqualTo("http://url/stilling/$stillingId")
+        }
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt skal ikke gjenåpne avbrutt aktivitetskort`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, AktivitetsStatus.AVBRUTT)
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.AVBRUTT.name)
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt med ugyldige felter skal ikke opprette aktivitetskort`() {
+        val gyldig = jacksonObjectMapper().readTree(
+            selvbetjentSamtykkeGittMelding(fnr = "01010012345", stillingId = UUID.randomUUID())
+        ) as ObjectNode
+
+        rapid.sendTestMessage(gyldig.deepCopy().put("stillingsId", "ikke-en-uuid").toString())
+        rapid.sendTestMessage(gyldig.deepCopy().put("samtykkeGittTidspunkt", "ikke-en-dato").toString())
+        rapid.sendTestMessage(gyldig.deepCopy().apply { remove("fnr") }.toString())
+        rapid.sendTestMessage(gyldig.deepCopy().apply { remove("stillingsinfo") }.toString())
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
+        assertThat(rapid.inspektør.size).isZero()
     }
 
     private fun testSamtykkeBesvart(
