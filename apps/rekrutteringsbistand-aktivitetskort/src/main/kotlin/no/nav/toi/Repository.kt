@@ -373,7 +373,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                             siste_aktivitetskort.slutt_dato,
                             siste_aktivitetskort.detaljer,
                             siste_aktivitetskort.handlinger,
-                            ?,
+                            ?::json,
                             siste_aktivitetskort.oppgave,
                             siste_aktivitetskort.action_type,
                             siste_aktivitetskort.avtalt_med_nav,
