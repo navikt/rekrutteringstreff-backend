@@ -84,7 +84,6 @@ class SamtykkeStatusLytter private constructor(
         fun registrer(rapidsConnection: RapidsConnection, repository: Repository) {
             listOf(
                 SamtykkeBesvartHendelse,
-                SelvbetjentSamtykkeGittHendelse,
                 SamtykkeTrukketHendelse,
                 SamtykkeSvarfristUtløptHendelse,
             )
@@ -131,26 +130,6 @@ private object SamtykkeBesvartHendelse : SamtykkeStatusHendelse {
         } else {
             AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE)
         })
-}
-
-private object SelvbetjentSamtykkeGittHendelse : SamtykkeStatusHendelse {
-    override val eventName = "selvbetjent-samtykke-til-deling-av-cv-gitt"
-
-    override fun registrerValidering(river: River) {
-        river.validate {
-            it.requireKey("stillingsTittel", "samtykkeGittTidspunkt")
-            it.requireZonedDateTime("samtykkeGittTidspunkt")
-        }
-    }
-
-    override fun aktivitetsStatus(packet: JsonMessage) = AktivitetsStatus.GJENNOMFORES
-
-    override fun endretAv(packet: JsonMessage, fnr: String) = fnr
-
-    override fun endretAvType(packet: JsonMessage) = EndretAvType.PERSONBRUKERIDENT
-
-    override fun etiketter(packet: JsonMessage) =
-        listOf(AktivitetskortEtikett("Godtatt CV-deling", Sentiment.POSITIVE))
 }
 
 private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {

@@ -241,28 +241,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
-    fun `selvbetjent samtykke gitt skal kreve eksisterende kort og flytte det til gjennomføres`() {
-        val fnr = "01010012345"
-        val stillingId = UUID.randomUUID()
-        val melding = selvbetjentSamtykkeGittMelding(fnr, stillingId)
-
-        rapid.sendTestMessage(melding)
-
-        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
-
-        opprettDeltStilling(fnr, stillingId)
-        rapid.sendTestMessage(melding)
-
-        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
-        assertThat(hendelser).hasSize(2)
-        hendelser.last().also { hendelse ->
-            assertThat(hendelse.aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
-            assertThat(hendelse.opprettetAv).isEqualTo(fnr)
-            assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
-        }
-    }
-
-    @Test
     fun `samtykke trukket av veileder skal flytte aktivitetskort til avbrutt`() {
         val fnr = "01010012345"
         val stillingId = UUID.randomUUID()

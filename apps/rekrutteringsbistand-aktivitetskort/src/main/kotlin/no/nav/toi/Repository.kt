@@ -570,6 +570,99 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         }
     }
 
+    fun opprettDeltStillingForSelvbetjent(
+        fnr: String,
+        stillingId: String,
+        tittel: String,
+        opprettetAv: String,
+        messageId: UUID
+    ): UUID? {
+        val aktivitetskortId = UUID.randomUUID()
+
+        dataSource.connection.use { connection ->
+            try {
+                connection.autoCommit = false
+
+                val endredeLinjer = connection.prepareStatement(
+                    """
+                    INSERT INTO delt_stilling (aktivitetskort_id, fnr, stilling_id)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (stilling_id, fnr) DO NOTHING
+                    """.trimIndent()
+                ).apply {
+                    setObject(1, aktivitetskortId)
+                    setString(2, fnr)
+                    setObject(3, UUID.fromString(stillingId))
+                }.executeUpdate()
+
+                if (endredeLinjer == 0) {
+                    connection.rollback()
+                    teamLog.info("Aktivitetskort finnes allerede for stilling $stillingId og fnr")
+                    return null
+                }
+
+                connection.prepareStatement(
+                    """
+                    INSERT INTO aktivitetskort (
+                        fnr, tittel, beskrivelse, message_id, aktivitetskort_id, aktivitets_status,
+                        endret_av, endret_av_type, endret_tidspunkt, detaljer, handlinger, etiketter,
+                        oppgave, action_type, avtalt_med_nav, aktivitetskort_type
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, '${AktivitetsStatus.GJENNOMFORES.name}',
+                        ?, '${EndretAvType.PERSONBRUKERIDENT.name}', ?, ?::json, ?::json, ?::json,
+                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${SelvbetjentDeleCvMedArbeidsgiverType.dbType}'
+                    )
+                    """.trimIndent()
+                ).apply {
+                    setString(1, fnr)
+                    setString(2, tittel)
+                    setString(
+                        3,
+                        SelvbetjentDeleCvMedArbeidsgiverType.beskrivelse
+                    )
+                    setObject(4, messageId)
+                    setObject(5, aktivitetskortId)
+                    setString(6, opprettetAv)
+                    setObject(7, ZonedDateTime.now().toLocalDateTime())
+                    setString(8, "[]") // detaljer
+                    setString(
+                        9,
+                        jackson3ObjectMapper.writeValueAsString(
+                            listOf(
+                                AktivitetskortHandling(
+                                    SelvbetjentDeleCvMedArbeidsgiverType.handlingTittel,
+                                    SelvbetjentDeleCvMedArbeidsgiverType.handlingSubtekst,
+                                    "$minsideStillingUrl/$stillingId",
+                                    LenkeType.FELLES
+                                )
+                            )
+                        )
+                    ) // handlinger
+                    setString(
+                        10, jackson3ObjectMapper.writeValueAsString(
+                            listOf(
+                                AktivitetskortEtikett(
+                                    "Venter på å bli kontaktet",
+                                    Sentiment.POSITIVE,
+                                    null
+                                )
+                            )
+                        )
+                    )
+                    setNull(11, VARCHAR)
+                }.executeUpdate()
+
+                connection.commit()
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+        return aktivitetskortId
+    }
+
     fun opprettDeltStilling(
         fnr: String,
         stillingId: String,
