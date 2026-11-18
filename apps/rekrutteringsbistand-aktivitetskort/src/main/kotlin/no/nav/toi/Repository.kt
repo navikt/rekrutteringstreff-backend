@@ -373,7 +373,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                             siste_aktivitetskort.slutt_dato,
                             siste_aktivitetskort.detaljer,
                             siste_aktivitetskort.handlinger,
-                            siste_aktivitetskort.etiketter,
+                            ?,
                             siste_aktivitetskort.oppgave,
                             siste_aktivitetskort.action_type,
                             siste_aktivitetskort.avtalt_med_nav,
@@ -394,11 +394,20 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                         aktivitetskortIder.forEach { aktivitetskortId ->
                             statement.setObject(1, UUID.randomUUID())
                             statement.setString(2, AktivitetsStatus.FULLFORT.name)
-                            statement.setString(3, endretAv)
-                            statement.setString(4, EndretAvType.NAVIDENT.name)
-                            statement.setTimestamp(5, endretTidspunkt)
-                            statement.setObject(6, aktivitetskortId)
-                            statement.setString(7, AktivitetsStatus.GJENNOMFORES.name)
+                            statement.setString(3, jackson3ObjectMapper.writeValueAsString(
+                                listOf(
+                                    AktivitetskortEtikett(
+                                        "Ikke fått jobben",
+                                        Sentiment.NEUTRAL,
+                                        null
+                                    )
+                                )
+                            ))
+                            statement.setString(4, endretAv)
+                            statement.setString(5, EndretAvType.NAVIDENT.name)
+                            statement.setTimestamp(6, endretTidspunkt)
+                            statement.setObject(7, aktivitetskortId)
+                            statement.setString(8, AktivitetsStatus.GJENNOMFORES.name)
                             statement.addBatch()
                         }
 
@@ -446,7 +455,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     siste_aktivitetskort.slutt_dato,
                     siste_aktivitetskort.detaljer,
                     siste_aktivitetskort.handlinger,
-                    ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?" },
+                    ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?::json" },
                     siste_aktivitetskort.oppgave,
                     siste_aktivitetskort.action_type,
                     siste_aktivitetskort.avtalt_med_nav,
@@ -474,7 +483,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 setObject(indexOffset++, UUID.randomUUID())
                 setString(indexOffset++, aktivitetsStatus.name)
                 if(etiketter != null) {
-                    setString(indexOffset++, etiketter.let { jackson3ObjectMapper.writeValueAsString(it) } ?: "")
+                    setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(etiketter))
                 }
                 setString(indexOffset++, endretAv)
                 setString(indexOffset++, endretAvType.name)
@@ -641,7 +650,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     setString(10, jackson3ObjectMapper.writeValueAsString(
                         listOf(
                             AktivitetskortEtikett(
-                                "Venter svar",
+                                "Venter på svar fra deg",
                                 Sentiment.NEUTRAL,
                                 null
                             )
