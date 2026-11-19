@@ -73,13 +73,13 @@ class SelvbetjentAktivitetskortLytter (
             return
         }
 
-        // Kun kort som venter på svar flyttes. Avbrutte eller fullførte kort skal ikke gjenåpnes.
+        // Kort som venter på svar eller er avbrutt flyttes. Fullførte kort skal ikke gjenåpnes.
         repository.oppdaterAktivitetsstatus(
             aktivitetskortId = aktivitetskortId,
             aktivitetsStatus = AktivitetsStatus.GJENNOMFORES,
             endretAv = fnr,
             endretAvType = EndretAvType.PERSONBRUKERIDENT,
-            forventetSisteAktivitetsstatus = AktivitetsStatus.FORSLAG,
+            forventetSisteAktivitetsstatus = listOf(AktivitetsStatus.FORSLAG, AktivitetsStatus.AVBRUTT),
             etiketter = listOf(AktivitetskortEtikett("Venter på å bli kontaktet", Sentiment.POSITIVE)),
             handlinger = repository.selvbetjentDeltStillingHandlinger(stillingId.toString()),
         )

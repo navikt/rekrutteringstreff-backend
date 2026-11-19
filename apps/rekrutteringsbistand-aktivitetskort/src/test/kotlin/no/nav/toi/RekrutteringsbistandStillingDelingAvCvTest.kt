@@ -689,7 +689,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
-    fun `selvbetjent samtykke gitt skal ikke gjenåpne avbrutt aktivitetskort`() {
+    fun `selvbetjent samtykke gitt skal flytte avbrutt aktivitetskort til gjennomføres`() {
         val fnr = "01010012345"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId, AktivitetsStatus.AVBRUTT)
@@ -697,8 +697,13 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
 
         val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
-        assertThat(hendelser).hasSize(2)
-        assertThat(hendelser.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.AVBRUTT.name)
+        assertThat(hendelser).hasSize(3)
+        assertThat(hendelser.map { it.aktivitetskortId }.distinct()).hasSize(1)
+        hendelser.last().apply {
+            assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
+            assertThat(opprettetAv).isEqualTo(fnr)
+            assertThat(opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
+        }
     }
 
     @Test

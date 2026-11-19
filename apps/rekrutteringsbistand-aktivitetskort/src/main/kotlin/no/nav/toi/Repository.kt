@@ -425,7 +425,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         aktivitetsStatus: AktivitetsStatus,
         endretAv: String,
         endretAvType: EndretAvType,
-        forventetSisteAktivitetsstatus: AktivitetsStatus? = null,
+        forventetSisteAktivitetsstatus: List<AktivitetsStatus>? = null,
         etiketter: List<AktivitetskortEtikett>? = null,
         handlinger: List<AktivitetskortHandling>? = null
     ) {
@@ -466,7 +466,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                    OR siste_aktivitetskort.endret_av IS DISTINCT FROM ?
                    OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?)
                 """.trimIndent() + if (forventetSisteAktivitetsstatus != null) {
-                    " AND siste_aktivitetskort.aktivitets_status = ?"
+                    " AND siste_aktivitetskort.aktivitets_status = ANY(?)"
                 } else {
                     ""
                 }
@@ -488,7 +488,10 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 setString(indexOffset++, endretAv)
                 setString(indexOffset++, endretAvType.name)
                 if (forventetSisteAktivitetsstatus != null) {
-                    setString(indexOffset++, forventetSisteAktivitetsstatus.name)
+                    setArray(
+                        indexOffset++,
+                        connection.createArrayOf("text", forventetSisteAktivitetsstatus.map { it.name }.toTypedArray())
+                    )
                 }
             }.executeUpdate()
         }.let { rowsUpdated ->
