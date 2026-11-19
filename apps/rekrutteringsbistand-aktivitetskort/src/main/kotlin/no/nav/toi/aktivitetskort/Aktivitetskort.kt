@@ -254,27 +254,6 @@ object DeleCvMedArbeidsgiverType: AktivitetskortType {
     )
 }
 
-object SelvbetjentDeleCvMedArbeidsgiverType: AktivitetskortType {
-    override val eventName = "deltstilling"
-    override val beskrivelse = "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
-    override val handlingTittel = "Sjekk ut stillingen"
-    override val handlingSubtekst = "Sjekk ut stillingen og status på samtykke"
-    override val dbType = "DELE_CV_MED_ARBEIDSGIVER"
-    override val akaasType = "DELE_CV_MED_ARBEIDSGIVER"
-    val etiketter = listOf(AktivitetskortEtikett("Venter på å bli kontaktet", Sentiment.POSITIVE))
-
-    override fun tilFeil(
-        fellesMeldingsfelter: FellesMeldingsfelter,
-        resultSet: ResultSet,
-        aktivitetskortId: String
-    ) = DeltStillingFeilMelding(
-        fellesMeldingsfelter = fellesMeldingsfelter,
-        stillingId = resultSet.getObject("stilling_id", UUID::class.java)
-            ?.toString()
-            ?: error("Mangler stillingId for aktivitetskort $aktivitetskortId"),
-    )
-}
-
 enum class LenkeType {
     INTERN,
     EKSTERN,

@@ -576,8 +576,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
 
     fun selvbetjentDeltStillingHandlinger(stillingId: String) = listOf(
         AktivitetskortHandling(
-            SelvbetjentDeleCvMedArbeidsgiverType.handlingTittel,
-            SelvbetjentDeleCvMedArbeidsgiverType.handlingSubtekst,
+            DeleCvMedArbeidsgiverType.handlingTittel,
+            "Sjekk ut stillingen og status på samtykke",
             "$minsideStillingUrl/$stillingId",
             LenkeType.FELLES
         )
@@ -623,7 +623,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     ) VALUES (
                         ?, ?, ?, ?, ?, '${AktivitetsStatus.GJENNOMFORES.name}',
                         ?, '${EndretAvType.PERSONBRUKERIDENT.name}', ?, ?::json, ?::json, ?::json,
-                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${SelvbetjentDeleCvMedArbeidsgiverType.dbType}'
+                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${DeleCvMedArbeidsgiverType.dbType}'
                     )
                     """.trimIndent()
                 ).apply {
@@ -631,7 +631,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     setString(2, tittel)
                     setString(
                         3,
-                        SelvbetjentDeleCvMedArbeidsgiverType.beskrivelse
+                        DeleCvMedArbeidsgiverType.beskrivelse
                     )
                     setObject(4, messageId)
                     setObject(5, aktivitetskortId)
@@ -640,7 +640,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     setString(8, "[]") // detaljer
                     setString(9, jackson3ObjectMapper.writeValueAsString(selvbetjentDeltStillingHandlinger(stillingId)))
                     setString(
-                        10, jackson3ObjectMapper.writeValueAsString(SelvbetjentDeleCvMedArbeidsgiverType.etiketter)
+                        10, jackson3ObjectMapper.writeValueAsString(listOf(AktivitetskortEtikett("Venter på å bli kontaktet", Sentiment.POSITIVE)))
                     )
                     setNull(11, VARCHAR)
                 }.executeUpdate()

@@ -12,8 +12,9 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
 import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.EndretAvType
-import no.nav.toi.aktivitetskort.SelvbetjentDeleCvMedArbeidsgiverType
+import no.nav.toi.aktivitetskort.Sentiment
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -79,7 +80,7 @@ class SelvbetjentAktivitetskortLytter (
             endretAv = fnr,
             endretAvType = EndretAvType.PERSONBRUKERIDENT,
             forventetSisteAktivitetsstatus = AktivitetsStatus.FORSLAG,
-            etiketter = SelvbetjentDeleCvMedArbeidsgiverType.etiketter,
+            etiketter = listOf(AktivitetskortEtikett("Venter på å bli kontaktet", Sentiment.POSITIVE)),
             handlinger = repository.selvbetjentDeltStillingHandlinger(stillingId.toString()),
         )
     }

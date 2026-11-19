@@ -6,7 +6,6 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.DeleCvMedArbeidsgiverType
 import no.nav.toi.aktivitetskort.EndretAvType
-import no.nav.toi.aktivitetskort.SelvbetjentDeleCvMedArbeidsgiverType
 import no.nav.toi.rekrutteringsbistand.IdentType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
@@ -627,10 +626,10 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(this.fnr).isEqualTo(fnr)
             assertThat(this.stillingId).isEqualTo(stillingId)
             assertThat(tittel).isEqualTo("Test Stilling")
-            assertThat(beskrivelse).isEqualTo(SelvbetjentDeleCvMedArbeidsgiverType.beskrivelse)
+            assertThat(beskrivelse).isEqualTo(DeleCvMedArbeidsgiverType.beskrivelse)
             assertThat(detaljer).isEqualToIgnoringWhitespace("[]")
             assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
-            assertThat(aktivitetsType).isEqualTo(SelvbetjentDeleCvMedArbeidsgiverType.dbType)
+            assertThat(aktivitetsType).isEqualTo(DeleCvMedArbeidsgiverType.dbType)
             assertThat(opprettetAv).isEqualTo(fnr)
             assertThat(opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
             assertThat(opprettetTidspunkt).isBetween(før, ZonedDateTime.now())
@@ -641,8 +640,8 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(etikett["sentiment"].asString()).isEqualTo("POSITIVE")
 
             val handling = jacksonObjectMapper().readTree(handlinger).single()
-            assertThat(handling["tekst"].asString()).isEqualTo(SelvbetjentDeleCvMedArbeidsgiverType.handlingTittel)
-            assertThat(handling["subtekst"].asString()).isEqualTo(SelvbetjentDeleCvMedArbeidsgiverType.handlingSubtekst)
+            assertThat(handling["tekst"].asString()).isEqualTo(DeleCvMedArbeidsgiverType.handlingTittel)
+            assertThat(handling["subtekst"].asString()).isEqualTo("Sjekk ut stillingen og status på samtykke")
             assertThat(handling["url"].asString()).isEqualTo("http://url/stilling/$stillingId")
             assertThat(handling["lenkeType"].asString()).isEqualTo("FELLES")
         }
