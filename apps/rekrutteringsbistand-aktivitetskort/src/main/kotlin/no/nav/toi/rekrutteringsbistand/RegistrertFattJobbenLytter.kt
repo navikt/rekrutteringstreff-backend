@@ -12,7 +12,9 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
 import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.EndretAvType
+import no.nav.toi.aktivitetskort.Sentiment
 
 class RegistrertFattJobbenLytter(
     rapidsConnection: RapidsConnection,
@@ -51,6 +53,12 @@ class RegistrertFattJobbenLytter(
                 endretAv = navIdent,
                 endretAvType = EndretAvType.NAVIDENT,
                 forventetSisteAktivitetsstatus = listOf(AktivitetsStatus.GJENNOMFORES),
+                etiketter = listOf(
+                    AktivitetskortEtikett(
+                        tekst = "Fått jobben 🎉",
+                        sentiment = Sentiment.NEUTRAL,
+                        kode = null
+                    ))
             )
         }
 

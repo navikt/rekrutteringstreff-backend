@@ -67,6 +67,7 @@ class SamtykkeStatusLytter private constructor(
             aktivitetsStatus = hendelse.aktivitetsStatus(packet),
             endretAv = hendelse.endretAv(packet, fnr),
             endretAvType = hendelse.endretAvType(packet),
+            etiketter = hendelse.etiketter(packet),
         )
     }
 
@@ -125,11 +126,11 @@ private object SamtykkeBesvartHendelse : SamtykkeStatusHendelse {
         IdentType.valueOf(packet["besvartAvIdentType"].asString()).tilEndretAvType()
 
     override fun etiketter(packet: JsonMessage) =
-        listOf(if (packet["samtykkeGitt"].asString().toBooleanStrict()) {
-            AktivitetskortEtikett("Godtatt CV-deling", Sentiment.POSITIVE)
+        if (packet["samtykkeGitt"].asString().toBooleanStrict()) {
+            listOf(AktivitetskortEtikett("Venter på å bli kontaktet", Sentiment.POSITIVE))
         } else {
-            AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE)
-        })
+            emptyList()
+        }
 }
 
 private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
@@ -151,7 +152,7 @@ private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
         IdentType.valueOf(packet["trukketAvIdentType"].asString()).tilEndretAvType()
 
     override fun etiketter(packet: JsonMessage) =
-        listOf(AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE))
+        listOf(AktivitetskortEtikett("samtykke til deling av CV er trukket", Sentiment.NEGATIVE))
 }
 
 private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {
@@ -170,7 +171,7 @@ private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {
     override fun endretAvType(packet: JsonMessage) = EndretAvType.SYSTEM
 
     override fun etiketter(packet: JsonMessage) =
-        listOf(AktivitetskortEtikett("Ikke godtatt CV-deling", Sentiment.NEGATIVE))
+        emptyList<AktivitetskortEtikett>()
 }
 
 private fun JsonMessage.requireZonedDateTime(key: String) {
