@@ -20,6 +20,7 @@ import no.nav.toi.rekrutteringsbistand.RegistrertFattJobbenBehovLytter
 import no.nav.toi.rekrutteringsbistand.RegistrertFattJobbenLytter
 import no.nav.toi.rekrutteringsbistand.SamtykkeForespurtLytter
 import no.nav.toi.rekrutteringsbistand.SamtykkeStatusLytter
+import no.nav.toi.rekrutteringsbistand.SelvbetjentAktivitetskortLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffSvarOgStatusLytter
@@ -83,6 +84,7 @@ class App(
             RegistrertFattJobbenLytter(rapidsConnection, repository)
             KandidatlisteLukketBehovLytter(rapidsConnection)
             KandidatlisteLukketLytter(rapidsConnection, repository)
+            SelvbetjentAktivitetskortLytter(rapidsConnection, repository)
         }
         // Rekrutteringstreff
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)

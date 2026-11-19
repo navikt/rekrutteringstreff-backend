@@ -20,7 +20,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/fiks_test_aktivitetskort
+      deploy_dev_branch: refs/heads/opprett_aktivitetskort_selvbetjent
     permissions:
       contents: read
       id-token: write

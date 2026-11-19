@@ -17,7 +17,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
@@ -238,28 +237,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             Triple(AktivitetsStatus.GJENNOMFORES.name, fnr, EndretAvType.PERSONBRUKERIDENT.name),
             Triple(AktivitetsStatus.AVBRUTT.name, fnr, EndretAvType.PERSONBRUKERIDENT.name),
         )
-    }
-
-    @Test
-    fun `selvbetjent samtykke gitt skal kreve eksisterende kort og flytte det til gjennomføres`() {
-        val fnr = "01010012345"
-        val stillingId = UUID.randomUUID()
-        val melding = selvbetjentSamtykkeGittMelding(fnr, stillingId)
-
-        rapid.sendTestMessage(melding)
-
-        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
-
-        opprettDeltStilling(fnr, stillingId)
-        rapid.sendTestMessage(melding)
-
-        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
-        assertThat(hendelser).hasSize(2)
-        hendelser.last().also { hendelse ->
-            assertThat(hendelse.aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
-            assertThat(hendelse.opprettetAv).isEqualTo(fnr)
-            assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
-        }
     }
 
     @Test
@@ -631,6 +608,117 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         assertThat(rapid.inspektør.size).isEqualTo(1)
         assertThat(rapid.inspektør.message(0)["@event_name"].asString()).isEqualTo("kandidat_v2.LukketKandidatliste")
         assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt skal opprette aktivitetskort i gjennomføres`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        val før = ZonedDateTime.now()
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+
+        val aktivitetskort = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(aktivitetskort).hasSize(1)
+        assertThat(rapid.inspektør.size).isZero()
+
+        aktivitetskort.single().apply {
+            assertThat(this.fnr).isEqualTo(fnr)
+            assertThat(this.stillingId).isEqualTo(stillingId)
+            assertThat(tittel).isEqualTo("Test Stilling")
+            assertThat(beskrivelse).isEqualTo(DeleCvMedArbeidsgiverType.beskrivelse)
+            assertThat(detaljer).isEqualToIgnoringWhitespace("[]")
+            assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
+            assertThat(aktivitetsType).isEqualTo(DeleCvMedArbeidsgiverType.dbType)
+            assertThat(opprettetAv).isEqualTo(fnr)
+            assertThat(opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
+            assertThat(opprettetTidspunkt).isBetween(før, ZonedDateTime.now())
+            assertThat(feil).isNull()
+
+            val etikett = jacksonObjectMapper().readTree(etiketter).single()
+            assertThat(etikett["tekst"].asString()).isEqualTo("Venter på å bli kontaktet")
+            assertThat(etikett["sentiment"].asString()).isEqualTo("POSITIVE")
+
+            val handling = jacksonObjectMapper().readTree(handlinger).single()
+            assertThat(handling["tekst"].asString()).isEqualTo(DeleCvMedArbeidsgiverType.handlingTittel)
+            assertThat(handling["subtekst"].asString()).isEqualTo("Sjekk ut stillingen og status på samtykke")
+            assertThat(handling["url"].asString()).isEqualTo("http://url/stilling/$stillingId")
+            assertThat(handling["lenkeType"].asString()).isEqualTo("FELLES")
+        }
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt for samme kandidat og stilling skal ignoreres`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+        val første = testRepository.hentAlleRekrutteringsbistandStillinger()
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+
+        val etterpå = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(etterpå).hasSize(1)
+        assertThat(etterpå.single()).usingRecursiveComparison().isEqualTo(første.single())
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt skal flytte eksisterende aktivitetskort fra veileder til gjennomføres`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId)
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser.map { it.aktivitetskortId }.distinct()).hasSize(1)
+        hendelser.last().apply {
+            assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
+            assertThat(opprettetAv).isEqualTo(fnr)
+            assertThat(opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
+            val etikett = jacksonObjectMapper().readTree(etiketter).single()
+            assertThat(etikett["tekst"].asString()).isEqualTo("Venter på å bli kontaktet")
+            assertThat(etikett["sentiment"].asString()).isEqualTo("POSITIVE")
+            val handling = jacksonObjectMapper().readTree(handlinger).single()
+            assertThat(handling["subtekst"].asString()).isEqualTo("Sjekk ut stillingen og status på samtykke")
+            assertThat(handling["url"].asString()).isEqualTo("http://url/stilling/$stillingId")
+        }
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt skal flytte avbrutt aktivitetskort til gjennomføres`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, AktivitetsStatus.AVBRUTT)
+
+        rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(3)
+        assertThat(hendelser.map { it.aktivitetskortId }.distinct()).hasSize(1)
+        hendelser.last().apply {
+            assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
+            assertThat(opprettetAv).isEqualTo(fnr)
+            assertThat(opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
+        }
+    }
+
+    @Test
+    fun `selvbetjent samtykke gitt med ugyldige felter skal ikke opprette aktivitetskort`() {
+        val gyldig = jacksonObjectMapper().readTree(
+            selvbetjentSamtykkeGittMelding(fnr = "01010012345", stillingId = UUID.randomUUID())
+        ) as ObjectNode
+
+        rapid.sendTestMessage(gyldig.deepCopy().put("stillingsId", "ikke-en-uuid").toString())
+        rapid.sendTestMessage(gyldig.deepCopy().put("samtykkeGittTidspunkt", "ikke-en-dato").toString())
+        rapid.sendTestMessage(gyldig.deepCopy().apply { remove("fnr") }.toString())
+        rapid.sendTestMessage(gyldig.deepCopy().apply { remove("stillingsinfo") }.toString())
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
+        assertThat(rapid.inspektør.size).isZero()
     }
 
     private fun testSamtykkeBesvart(

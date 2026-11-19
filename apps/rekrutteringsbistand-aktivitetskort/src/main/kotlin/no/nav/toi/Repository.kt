@@ -425,8 +425,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         aktivitetsStatus: AktivitetsStatus,
         endretAv: String,
         endretAvType: EndretAvType,
-        forventetSisteAktivitetsstatus: AktivitetsStatus? = null,
-        etiketter: List<AktivitetskortEtikett>? = null
+        forventetSisteAktivitetsstatus: List<AktivitetsStatus>? = null,
+        etiketter: List<AktivitetskortEtikett>? = null,
+        handlinger: List<AktivitetskortHandling>? = null
     ) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
@@ -445,8 +446,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     siste_aktivitetskort.start_dato,
                     siste_aktivitetskort.slutt_dato,
                     siste_aktivitetskort.detaljer,
-                    siste_aktivitetskort.handlinger,
-                    ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?" },
+                    ${if(handlinger == null) "siste_aktivitetskort.handlinger" else "?::json" },
+                    ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?::json" },
                     siste_aktivitetskort.oppgave,
                     siste_aktivitetskort.action_type,
                     siste_aktivitetskort.avtalt_med_nav,
@@ -465,7 +466,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                    OR siste_aktivitetskort.endret_av IS DISTINCT FROM ?
                    OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?)
                 """.trimIndent() + if (forventetSisteAktivitetsstatus != null) {
-                    " AND siste_aktivitetskort.aktivitets_status = ?"
+                    " AND siste_aktivitetskort.aktivitets_status = ANY(?)"
                 } else {
                     ""
                 }
@@ -473,8 +474,11 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 var indexOffset = 1
                 setObject(indexOffset++, UUID.randomUUID())
                 setString(indexOffset++, aktivitetsStatus.name)
+                if(handlinger != null) {
+                    setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(handlinger))
+                }
                 if(etiketter != null) {
-                    setString(indexOffset++, etiketter.let { jackson3ObjectMapper.writeValueAsString(it) } ?: "")
+                    setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(etiketter))
                 }
                 setString(indexOffset++, endretAv)
                 setString(indexOffset++, endretAvType.name)
@@ -484,7 +488,10 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 setString(indexOffset++, endretAv)
                 setString(indexOffset++, endretAvType.name)
                 if (forventetSisteAktivitetsstatus != null) {
-                    setString(indexOffset++, forventetSisteAktivitetsstatus.name)
+                    setArray(
+                        indexOffset++,
+                        connection.createArrayOf("text", forventetSisteAktivitetsstatus.map { it.name }.toTypedArray())
+                    )
                 }
             }.executeUpdate()
         }.let { rowsUpdated ->
@@ -568,6 +575,88 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 teamLog.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
             }
         }
+    }
+
+    fun selvbetjentDeltStillingHandlinger(stillingId: String) = listOf(
+        AktivitetskortHandling(
+            DeleCvMedArbeidsgiverType.handlingTittel,
+            "Sjekk ut stillingen og status på samtykke",
+            "$minsideStillingUrl/$stillingId",
+            LenkeType.FELLES
+        )
+    )
+
+    fun opprettDeltStillingForSelvbetjent(
+        fnr: String,
+        stillingId: String,
+        tittel: String,
+        opprettetAv: String,
+        messageId: UUID
+    ): UUID? {
+        val aktivitetskortId = UUID.randomUUID()
+
+        dataSource.connection.use { connection ->
+            try {
+                connection.autoCommit = false
+
+                val endredeLinjer = connection.prepareStatement(
+                    """
+                    INSERT INTO delt_stilling (aktivitetskort_id, fnr, stilling_id)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (stilling_id, fnr) DO NOTHING
+                    """.trimIndent()
+                ).apply {
+                    setObject(1, aktivitetskortId)
+                    setString(2, fnr)
+                    setObject(3, UUID.fromString(stillingId))
+                }.executeUpdate()
+
+                if (endredeLinjer == 0) {
+                    connection.rollback()
+                    teamLog.info("Aktivitetskort finnes allerede for stilling $stillingId og fnr")
+                    return null
+                }
+
+                connection.prepareStatement(
+                    """
+                    INSERT INTO aktivitetskort (
+                        fnr, tittel, beskrivelse, message_id, aktivitetskort_id, aktivitets_status,
+                        endret_av, endret_av_type, endret_tidspunkt, detaljer, handlinger, etiketter,
+                        oppgave, action_type, avtalt_med_nav, aktivitetskort_type
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, '${AktivitetsStatus.GJENNOMFORES.name}',
+                        ?, '${EndretAvType.PERSONBRUKERIDENT.name}', ?, ?::json, ?::json, ?::json,
+                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${DeleCvMedArbeidsgiverType.dbType}'
+                    )
+                    """.trimIndent()
+                ).apply {
+                    setString(1, fnr)
+                    setString(2, tittel)
+                    setString(
+                        3,
+                        DeleCvMedArbeidsgiverType.beskrivelse
+                    )
+                    setObject(4, messageId)
+                    setObject(5, aktivitetskortId)
+                    setString(6, opprettetAv)
+                    setObject(7, ZonedDateTime.now().toLocalDateTime())
+                    setString(8, "[]") // detaljer
+                    setString(9, jackson3ObjectMapper.writeValueAsString(selvbetjentDeltStillingHandlinger(stillingId)))
+                    setString(
+                        10, jackson3ObjectMapper.writeValueAsString(listOf(AktivitetskortEtikett("Venter på å bli kontaktet", Sentiment.POSITIVE)))
+                    )
+                    setNull(11, VARCHAR)
+                }.executeUpdate()
+
+                connection.commit()
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+        return aktivitetskortId
     }
 
     fun opprettDeltStilling(
