@@ -5,6 +5,10 @@ import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
+import no.nav.toi.schedulerConfig.FastTidspunktScheduler
+import no.nav.toi.schedulerConfig.ScheduledTask
+import no.nav.toi.schedulerConfig.Scheduler
+import no.nav.toi.schedulerConfig.SchedulerGjentakelse
 import java.time.LocalTime
 import java.time.ZoneId
 

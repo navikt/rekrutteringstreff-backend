@@ -1,6 +1,7 @@
-package no.nav.toi
+package no.nav.toi.schedulerConfig
 
 import no.nav.arbeidsgiver.toi.logging.log
+import no.nav.toi.LeaderElectionInterface
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDate
@@ -38,7 +39,14 @@ class FastTidspunktScheduler(
     private val gjentakelse: SchedulerGjentakelse,
 ) : Scheduler {
 
-    private val executor = ScheduledThreadPoolExecutor(1).apply {
+    private val trådnavn = scheduledTask::class.simpleName.orEmpty()
+        .removeSuffix("Scheduler")
+        .replace(Regex("(?<=[a-zæøå])(?=[A-ZÆØÅ])"), "-")
+        .lowercase()
+
+    private val executor = ScheduledThreadPoolExecutor(1) { runnable ->
+        Thread(runnable, trådnavn)
+    }.apply {
         setExecuteExistingDelayedTasksAfterShutdownPolicy(false)
     }
     private val erKjørende = AtomicBoolean(false)

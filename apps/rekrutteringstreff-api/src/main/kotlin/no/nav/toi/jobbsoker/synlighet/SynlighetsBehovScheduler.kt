@@ -7,6 +7,9 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.schedulerConfig.DefaultScheduler
+import no.nav.toi.schedulerConfig.ScheduledTask
+import no.nav.toi.schedulerConfig.Scheduler
 import java.util.concurrent.TimeUnit
 
 /**

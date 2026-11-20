@@ -1,6 +1,7 @@
-package no.nav.toi
+package no.nav.toi.schedulerConfig
 
 import no.nav.arbeidsgiver.toi.logging.log
+import no.nav.toi.LeaderElectionInterface
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean

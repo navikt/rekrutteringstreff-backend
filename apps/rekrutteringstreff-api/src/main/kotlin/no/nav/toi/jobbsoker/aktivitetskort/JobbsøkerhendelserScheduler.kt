@@ -10,6 +10,9 @@ import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.schedulerConfig.DefaultScheduler
+import no.nav.toi.schedulerConfig.ScheduledTask
+import no.nav.toi.schedulerConfig.Scheduler
 import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
