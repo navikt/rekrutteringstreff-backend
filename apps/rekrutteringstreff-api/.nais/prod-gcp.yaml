@@ -8,6 +8,8 @@ min_replicas: 2
 max_replicas: 4
 gcp_db_tier: db-custom-1-3840
 gcp_disk_autoresize: true
+gcp_db_point_in_time_recovery: true
+gcp_db_query_string_length: 4500
 postgres: POSTGRES_17
 adGruppeUtvikler: "41080368-439f-4128-858a-afbef876431e"
 adGruppeArbeidsgiverrettet: "46c8e3b2-0469-4740-983f-d8cd2b6e4fee"
