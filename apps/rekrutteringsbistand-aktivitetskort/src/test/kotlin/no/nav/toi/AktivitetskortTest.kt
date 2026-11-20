@@ -159,7 +159,7 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["detaljer"]).isEmpty()
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
-            assertThat(this["aktivitetskort"]["etiketter"][0]["tekst"].asString()).isEqualTo("Venter svar")
+            assertThat(this["aktivitetskort"]["etiketter"][0]["tekst"].asString()).isEqualTo("Venter på svar fra deg")
             assertThat(this["aktivitetskort"]["etiketter"][0]["sentiment"].asString()).isEqualTo("NEUTRAL")
             assertThat(this["aktivitetskort"]["etiketter"][0].has("kode")).isFalse()
             assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()

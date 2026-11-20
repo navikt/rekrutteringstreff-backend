@@ -12,7 +12,9 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
 import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.EndretAvType
+import no.nav.toi.aktivitetskort.Sentiment
 
 class RegistrertFattJobbenLytter(
     rapidsConnection: RapidsConnection,
@@ -24,10 +26,10 @@ class RegistrertFattJobbenLytter(
             precondition {
                 it.requireValue("@event_name", "kandidat_v2.RegistrertFåttJobben")
                 it.forbidValue("@slutt_av_hendelseskjede", true)
-                it.requireKey("stillingsinfo.stillingsid")
+                it.requireKey("stillingsinfo.stillingsid", "fodselsnummer")
             }
             validate {
-                it.requireKey("stillingsId", "utførtAvNavIdent", "tidspunkt", "fnr")
+                it.requireKey("stillingsId", "utførtAvNavIdent", "tidspunkt")
                 it.require("stillingsId") { node -> node.asString().toUUID() }
             }
         }.register(this)
@@ -41,7 +43,7 @@ class RegistrertFattJobbenLytter(
     ) {
         val stillingsId = packet["stillingsId"].asString().toUUID()
         val navIdent = packet["utførtAvNavIdent"].asString()
-        val fnr = packet["fnr"].asString()
+        val fnr = packet["fodselsnummer"].asString()
 
         val aktivitetskortId = repository.hentAktivitetskortIdForDeltStilling(fnr, stillingsId)
         if (aktivitetskortId != null && repository.hentSisteAktivitetsstatus(aktivitetskortId) == AktivitetsStatus.GJENNOMFORES) {
@@ -50,7 +52,13 @@ class RegistrertFattJobbenLytter(
                 aktivitetsStatus = AktivitetsStatus.FULLFORT,
                 endretAv = navIdent,
                 endretAvType = EndretAvType.NAVIDENT,
-                forventetSisteAktivitetsstatus = AktivitetsStatus.GJENNOMFORES,
+                forventetSisteAktivitetsstatus = listOf(AktivitetsStatus.GJENNOMFORES),
+                etiketter = listOf(
+                    AktivitetskortEtikett(
+                        tekst = "Fått jobben 🎉",
+                        sentiment = Sentiment.NEUTRAL,
+                        kode = null
+                    ))
             )
         }
 

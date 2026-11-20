@@ -54,6 +54,7 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 - [Automatiske backend-tester](7-akseptansetest-og-ros/automatiske-tester.md) - Plan for automatisering av akseptansetester i backend
 - [Testresultater WorkOp](7-akseptansetest-og-ros/testresultater-workop.md) - Resultat av første testrunde for WorkOp, med feil som gjenstår og uavklarte regler
 - [Akseptansetester WorkOp, runde 2](7-akseptansetest-og-ros/akseptansetester-workop-runde2.md) - Retest av endrede og nye tester og rettede funn etter første testrunde
+- [Akseptansetester lagrede søk](7-akseptansetest-og-ros/akseptansetester-lagrede-sok.md) - Manuelle tester i nettleseren for lagrede søk i treffsøket og stillingssøket
 
 ### 8. [Utviklerrutiner](8-utviklerrutiner/)
 

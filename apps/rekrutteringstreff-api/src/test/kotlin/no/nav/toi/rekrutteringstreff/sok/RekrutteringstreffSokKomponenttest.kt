@@ -279,8 +279,14 @@ class RekrutteringstreffSokKomponenttest {
 
     @Test
     fun `for mange fritekstord gir 400`() {
-        val ord = (1..11).map { "ord$it" }.toTypedArray()
+        val ord = (1..21).map { "ord$it" }.toTypedArray()
         assertThat(fritekstSøk(*ord).statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `fritekstord på antallsgrensen gir 200`() {
+        val ord = (1..20).map { "ord$it" }.toTypedArray()
+        assertThat(fritekstSøk(*ord).statusCode()).isEqualTo(200)
     }
 
     @Test
@@ -300,13 +306,13 @@ class RekrutteringstreffSokKomponenttest {
 
     @Test
     fun `for lang fritekst gir 400`() {
-        val response = fritekstSøk("a".repeat(201))
+        val response = fritekstSøk("a".repeat(401))
         assertThat(response.statusCode()).isEqualTo(400)
     }
 
     @Test
     fun `fritekst på lengde-grensen gir 200`() {
-        val response = fritekstSøk("a".repeat(200))
+        val response = fritekstSøk("a".repeat(400))
         assertThat(response.statusCode()).isEqualTo(200)
     }
 

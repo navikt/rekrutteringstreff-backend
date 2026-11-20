@@ -43,7 +43,7 @@ class KiAutorisasjonsTest {
         @JvmStatic
         @RegisterExtension
         val wireMockServer: WireMockExtension = WireMockExtension.newInstance()
-            .options(WireMockConfiguration.options().port(9955))
+            .options(WireMockConfiguration.options().dynamicPort())
             .build()
     }
     private val database = TestDatabase()
@@ -53,7 +53,11 @@ class KiAutorisasjonsTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
+        infra = TestInfrastructureContext(
+            dataSource = database.dataSource,
+            modiaKlientUrl = wmInfo.httpBaseUrl,
+            openAiBaseUrl = wireMockServer.baseUrl(),
+        ).also { it.start() }
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
     }

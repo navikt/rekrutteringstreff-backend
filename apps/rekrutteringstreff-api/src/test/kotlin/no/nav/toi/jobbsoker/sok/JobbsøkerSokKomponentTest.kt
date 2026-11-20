@@ -1159,6 +1159,25 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
+    fun `venteliste kan filtreres og telles som intern status`() {
+        val treffId = opprettTreffMedEier()
+        val ider = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "A"),
+            jobbsøker("22222222222", "Kari", "B"),
+        )
+        db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.VENTELISTE)
+
+        val dto = søk(treffId, "aktuellForTreffStatus" to listOf("VENTELISTE"))
+
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.jobbsøkere.single().personTreffId).isEqualTo(ider[0].toString())
+        assertThat(dto.jobbsøkere.single().aktuellForTreffStatus).isEqualTo(AktuellForTreffStatus.VENTELISTE)
+        assertThat(dto.antallPerAktuellForTreffStatus).containsExactlyInAnyOrderEntriesOf(
+            mapOf(AktuellForTreffStatus.VENTELISTE to 1, AktuellForTreffStatus.VURDERES to 1)
+        )
+    }
+
+    @Test
     fun `aktuellForTreffStatus-filter med flere verdier returnerer unionen og ekskluderer ikke satt`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
@@ -1249,15 +1268,18 @@ class JobbsøkerSokKomponentTest {
             jobbsøker("33333333333", "Vurderes", "C"),
             jobbsøker("44444444444", "Kontaktet", "D"),
             jobbsøker("55555555555", "Aktuell", "E"),
+            jobbsøker("66666666666", "Venteliste", "F"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.IKKE_AKTUELL)
         db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.KONTAKTET)
         db.settAktuellForTreffStatus(ider[3], AktuellForTreffStatus.AKTUELL)
+        db.settAktuellForTreffStatus(ider[4], AktuellForTreffStatus.VENTELISTE)
 
         val dto = søk(treffId, "sortering" to "aktuell-for-treff-status", "retning" to "asc")
 
         assertThat(dto.jobbsøkere.map { it.aktuellForTreffStatus }).containsExactly(
             AktuellForTreffStatus.AKTUELL,
+            AktuellForTreffStatus.VENTELISTE,
             AktuellForTreffStatus.KONTAKTET,
             AktuellForTreffStatus.VURDERES,
             AktuellForTreffStatus.IKKE_AKTUELL,
@@ -1271,15 +1293,18 @@ class JobbsøkerSokKomponentTest {
             jobbsøker("11111111111", "IkkeSatt", "A"),
             jobbsøker("22222222222", "Aktuell", "B"),
             jobbsøker("33333333333", "IkkeAktuell", "C"),
+            jobbsøker("44444444444", "Venteliste", "D"),
         )
         db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.AKTUELL)
         db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.IKKE_AKTUELL)
+        db.settAktuellForTreffStatus(ider[3], AktuellForTreffStatus.VENTELISTE)
 
         val dto = søk(treffId, "sortering" to "aktuell-for-treff-status", "retning" to "desc")
 
         assertThat(dto.jobbsøkere.map { it.aktuellForTreffStatus }).containsExactly(
             AktuellForTreffStatus.IKKE_AKTUELL,
             AktuellForTreffStatus.VURDERES,
+            AktuellForTreffStatus.VENTELISTE,
             AktuellForTreffStatus.AKTUELL,
         )
     }

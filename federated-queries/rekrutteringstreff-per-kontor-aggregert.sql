@@ -1,3 +1,6 @@
+SET @@location = 'europe-north1';
+
+CREATE OR REPLACE TABLE `toi-prod-324e.rekrutteringstreff.per_kontor_aggregert` AS
 SELECT *
 FROM
     EXTERNAL_QUERY(

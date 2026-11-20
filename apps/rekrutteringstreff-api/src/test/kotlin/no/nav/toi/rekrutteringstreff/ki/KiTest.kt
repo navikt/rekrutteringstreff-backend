@@ -37,7 +37,7 @@ class KiTest {
         @JvmStatic
         @RegisterExtension
         val wireMockServer: WireMockExtension = WireMockExtension.newInstance()
-            .options(WireMockConfiguration.options().port(9955))
+            .options(WireMockConfiguration.options().dynamicPort())
             .build()
     }
 
@@ -52,7 +52,11 @@ class KiTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
+        infra = TestInfrastructureContext(
+            dataSource = db.dataSource,
+            modiaKlientUrl = wmInfo.httpBaseUrl,
+            openAiBaseUrl = wireMockServer.baseUrl(),
+        ).also { it.start() }
         app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
     }
 

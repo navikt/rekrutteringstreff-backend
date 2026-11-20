@@ -18,6 +18,7 @@ import no.nav.toi.rekrutteringstreff.eier.leggTil
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.*
 import java.time.Instant
@@ -714,19 +715,20 @@ class JobbsøkerTest {
         db.hentJobbsøkerHendelser(treffId)
             .filter { it.hendelsestype == JobbsøkerHendelsestype.AKTUELL_FOR_TREFF_STATUS_ENDRET }
 
-    @Test
-    fun `eier kan sette aktuellForTreffStatus og det skrives hendelse`() {
+    @ParameterizedTest
+    @EnumSource(value = AktuellForTreffStatus::class, names = ["AKTUELL", "VENTELISTE"])
+    fun `eier kan sette aktuellForTreffStatus og det skrives hendelse`(status: AktuellForTreffStatus) {
         val (treffId, personTreffId) = opprettJobbsøkerOgRegistrerEierPåTreff()
 
-        val response = endreAktuellForTreffStatus(treffId, personTreffId, AktuellForTreffStatus.AKTUELL.name)
+        val response = endreAktuellForTreffStatus(treffId, personTreffId, status.name)
 
         assertThat(response.statusCode()).isEqualTo(HTTP_OK)
-        assertThat(db.hentAlleJobbsøkere().single().aktuellForTreffStatus).isEqualTo(AktuellForTreffStatus.AKTUELL)
+        assertThat(db.hentAlleJobbsøkere().single().aktuellForTreffStatus).isEqualTo(status)
         val hendelse = aktuellForTreffStatusHendelser(treffId).single()
         assertThat(hendelse.aktørIdentifikasjon).isEqualTo(testeierIdent)
         assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(hendelse.hendelseData).isEqualTo(
-            AktuellForTreffStatusHendelseDataDto(aktuellForTreffStatus = AktuellForTreffStatus.AKTUELL.name, forrigeAktuellForTreffStatus = AktuellForTreffStatus.VURDERES.name)
+            AktuellForTreffStatusHendelseDataDto(aktuellForTreffStatus = status.name, forrigeAktuellForTreffStatus = AktuellForTreffStatus.VURDERES.name)
         )
     }
 

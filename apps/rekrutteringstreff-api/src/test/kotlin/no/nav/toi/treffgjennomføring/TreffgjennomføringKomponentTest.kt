@@ -266,6 +266,71 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `usynlig jobbsøker på WorkOp får rom og kan registrere interesse`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        db.settSynlighet(person, false)
+        oppmøte(treff, person, møtt = true)
+
+        assertThat(møteoppsett(treff).statusCode()).isEqualTo(200)
+        assertThat(interesse(treff, person, ag, interessert = true).statusCode()).isEqualTo(200)
+
+        val svar = aggregat(treff)
+        assertThat(svar["rom"].flatMap { it["jobbsøkere"] }.map { it.asText() }).containsExactly(person.somString)
+        assertThat(svar["interesser"]).hasSize(1)
+    }
+
+    @Test
+    fun `synlighetsendring etter romfordeling beholder rom og interesse`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+        interesse(treff, person, ag, interessert = true)
+
+        db.settSynlighet(person, false)
+
+        val svar = aggregat(treff)
+        assertThat(svar["rom"].flatMap { it["jobbsøkere"] }.map { it.asText() }).containsExactly(person.somString)
+        assertThat(svar["interesser"]).hasSize(1)
+    }
+
+    @Test
+    fun `usynlig jobbsøker på WorkOp vises i jobbsøkerlisten uten fødselsnummer`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        db.settSynlighet(person, false)
+
+        val jobbsøkere = gjennomføringsjobbsøkere(treff)
+
+        assertThat(jobbsøkere.map { it["personTreffId"].asText() }).containsExactly(person.somString)
+        assertThat(jobbsøkere.single()["fødselsnummer"]?.isNull ?: true).isTrue()
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "WORKOP, false",
+        "WORKOP, true",
+        "REKRUTTERINGSTREFF, true",
+    )
+    fun `sperret jobbsøker vises aldri i jobbsøkerlisten for gjennomføringen`(
+        kategori: RekrutteringstreffKategori,
+        erSynlig: Boolean,
+    ) {
+        val treff = treff(kategori, antallArbeidsgivere = 1)
+        val sperret = jobbsøker(treff, "11111111111")
+        val vanlig = jobbsøker(treff, "22222222222")
+        db.settSperret(sperret, true)
+        db.settSynlighet(sperret, erSynlig)
+
+        val jobbsøkere = gjennomføringsjobbsøkere(treff)
+
+        assertThat(jobbsøkere.map { it["personTreffId"].asText() }).containsExactly(vanlig.somString)
+    }
+
+    @Test
     fun `gjentatt registrering av samme oppmøte gir ingen ny hendelse`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
@@ -1828,6 +1893,12 @@ class TreffgjennomføringKomponentTest {
         val svar = post(treffId, "/treffgjennomforing-og-oppfolging/jobbsokere", body)
         assertThat(svar.statusCode()).isEqualTo(200)
         return mapper.readTree(svar.body())["jobbsøkere"].values().map { it["personTreffId"].asString() to it["status"].asString() }
+    }
+
+    private fun gjennomføringsjobbsøkere(treffId: TreffId): List<JsonNode> {
+        val svar = post(treffId, "/treffgjennomforing-og-oppfolging/jobbsokere", "{}")
+        assertThat(svar.statusCode()).isEqualTo(200)
+        return mapper.readTree(svar.body())["jobbsøkere"].toList()
     }
 
     private fun oppmøteliste(treffId: TreffId): List<String> =
