@@ -1,9 +1,9 @@
 package no.nav.toi
 
 import no.nav.toi.aktivitetskort.ErrorType
-import no.nav.toi.aktivitetskort.atOslo
 import java.sql.Timestamp
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.UUID
 import kotlin.use
@@ -108,7 +108,7 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
         }
     }
 
-    private fun Timestamp.atOslo() = this.toInstant().atOslo()
+    private fun Timestamp.atOslo() = this.toInstant().atZone(ZoneId.of("Europe/Oslo"))
 }
 
 class RekrutteringstreffInvitasjon(
