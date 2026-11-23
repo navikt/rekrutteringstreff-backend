@@ -29,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Java v25
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: 'temurin'
           java-version: '25'
@@ -128,7 +128,7 @@ jobs:
 
   call-lagre-docker-baseimage-digest:
     needs: [ build-and-publish, deploy-to-prod-gcp ]
-    uses: navikt/toi-github-actions-workflows/.github/workflows/lagre-docker-baseimage-digest.yaml@v16
+    uses: navikt/toi-github-actions-workflows/.github/workflows/lagre-docker-baseimage-digest.yaml@v18
     with:
       app-navn: ${{ inputs.app_name }}
       baseimage-tagged-ref: ${{ inputs.baseimage-tagged-ref }}
