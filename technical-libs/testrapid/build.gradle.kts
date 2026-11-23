@@ -8,5 +8,7 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.rapids.and.rivers)
+    implementation(libs.tbd.rapids.and.rivers.api)
+    implementation(libs.jackson3.module.kotlin)
+    implementation(libs.micrometer.core)
 }
