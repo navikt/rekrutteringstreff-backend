@@ -14,7 +14,6 @@ val testContainerVersion = "2.0.5"
 val javalinVersion = "7.2.3"
 val micrometerVersion = "1.17.1"
 val jackson2Version = "2.22.4"
-val rapidsAndRiversVersion = libs.versions.rapids.and.rivers.get()
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.1"
 
@@ -36,12 +35,8 @@ dependencies {
     implementation("com.auth0:jwks-rsa:0.24.1")
     implementation("io.opentelemetry.instrumentation:opentelemetry-logback-mdc-1.0:${opentelemetryLogbackMdcVersion}")
     implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:${openTelemetryAnnotationsVersion}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
-    // Rapids and rivers uten Ktor.
-    implementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-impl:${rapidsAndRiversVersion}")
-    implementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-api:${rapidsAndRiversVersion}")
-    implementation("com.github.navikt.rapids-and-rivers:kafka:${rapidsAndRiversVersion}")
-    testImplementation("com.github.navikt.rapids-and-rivers:rapids-and-rivers-test:${rapidsAndRiversVersion}")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:testcontainers-postgresql:$testContainerVersion")

@@ -1,8 +1,8 @@
 package no.nav.toi
 
-import io.ktor.server.util.toZonedDateTime
-import io.ktor.utils.io.InternalAPI
 import no.nav.toi.aktivitetskort.ErrorType
+import no.nav.toi.aktivitetskort.atOslo
+import java.sql.Timestamp
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -20,7 +20,6 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
         }
     }
 
-    @OptIn(InternalAPI::class)
     fun hentAlleRekrutteringstreffInvitasjoner() = databaseConfig.lagDatasource().connection.use { connection ->
         connection.prepareStatement(
             """
@@ -46,12 +45,12 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
                         aktivitetsStatus = resultSet.getString("aktivitets_status"),
                         opprettetAv = resultSet.getString("endret_av"),
                         opprettetAvType = resultSet.getString("endret_av_type"),
-                        opprettetTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toZonedDateTime(),
+                        opprettetTidspunkt = resultSet.getTimestamp("endret_tidspunkt").atOslo(),
                         messageId = UUID.fromString(resultSet.getString("message_id")),
                         aktivitetsType = resultSet.getString("aktivitetskort_type"),
                         feil = resultSet.getString("failing_message")?.let { failingMessage ->
                             AktivitetskortFeil(
-                                timestamp = resultSet.getTimestamp("timestamp").toZonedDateTime(),
+                                timestamp = resultSet.getTimestamp("timestamp").atOslo(),
                                 failingMessage = failingMessage,
                                 errorMessage = resultSet.getString("error_message"),
                                 errorType = ErrorType.valueOf(resultSet.getString("error_type"))
@@ -65,7 +64,6 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
         }
     }
 
-    @OptIn(InternalAPI::class)
     fun hentAlleRekrutteringsbistandStillinger() = databaseConfig.lagDatasource().connection.use { connection ->
         connection.prepareStatement(
             """
@@ -91,12 +89,12 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
                         aktivitetsStatus = resultSet.getString("aktivitets_status"),
                         opprettetAv = resultSet.getString("endret_av"),
                         opprettetAvType = resultSet.getString("endret_av_type"),
-                        opprettetTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toZonedDateTime(),
+                        opprettetTidspunkt = resultSet.getTimestamp("endret_tidspunkt").atOslo(),
                         messageId = UUID.fromString(resultSet.getString("message_id")),
                         aktivitetsType = resultSet.getString("aktivitetskort_type"),
                         feil = resultSet.getString("failing_message")?.let { failingMessage ->
                             AktivitetskortFeil(
-                                timestamp = resultSet.getTimestamp("timestamp").toZonedDateTime(),
+                                timestamp = resultSet.getTimestamp("timestamp").atOslo(),
                                 failingMessage = failingMessage,
                                 errorMessage = resultSet.getString("error_message"),
                                 errorType = ErrorType.valueOf(resultSet.getString("error_type"))
@@ -109,6 +107,8 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
             }.toList()
         }
     }
+
+    private fun Timestamp.atOslo() = this.toInstant().atOslo()
 }
 
 class RekrutteringstreffInvitasjon(
