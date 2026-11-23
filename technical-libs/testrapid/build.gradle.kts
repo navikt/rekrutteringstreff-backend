@@ -8,5 +8,5 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.navikt:rapids-and-rivers:2026091610031789545782")
+    implementation("com.github.navikt:rapids-and-rivers:2026111908531795074794")
 }

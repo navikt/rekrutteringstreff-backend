@@ -9,12 +9,12 @@ application {
 
 val flywayVersion = "13.11.1"
 val postgresVersion = "42.7.13"
-val hikariVersion = "6.2.1"
+val hikariVersion = "7.1.0"
 val testContainerVersion = "2.0.5"
 val javalinVersion = "7.2.3"
 val micrometerVersion = "1.17.1"
 val jackson2Version = "2.22.4"
-val rapidsAndRiversVersion = "2026091610031789545782" // Må være lik versjonen i buildSrc/toi.rapids-and-rivers.gradle.kts
+val rapidsAndRiversVersion = "2026111908531795074794" // Må være lik versjonen i buildSrc/toi.rapids-and-rivers.gradle.kts
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.1"
 

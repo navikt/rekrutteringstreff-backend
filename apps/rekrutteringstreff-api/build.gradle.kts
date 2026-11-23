@@ -9,7 +9,7 @@ application {
 }
 
 val javalinVersion = "7.2.4"
-val mockOAuth2ServerVersion = "6.1.3"
+val mockOAuth2ServerVersion = "7.0.1"
 val flywayVersion = "13.11.1"
 val postgresVersion = "42.7.14"
 val hikariVersion = "7.1.0"
