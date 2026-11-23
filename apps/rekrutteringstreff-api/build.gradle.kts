@@ -1,5 +1,5 @@
 plugins {
-    id("toi.rapids-and-rivers")
+    id("toi.rapids-and-rivers-med-ktor")
     kotlin("kapt")
     id("io.github.ben-manes.versions") version "0.64.0"
 }

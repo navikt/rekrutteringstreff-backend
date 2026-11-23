@@ -13,7 +13,7 @@ rapids-and-rivers = "2026091610031789545782"
 
 # Sikkerhetsfikser for transitive avhengigheter (logstash-logback-encoder, rapids-and-rivers/kafka-clients og jwks-rsa).
 # Fjern når de som drar dem inn bruker rettede versjoner.
-jackson3 = "3.2.3"
+jackson3 = "3.2.4"
 micrometer = "1.16.7"
 lz4-java = "1.11.4"
 snappy-java = "1.1.10.9"
@@ -29,8 +29,13 @@ junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", vers
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 rapids-and-rivers = { module = "com.github.navikt:rapids-and-rivers", version.ref = "rapids-and-rivers" }
+# Rapids and rivers uten Ktor. Aliasene starter ikke med rapids-and-rivers, for da blir libs.rapids.and.rivers en gruppe.
+tbd-rapids-and-rivers-impl = { module = "com.github.navikt.rapids-and-rivers:rapids-and-rivers-impl", version.ref = "rapids-and-rivers" }
+tbd-rapids-and-rivers-api = { module = "com.github.navikt.rapids-and-rivers:rapids-and-rivers-api", version.ref = "rapids-and-rivers" }
+tbd-kafka = { module = "com.github.navikt.rapids-and-rivers:kafka", version.ref = "rapids-and-rivers" }
 jackson3-core = { module = "tools.jackson.core:jackson-core", version.ref = "jackson3" }
 jackson3-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson3" }
+jackson3-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin", version.ref = "jackson3" }
 micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
 lz4-java = { module = "at.yawk.lz4:lz4-java", version.ref = "lz4-java" }
