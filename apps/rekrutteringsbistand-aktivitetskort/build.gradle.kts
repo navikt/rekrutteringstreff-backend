@@ -14,7 +14,7 @@ val testContainerVersion = "2.0.5"
 val javalinVersion = "7.2.3"
 val micrometerVersion = "1.17.1"
 val jackson2Version = "2.22.4"
-val rapidsAndRiversVersion = "2026091610031789545782" // Må være lik versjonen i buildSrc/toi.rapids-and-rivers.gradle.kts
+val rapidsAndRiversVersion = libs.versions.rapids.and.rivers.get()
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.1"
 

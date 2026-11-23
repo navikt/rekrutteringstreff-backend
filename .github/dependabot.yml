@@ -7,8 +7,8 @@ registries:
     url: https://github-package-registry-mirror.gc.nav.no/cached/maven-release
 updates:
   - package-ecosystem: "gradle"
-    # Rot-bygget dekker alle subprosjekter i settings.gradle.kts og buildSrc/build.gradle.kts.
-    # Versjoner i convention plugins (buildSrc/src/main/kotlin/*.gradle.kts) oppdateres ikke.
+    # Rot-bygget dekker alle subprosjekter i settings.gradle.kts, buildSrc/build.gradle.kts og gradle/libs.versions.toml.
+    # Versjonene til convention pluginene i buildSrc ligger i gradle/libs.versions.toml, ellers ville Dependabot ikke sett dem.
     directory: "/"
     registries:
       - nav-speil

@@ -13,20 +13,23 @@ repositories {
     maven("https://packages.confluent.io/maven/")
 }
 
-val slf4jVersion = "2.0.18"
-val logbackVersion = "1.6.1"
-val logstashLogbackEncoderVersion = "9.0"
-val junitJupiterVersion = "5.14.4"
-val junitPlatformVersion = "1.14.4"
-val assertjVersion = "3.27.7"
+// Versjonene ligger i gradle/libs.versions.toml, så Dependabot kan oppdatere dem
+val libs = the<VersionCatalogsExtension>().named("libs")
+fun versjon(navn: String): String = libs.findVersion(navn).get().requiredVersion
 
-// Sikkerhetsfikser for transitive avhengigheter (logstash-logback-encoder, rapids-and-rivers/kafka-clients og jwks-rsa).
-// Fjern når de som drar dem inn bruker rettede versjoner.
-val jackson3Version = "3.2.3"
-val micrometerVersion = "1.16.7"
-val lz4JavaVersion = "1.11.4"
-val snappyJavaVersion = "1.1.10.9"
-val guavaVersion = "33.7.2-jre"
+val slf4jVersion = versjon("slf4j")
+val logbackVersion = versjon("logback")
+val logstashLogbackEncoderVersion = versjon("logstash-logback-encoder")
+val junitJupiterVersion = versjon("junit-jupiter")
+val junitPlatformVersion = versjon("junit-platform")
+val assertjVersion = versjon("assertj")
+
+// Sikkerhetsfikser for transitive avhengigheter, se kommentar i gradle/libs.versions.toml
+val jackson3Version = versjon("jackson3")
+val micrometerVersion = versjon("micrometer")
+val lz4JavaVersion = versjon("lz4-java")
+val snappyJavaVersion = versjon("snappy-java")
+val guavaVersion = versjon("guava")
 
 dependencies {
     constraints {

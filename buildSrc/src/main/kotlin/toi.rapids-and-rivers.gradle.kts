@@ -7,7 +7,9 @@ repositories {
     maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
 }
 
+val libs = the<VersionCatalogsExtension>().named("libs")
+
 dependencies {
-    implementation("com.github.navikt:rapids-and-rivers:2026091610031789545782")
+    implementation(libs.findLibrary("rapids-and-rivers").get())
     testImplementation(project(":technical-libs:testrapid"))
 }
