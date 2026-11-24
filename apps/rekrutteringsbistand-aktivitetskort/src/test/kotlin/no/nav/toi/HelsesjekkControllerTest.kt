@@ -33,7 +33,7 @@ class HelsesjekkControllerTest {
             localEnv["NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_PORT"] = localConfig.getMappedPort(5432).toString()
         }
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
-    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "http://url/stilling", "topic")
+    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "http://url/stilling")
 
     private lateinit var app: App
 
@@ -51,6 +51,7 @@ class HelsesjekkControllerTest {
         port = appPort,
         rapidsConnection = TestRapid(),
         repository = repository,
+        dabAktivitetskortTopic = "topic",
         producer = MockProducer(),
         consumer = MockConsumer(StrategyType.EARLIEST.toString()),
         dabAktivitetskortFeilTopic = "topic",

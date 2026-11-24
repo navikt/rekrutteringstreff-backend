@@ -10,6 +10,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
 import org.apache.kafka.clients.producer.MockProducer
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.serialization.StringSerializer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
@@ -26,6 +28,8 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Future
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortTest {
@@ -44,7 +48,7 @@ class AktivitetskortTest {
     private val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "http://url/stilling", "topic")
+    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "http://url/stilling")
     private val objectMapper = jacksonMapperBuilder().build()
 
     @BeforeEach
@@ -84,9 +88,10 @@ class AktivitetskortTest {
             poststed = expectedPoststed
         )
 
-        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock(), "topic").run()
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
+        assertThat(record.topic()).isEqualTo("topic")
         assertThat(record.key()).isEqualTo(expectedAktivitetskortId.toString())
         record.value().let (objectMapper::readTree).apply {
             assertThat(this["messageId"].asString()).isNotBlank()
@@ -132,7 +137,7 @@ class AktivitetskortTest {
             messageId = UUID.randomUUID()
         )
 
-        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock(), "topic").run()
 
         assertThat(expectedAktivitetskortId).isNotNull()
         assertThat(producer.history()).hasSize(1)
@@ -189,7 +194,7 @@ class AktivitetskortTest {
             aktivitetskortType = WorkOpType
         )
 
-        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock(), "topic").run()
 
         val tree = producer.history().first().value().let(objectMapper::readTree)
         assertThat(tree["aktivitetskortType"].asString()).isEqualTo("WORKOP")
@@ -223,7 +228,7 @@ class AktivitetskortTest {
             poststed = "Test Poststed"
         )
 
-        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock(), "topic").run()
 
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
@@ -250,16 +255,38 @@ class AktivitetskortTest {
             poststed = "Test Poststed"
         )
 
-        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
-        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock(), "topic").run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock(), "topic").run()
 
         assertThat(producer.history()).hasSize(1)
     }
 
     @Test
+    fun `manglende Kafka-kvittering skal beholde hendelsen for ny sending`() {
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner().single().messageId.toString()
+        val producerMedFeil = object : MockProducer<String, String>(true, null, StringSerializer(), StringSerializer()) {
+            override fun send(record: ProducerRecord<String, String>): Future<RecordMetadata> =
+                CompletableFuture.failedFuture(IllegalStateException("Kafka-kvittering feilet"))
+        }
+
+        AktivitetskortJobb(repository, producerMedFeil, LeaderElectionMock(), "topic").run()
+
+        assertThat(repository.hentUsendteAktivitetskortHendelser()).hasSize(1)
+
+        val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
+        AktivitetskortJobb(repository, producer, LeaderElectionMock(), "topic").run()
+
+        assertThat(producer.history()).hasSize(1)
+        val melding = objectMapper.readTree(producer.history().single().value())
+        assertThat(melding["messageId"].asString()).isEqualTo(messageId)
+        assertThat(repository.hentUsendteAktivitetskortHendelser()).isEmpty()
+    }
+
+    @Test
     fun `AktivitetsJobb skal ikke feile ved tom database`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
-        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock(), "topic").run()
         assertThat(producer.history()).isEmpty()
     }
 

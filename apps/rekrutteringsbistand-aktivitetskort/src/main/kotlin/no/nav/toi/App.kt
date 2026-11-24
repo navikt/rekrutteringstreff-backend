@@ -43,6 +43,7 @@ class App(
     private val repository: Repository,
     private val producer: Producer<String, String>,
     private val consumer: Consumer<String, String>,
+    private val dabAktivitetskortTopic: String,
     private val dabAktivitetskortFeilTopic: String,
     private val leaderElection: LeaderElectionInterface,
     private val meterRegistry: PrometheusMeterRegistry,
@@ -54,7 +55,10 @@ class App(
 
     fun start() {
         startJavalin()
-        schedulerContext = scheduler(0, 0, repository, producer, consumer, rapidsConnection, dabAktivitetskortFeilTopic, leaderElection)
+        schedulerContext = scheduler(
+            0, 0, repository, producer, consumer, rapidsConnection,
+            dabAktivitetskortTopic, dabAktivitetskortFeilTopic, leaderElection,
+        )
         startRapidsAndRivers()
     }
 
@@ -132,10 +136,10 @@ fun main() {
             DatabaseConfig(env),
             env.variable("MIN_SIDE_REKRUTTERINGSTREFF_URL"),
             env.variable("MIN_SIDE_STILLING_URL"),
-            env.variable("DAB_AKTIVITETSKORT_TOPIC")
         ),
         producer = KafkaProducer(producerConfig(env)),
         consumer = KafkaConsumer(consumerConfig(env)),
+        dabAktivitetskortTopic = env.variable("DAB_AKTIVITETSKORT_TOPIC"),
         dabAktivitetskortFeilTopic = env.variable("DAB_AKTIVITETSKORT_FEIL_TOPIC"),
         leaderElection = LeaderElection(),
         meterRegistry = meterRegistry,

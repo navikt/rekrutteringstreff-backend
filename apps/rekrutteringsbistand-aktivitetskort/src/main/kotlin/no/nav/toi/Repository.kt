@@ -4,6 +4,7 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.*
 import org.flywaydb.core.Flyway
+import java.sql.ResultSet
 import java.sql.Statement
 import java.sql.Timestamp
 import java.sql.Types.VARCHAR
@@ -12,7 +13,7 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.*
 
-class Repository(databaseConfig: DatabaseConfig, private val minsideRekrutteringstreffUrl: String, private val minsideStillingUrl: String, private val dabAktivitetskortTopic: String) {
+class Repository(databaseConfig: DatabaseConfig, private val minsideRekrutteringstreffUrl: String, private val minsideStillingUrl: String) {
     private val dataSource = databaseConfig.lagDatasource()
     private val teamLog = TeamLogLogger.teamlog(log)
 
@@ -129,8 +130,6 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
             generateSequence {
                 if (resultSet.next()) {
                     Aktivitetskort(
-                        dabAktivitetskortTopic = dabAktivitetskortTopic,
-                        repository = this,
                         messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
                         aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString(),
                         fnr = resultSet.getString("fnr"),
@@ -147,8 +146,6 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                         handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
                         etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
                         oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
-                        avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
-                        sendtTidspunkt = null,
                         aktivitetskortType = resultSet.getString("aktivitetskort_type").let(AktivitetskortType::fraDbKode)
                     )
                 } else {

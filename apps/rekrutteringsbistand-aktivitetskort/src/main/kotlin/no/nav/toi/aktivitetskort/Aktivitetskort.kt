@@ -11,9 +11,7 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 
-class Aktivitetskort (
-    private val dabAktivitetskortTopic: String,
-    private val repository: Repository,
+class Aktivitetskort(
     private val aktivitetskortId: String,
     private val messageId: String,
     private val fnr: String,
@@ -27,15 +25,16 @@ class Aktivitetskort (
     private val etiketter: List<AktivitetskortEtikett>,
     private val oppgave: AktivitetskortOppgave?,
     private val actionType: ActionType,
-    private val avtaltMedNav: Boolean,
     private val endretAv: String,
     private val endretAvType: EndretAvType,
     private val endretTidspunkt: ZonedDateTime,
-    private val sendtTidspunkt: ZonedDateTime?,
-    private val aktivitetskortType: AktivitetskortType = RekrutteringstreffType
+    private val aktivitetskortType: AktivitetskortType,
 ) {
-
-    fun send(producer: Producer<String, String>) {
+    fun send(
+        producer: Producer<String, String>,
+        dabAktivitetskortTopic: String,
+        repository: Repository,
+    ) {
         val record = ProducerRecord(
             dabAktivitetskortTopic,
             aktivitetskortId,
@@ -45,7 +44,7 @@ class Aktivitetskort (
             producer.send(record).get()
             repository.markerAktivitetskorthendelseSomSendt(messageId)
         } catch (e: Exception) {
-            throw RuntimeException("Failed to send aktivitetskort hendelse ${aktivitetskortId}", e)
+            throw RuntimeException("Failed to send aktivitetskort hendelse $aktivitetskortId", e)
         }
     }
 
@@ -74,7 +73,6 @@ class Aktivitetskort (
         )
         return jackson3ObjectMapper.writeValueAsString(melding)
     }
-
 }
 
 private class AkaasMelding(
@@ -163,7 +161,7 @@ enum class Sentiment {
     NEUTRAL
 }
 
-interface AktivitetskortType{
+sealed interface AktivitetskortType {
     val eventName: String
     val beskrivelse: String
     val handlingTittel: String
@@ -201,6 +199,7 @@ object RekrutteringstreffType: AktivitetskortType {
         eventName = "aktivitetskort-feil-rekrutteringstreff",
     )
 }
+
 object WorkOpType: AktivitetskortType {
     override val eventName = "workopinvitasjon"
     override val beskrivelse =
@@ -239,7 +238,6 @@ object DeleCvMedArbeidsgiverType: AktivitetskortType {
     override val beskrivelse = "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
     override val handlingTittel = "Sjekk ut stillingen"
     override val handlingSubtekst = "Sjekk ut stillingen og svar"
-    override val dbType = "DELE_CV_MED_ARBEIDSGIVER"
     override val akaasType = "DELE_CV_MED_ARBEIDSGIVER"
 
     override fun tilFeil(

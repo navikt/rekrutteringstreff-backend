@@ -44,12 +44,13 @@ fun scheduler(
     producer: Producer<String, String>,
     consumer: Consumer<String, String>,
     rapidsConnection: RapidsConnection,
+    dabAktivitetskortTopic: String,
     dabAktivitetskortFeilTopic: String,
     leaderElection: LeaderElectionInterface,
 ): SchedulerContext = runBlocking {
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
-    val myJob = AktivitetskortJobb(repository, producer, leaderElection)
+    val myJob = AktivitetskortJobb(repository, producer, leaderElection, dabAktivitetskortTopic)
     val myErrorJob = AktivitetskortFeilJobb(repository, consumer, leaderElection, dabAktivitetskortFeilTopic) { key, message ->
         rapidsConnection.publish(key, message)
     }
@@ -64,8 +65,13 @@ fun scheduler(
     SchedulerContext(scheduledExecutor, scheduledFeilExecutor)
 }
 
-class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>, private val leaderElection: LeaderElectionInterface): Runnable {
-   private val teamLog = TeamLogLogger.teamlog(log)
+class AktivitetskortJobb(
+    private val repository: Repository,
+    private val producer: Producer<String, String>,
+    private val leaderElection: LeaderElectionInterface,
+    private val dabAktivitetskortTopic: String,
+) : Runnable {
+    private val teamLog = TeamLogLogger.teamlog(log)
 
     @WithSpan
     override fun run() {
@@ -77,7 +83,7 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
             log.info("Kjører AktivitetsJobb")
             repository.hentUsendteAktivitetskortHendelser().forEach { usendtHendelse ->
                 try {
-                    usendtHendelse.send(producer)
+                    usendtHendelse.send(producer, dabAktivitetskortTopic, repository)
                 } catch (e: Exception) {
                     teamLog.error("Feil ved sending av Aktivitetskorthendelse", e)
                 }
