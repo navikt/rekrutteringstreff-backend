@@ -68,6 +68,7 @@ class SamtykkeStatusLytter private constructor(
             endretAv = hendelse.endretAv(packet, fnr),
             endretAvType = hendelse.endretAvType(packet),
             etiketter = hendelse.etiketter(packet),
+            detaljer = emptyList(),
         )
     }
 

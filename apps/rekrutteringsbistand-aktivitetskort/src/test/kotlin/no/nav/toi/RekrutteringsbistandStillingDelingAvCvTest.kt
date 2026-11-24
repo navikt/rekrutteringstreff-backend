@@ -85,6 +85,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val tittel = "Test Stilling"
         val opprettetAv = "testuser"
         val opprettetTidspunkt = ZonedDateTime.now()
+        val svarfrist = ZonedDateTime.parse("2026-11-27T00:59:59.999+01:00[Europe/Oslo]")
 
         rapid.sendTestMessage(
             samtykkeForespurtMelding(
@@ -92,6 +93,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
                 stillingId = stillingId,
                 stillingsTittel = tittel,
                 forespurtAvIdent = opprettetAv,
+                svarfrist = svarfrist,
             )
         )
         val rekrutteringsbistandStillinger = testRepository.hentAlleRekrutteringsbistandStillinger()
@@ -99,7 +101,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
 
-        val expectedDetaljer = """[]"""
+        val expectedDetaljer = "[{\"label\":\"Svarfrist\",\"verdi\":\"26.\u00A0november\u00A02026\"}]"
         rekrutteringsbistandStillinger.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
             assertThat(this[0].stillingId).isEqualTo(stillingId)
@@ -179,6 +181,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             tittel = "Test Stilling",
             opprettetAv = "Z123456",
             messageId = UUID.randomUUID(),
+            svarfrist = ZonedDateTime.now().plusDays(2),
         )
         val melding = samtykkeBesvartMelding(
             fnr = fnr,
@@ -209,6 +212,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             tittel = "Test Stilling",
             opprettetAv = navIdent,
             messageId = UUID.randomUUID(),
+            svarfrist = ZonedDateTime.now().plusDays(2),
         )
 
         rapid.sendTestMessage(
@@ -763,6 +767,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             tittel = "Test Stilling",
             opprettetAv = "Z123456",
             messageId = UUID.randomUUID(),
+            svarfrist = ZonedDateTime.now().plusDays(2),
         )
         if (aktivitetsStatus != AktivitetsStatus.FORSLAG) {
             repository.oppdaterAktivitetsstatus(
@@ -779,13 +784,14 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         stillingId: UUID,
         stillingsTittel: String,
         forespurtAvIdent: String,
+        svarfrist: ZonedDateTime = ZonedDateTime.now().plusDays(7).truncatedTo(ChronoUnit.MILLIS),
     ) = """
         {
             "@event_name": "samtykke-forespurt-om-deling-av-cv",
             "fnr": "$fnr",
             "stillingsId": "$stillingId",
             "stillingsTittel": "$stillingsTittel",
-            "svarfrist": "${ZonedDateTime.now().plusDays(7).truncatedTo(ChronoUnit.MILLIS)}",
+            "svarfrist": "$svarfrist",
             "forespurtAvIdent": "$forespurtAvIdent",
             "forespurtTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
             "stillingsinfo": {

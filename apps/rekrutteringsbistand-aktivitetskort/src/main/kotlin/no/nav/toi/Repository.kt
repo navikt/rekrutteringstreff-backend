@@ -3,6 +3,7 @@ package no.nav.toi
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.*
+import no.nav.toi.rekrutteringsbistand.formaterSvarfrist
 import org.flywaydb.core.Flyway
 import java.sql.ResultSet
 import java.sql.Statement
@@ -363,7 +364,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                             siste_aktivitetskort.beskrivelse,
                             siste_aktivitetskort.start_dato,
                             siste_aktivitetskort.slutt_dato,
-                            siste_aktivitetskort.detaljer,
+                            ?::json,
                             siste_aktivitetskort.handlinger,
                             ?::json,
                             siste_aktivitetskort.oppgave,
@@ -386,7 +387,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                         aktivitetskortIder.forEach { aktivitetskortId ->
                             statement.setObject(1, UUID.randomUUID())
                             statement.setString(2, AktivitetsStatus.FULLFORT.name)
-                            statement.setString(3, jackson3ObjectMapper.writeValueAsString(
+                            statement.setString(3, jackson3ObjectMapper.writeValueAsString(emptyList<AktivitetskortDetalj>()))
+                            statement.setString(4, jackson3ObjectMapper.writeValueAsString(
                                 listOf(
                                     AktivitetskortEtikett(
                                         "Ikke fått jobben",
@@ -395,11 +397,11 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                                     )
                                 )
                             ))
-                            statement.setString(4, endretAv)
-                            statement.setString(5, EndretAvType.NAVIDENT.name)
-                            statement.setTimestamp(6, endretTidspunkt)
-                            statement.setObject(7, aktivitetskortId)
-                            statement.setString(8, AktivitetsStatus.GJENNOMFORES.name)
+                            statement.setString(5, endretAv)
+                            statement.setString(6, EndretAvType.NAVIDENT.name)
+                            statement.setTimestamp(7, endretTidspunkt)
+                            statement.setObject(8, aktivitetskortId)
+                            statement.setString(9, AktivitetsStatus.GJENNOMFORES.name)
                             statement.addBatch()
                         }
 
@@ -428,7 +430,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         endretAvType: EndretAvType,
         forventetSisteAktivitetsstatus: List<AktivitetsStatus>? = null,
         etiketter: List<AktivitetskortEtikett>? = null,
-        handlinger: List<AktivitetskortHandling>? = null
+        handlinger: List<AktivitetskortHandling>? = null,
+        detaljer: List<AktivitetskortDetalj>? = null,
     ) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
@@ -446,7 +449,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     siste_aktivitetskort.beskrivelse,
                     siste_aktivitetskort.start_dato,
                     siste_aktivitetskort.slutt_dato,
-                    siste_aktivitetskort.detaljer,
+                    ${if(detaljer == null) "siste_aktivitetskort.detaljer" else "?::json" },
                     ${if(handlinger == null) "siste_aktivitetskort.handlinger" else "?::json" },
                     ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?::json" },
                     siste_aktivitetskort.oppgave,
@@ -475,6 +478,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 var indexOffset = 1
                 setObject(indexOffset++, UUID.randomUUID())
                 setString(indexOffset++, aktivitetsStatus.name)
+                if(detaljer != null) {
+                    setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(detaljer))
+                }
                 if(handlinger != null) {
                     setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(handlinger))
                 }
@@ -617,7 +623,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         stillingId: String,
         tittel: String,
         opprettetAv: String,
-        messageId: UUID
+        messageId: UUID,
+        svarfrist: ZonedDateTime
     ): UUID? = opprettDeltStilling(
         fnr = fnr,
         stillingId = stillingId,
@@ -635,6 +642,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
             )
         ),
         etiketter = listOf(AktivitetskortEtikett("Venter på svar fra deg", Sentiment.NEUTRAL)),
+        detaljer = listOf(AktivitetskortDetalj("Svarfrist", formaterSvarfrist(svarfrist))),
     )
 
     private fun opprettDeltStilling(
@@ -647,6 +655,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         endretAvType: EndretAvType,
         handlinger: List<AktivitetskortHandling>,
         etiketter: List<AktivitetskortEtikett>,
+        detaljer: List<AktivitetskortDetalj> = emptyList(),
     ): UUID? {
         val aktivitetskortId = UUID.randomUUID()
 
@@ -695,7 +704,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     statement.setString(7, opprettetAv)
                     statement.setString(8, endretAvType.name)
                     statement.setObject(9, ZonedDateTime.now().toLocalDateTime())
-                    statement.setString(10, "[]")
+                    statement.setString(10, jackson3ObjectMapper.writeValueAsString(detaljer))
                     statement.setString(11, jackson3ObjectMapper.writeValueAsString(handlinger))
                     statement.setString(12, jackson3ObjectMapper.writeValueAsString(etiketter))
                     statement.setNull(13, VARCHAR)

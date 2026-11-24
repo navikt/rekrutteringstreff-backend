@@ -82,6 +82,7 @@ class SelvbetjentAktivitetskortLytter (
             forventetSisteAktivitetsstatus = listOf(AktivitetsStatus.FORSLAG, AktivitetsStatus.AVBRUTT),
             etiketter = listOf(AktivitetskortEtikett("Venter på å bli kontaktet", Sentiment.POSITIVE)),
             handlinger = repository.selvbetjentDeltStillingHandlinger(stillingId.toString()),
+            detaljer = emptyList(),
         )
     }
 
