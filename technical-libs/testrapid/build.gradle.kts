@@ -8,5 +8,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.navikt:rapids-and-rivers:2026091610031789545782")
+    implementation(libs.tbd.rapids.and.rivers.api)
+    implementation(libs.jackson3.module.kotlin)
+    implementation(libs.micrometer.core)
 }

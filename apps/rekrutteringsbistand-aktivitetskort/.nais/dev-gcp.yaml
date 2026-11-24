@@ -4,6 +4,8 @@ min_replicas: 2
 max_replicas: 2
 gcp_db_tier: db-f1-micro
 gcp_disk_autoresize: false
+gcp_db_point_in_time_recovery: false
+gcp_db_query_string_length: 1024
 postgres_versjon: POSTGRES_17
 kafka_consumer_group_id: rekrutteringsbistand-aktivitetskort-rapid-1
 min_side_rekrutteringstreff_url: https://rekrutteringstreff-bruker.intern.dev.nav.no/rekrutteringstreff

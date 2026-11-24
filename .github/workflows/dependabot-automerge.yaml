@@ -1,0 +1,25 @@
+name: Dependabot automerge
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions: { }
+
+concurrency:
+  group: dependabot-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dependabot-automerge:
+    uses: navikt/toi-github-actions-workflows/.github/workflows/dependabot-automerge-gradle.yaml@v18
+    with:
+      java-version: '25'
+      # Alle appene deployes, siden en oppdatering i buildSrc eller technical-libs kan treffe alle
+      deploy-workflow-filnavn: |
+        deploy-rekrutteringsbistand-aktivitetskort.yaml
+        deploy-rekrutteringstreff-api.yaml
+        deploy-rekrutteringstreff-minside-api.yaml
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write

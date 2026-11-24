@@ -1,0 +1,76 @@
+# Basert på maler/dependabot-gradle.yml i navikt/toi-github-actions-workflows.
+version: 2
+# Proxyen til Dependabot slipper bare ut til registre som er deklarert her.
+registries:
+  nav-speil:
+    type: maven-repository
+    url: https://github-package-registry-mirror.gc.nav.no/cached/maven-release
+updates:
+  - package-ecosystem: "gradle"
+    # Rot-bygget dekker alle subprosjekter i settings.gradle.kts, buildSrc/build.gradle.kts og gradle/libs.versions.toml.
+    # Versjonene til convention pluginene i buildSrc ligger i gradle/libs.versions.toml, ellers ville Dependabot ikke sett dem.
+    directory: "/"
+    registries:
+      - nav-speil
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "Europe/Oslo"
+    cooldown:
+      default-days: 3
+      exclude:
+        - "no.nav*"
+    open-pull-requests-limit: 10
+    ignore:
+      # Følger agentversjonen til Nais, se https://doc.nais.io/observability/reference/auto-config/#agent-versions
+      # Regelen gjør ingenting i apper som ikke har avhengigheten.
+      - dependency-name: "io.opentelemetry.instrumentation:opentelemetry-logback-mdc-1.0"
+    labels:
+      - "dependencies"
+      - "gradle"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      minor-og-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      # 30 minutter etter gradle, så automerge og deploy ikke kjører samtidig
+      time: "06:30"
+      timezone: "Europe/Oslo"
+    cooldown:
+      default-days: 3
+      exclude:
+        - "navikt/*"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      minor-og-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"

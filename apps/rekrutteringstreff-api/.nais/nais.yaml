@@ -75,6 +75,9 @@ spec:
           - name: rekrutteringstreff-api
         tier: {{ gcp_db_tier }}
         diskAutoresize: {{ gcp_disk_autoresize }}
+        pointInTimeRecovery: {{ gcp_db_point_in_time_recovery }}
+        insights:
+          queryStringLength: {{ gcp_db_query_string_length }}
   envFrom:
     - secret: openai-toi-rekrutteringstreff
   env:
