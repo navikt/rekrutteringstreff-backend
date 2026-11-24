@@ -58,7 +58,8 @@ class RegistrertFattJobbenLytter(
                         tekst = "Fått jobben 🎉",
                         sentiment = Sentiment.NEUTRAL,
                         kode = null
-                    ))
+                    )),
+                detaljer = emptyList(),
             )
         }
 

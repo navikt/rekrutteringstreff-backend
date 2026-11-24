@@ -371,7 +371,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                             siste_aktivitetskort.beskrivelse,
                             siste_aktivitetskort.start_dato,
                             siste_aktivitetskort.slutt_dato,
-                            siste_aktivitetskort.detaljer,
+                            ?::json,
                             siste_aktivitetskort.handlinger,
                             ?::json,
                             siste_aktivitetskort.oppgave,
@@ -394,7 +394,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                         aktivitetskortIder.forEach { aktivitetskortId ->
                             statement.setObject(1, UUID.randomUUID())
                             statement.setString(2, AktivitetsStatus.FULLFORT.name)
-                            statement.setString(3, jackson3ObjectMapper.writeValueAsString(
+                            statement.setString(3, jackson3ObjectMapper.writeValueAsString(emptyList<AktivitetskortDetalj>()))
+                            statement.setString(4, jackson3ObjectMapper.writeValueAsString(
                                 listOf(
                                     AktivitetskortEtikett(
                                         "Ikke fått jobben",
@@ -403,11 +404,11 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                                     )
                                 )
                             ))
-                            statement.setString(4, endretAv)
-                            statement.setString(5, EndretAvType.NAVIDENT.name)
-                            statement.setTimestamp(6, endretTidspunkt)
-                            statement.setObject(7, aktivitetskortId)
-                            statement.setString(8, AktivitetsStatus.GJENNOMFORES.name)
+                            statement.setString(5, endretAv)
+                            statement.setString(6, EndretAvType.NAVIDENT.name)
+                            statement.setTimestamp(7, endretTidspunkt)
+                            statement.setObject(8, aktivitetskortId)
+                            statement.setString(9, AktivitetsStatus.GJENNOMFORES.name)
                             statement.addBatch()
                         }
 
@@ -436,7 +437,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         endretAvType: EndretAvType,
         forventetSisteAktivitetsstatus: List<AktivitetsStatus>? = null,
         etiketter: List<AktivitetskortEtikett>? = null,
-        handlinger: List<AktivitetskortHandling>? = null
+        handlinger: List<AktivitetskortHandling>? = null,
+        detaljer: List<AktivitetskortDetalj>? = null,
     ) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
@@ -454,7 +456,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     siste_aktivitetskort.beskrivelse,
                     siste_aktivitetskort.start_dato,
                     siste_aktivitetskort.slutt_dato,
-                    siste_aktivitetskort.detaljer,
+                    ${if(detaljer == null) "siste_aktivitetskort.detaljer" else "?::json" },
                     ${if(handlinger == null) "siste_aktivitetskort.handlinger" else "?::json" },
                     ${if(etiketter == null) "siste_aktivitetskort.etiketter" else "?::json" },
                     siste_aktivitetskort.oppgave,
@@ -483,6 +485,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 var indexOffset = 1
                 setObject(indexOffset++, UUID.randomUUID())
                 setString(indexOffset++, aktivitetsStatus.name)
+                if(detaljer != null) {
+                    setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(detaljer))
+                }
                 if(handlinger != null) {
                     setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(handlinger))
                 }
@@ -673,7 +678,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         stillingId: String,
         tittel: String,
         opprettetAv: String,
-        messageId: UUID
+        messageId: UUID,
+        svarfrist: ZonedDateTime,
     ): UUID? {
         val aktivitetskortId = UUID.randomUUID()
 
@@ -721,8 +727,12 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     setObject(4, messageId)
                     setObject(5, aktivitetskortId)
                     setString(6, opprettetAv)
-                    setObject(7, ZonedDateTime.now().toLocalDateTime())
-                    setString(8, "[]")
+                    setObject(7, ZonedDateTime.now().toLocalDateTime()) // endret tidspunkt
+                    setString(8, jackson3ObjectMapper.writeValueAsString(
+                        listOf(
+                            AktivitetskortDetalj("Svarfrist", svarfrist.toString()),
+                        )
+                    ))
                     setString(
                         9,
                         jackson3ObjectMapper.writeValueAsString(

@@ -50,6 +50,7 @@ class SamtykkeForespurtLytter(
     ) {
         val fnr = packet["fnr"].asString()
         val stillingId = packet["stillingsId"].asString()
+        val svarFrist = ZonedDateTime.parse(packet["svarfrist"].asString())
 
         val hendelseId = UUID.randomUUID()
         repository.opprettDeltStilling(
@@ -57,7 +58,8 @@ class SamtykkeForespurtLytter(
             stillingId = stillingId,
             tittel = packet["stillingsTittel"].asString(),
             opprettetAv = packet["forespurtAvIdent"].asString(),
-            messageId = hendelseId
+            messageId = hendelseId,
+            svarfrist = svarFrist,
         )?.let { aktivitetskortId ->
             packet["aktivitetskortuuid"] = aktivitetskortId
             packet["hendelseId"] = hendelseId

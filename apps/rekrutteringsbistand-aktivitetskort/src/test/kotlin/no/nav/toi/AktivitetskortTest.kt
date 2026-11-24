@@ -23,6 +23,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import tools.jackson.module.kotlin.jacksonMapperBuilder
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -124,12 +125,15 @@ class AktivitetskortTest {
         val expectedStillingId = UUID.randomUUID()
         val expectedTittel = "Teststilling"
         val expectedOpprettetAv = "testuser"
+        val svarfrist = ZonedDateTime.now().plusDays(2)
+
         val expectedAktivitetskortId = repository.opprettDeltStilling(
             fnr = expectedFnr,
             stillingId = expectedStillingId.toString(),
             tittel = expectedTittel,
             opprettetAv = expectedOpprettetAv,
-            messageId = UUID.randomUUID()
+            messageId = UUID.randomUUID(),
+            svarfrist = svarfrist,
         )
 
         AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
@@ -147,6 +151,10 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["tittel"].asString()).isEqualTo(expectedTittel)
             assertThat(this["aktivitetskort"]["aktivitetStatus"].asString()).isEqualTo("FORSLAG")
             assertThat(this["aktivitetskort"]["startDato"].isNull).isTrue()
+            assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
+            assertThat(this["aktivitetskort"]["detaljer"]).hasSize(1)
+            assertThat(this["aktivitetskort"]["detaljer"][0]["label"].asString()).isEqualTo("Svarfrist")
+            assertThat(this["aktivitetskort"]["detaljer"][0]["verdi"].asString()).isEqualTo(svarfrist.toString())
             assertThat(this["aktivitetskort"]["sluttDato"].isNull).isTrue()
             assertThat(this["aktivitetskort"]["beskrivelse"].asString()).isEqualTo(
                 "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
@@ -156,8 +164,6 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["endretTidspunkt"].isString).isTrue()
             assertThat(ZonedDateTime.parse(this["aktivitetskort"]["endretTidspunkt"].asString())).isNotNull()
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
-            assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
-            assertThat(this["aktivitetskort"]["detaljer"]).isEmpty()
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["etiketter"][0]["tekst"].asString()).isEqualTo("Venter på svar fra deg")
             assertThat(this["aktivitetskort"]["etiketter"][0]["sentiment"].asString()).isEqualTo("NEUTRAL")
@@ -437,6 +443,7 @@ class AktivitetskortTest {
             tittel = "Teststilling",
             opprettetAv = "testuser",
             messageId = UUID.randomUUID(),
+            svarfrist = ZonedDateTime.now().plusDays(2),
         )
         val deltStilling = testRepository.hentAlleRekrutteringsbistandStillinger().single()
         val errorMessage = "Aktivitetskortet ble avvist"
