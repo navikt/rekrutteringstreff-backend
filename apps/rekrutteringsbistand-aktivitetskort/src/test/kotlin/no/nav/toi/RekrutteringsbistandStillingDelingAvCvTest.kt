@@ -84,7 +84,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val tittel = "Test Stilling"
         val opprettetAv = "testuser"
         val opprettetTidspunkt = ZonedDateTime.now()
-        val svarfrist = ZonedDateTime.now().plusDays(7).truncatedTo(ChronoUnit.MILLIS)
+        val svarfrist = ZonedDateTime.parse("2026-11-27T00:59:59.999+01:00[Europe/Oslo]")
 
         rapid.sendTestMessage(
             samtykkeForespurtMelding(
@@ -100,7 +100,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
 
-        val expectedDetaljer = """[{"label":"Svarfrist","verdi":"$svarfrist"}]"""
+        val expectedDetaljer = "[{\"label\":\"Svarfrist\",\"verdi\":\"26.\u00A0november\u00A02026\"}]"
         rekrutteringsbistandStillinger.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
             assertThat(this[0].stillingId).isEqualTo(stillingId)

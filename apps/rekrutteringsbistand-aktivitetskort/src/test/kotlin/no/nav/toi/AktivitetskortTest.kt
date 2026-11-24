@@ -125,7 +125,7 @@ class AktivitetskortTest {
         val expectedStillingId = UUID.randomUUID()
         val expectedTittel = "Teststilling"
         val expectedOpprettetAv = "testuser"
-        val svarfrist = ZonedDateTime.now().plusDays(2)
+        val svarfrist = ZonedDateTime.parse("2026-11-27T00:59:59.999+01:00[Europe/Oslo]")
 
         val expectedAktivitetskortId = repository.opprettDeltStilling(
             fnr = expectedFnr,
@@ -154,7 +154,7 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["detaljer"]).hasSize(1)
             assertThat(this["aktivitetskort"]["detaljer"][0]["label"].asString()).isEqualTo("Svarfrist")
-            assertThat(this["aktivitetskort"]["detaljer"][0]["verdi"].asString()).isEqualTo(svarfrist.toString())
+            assertThat(this["aktivitetskort"]["detaljer"][0]["verdi"].asString()).isEqualTo("26.\u00A0november\u00A02026")
             assertThat(this["aktivitetskort"]["sluttDato"].isNull).isTrue()
             assertThat(this["aktivitetskort"]["beskrivelse"].asString()).isEqualTo(
                 "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."

@@ -3,6 +3,7 @@ package no.nav.toi
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.*
+import no.nav.toi.rekrutteringsbistand.formaterSvarfrist
 import org.flywaydb.core.Flyway
 import java.sql.Statement
 import java.sql.Timestamp
@@ -730,7 +731,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                     setObject(7, ZonedDateTime.now().toLocalDateTime()) // endret tidspunkt
                     setString(8, jackson3ObjectMapper.writeValueAsString(
                         listOf(
-                            AktivitetskortDetalj("Svarfrist", svarfrist.toString()),
+                            AktivitetskortDetalj("Svarfrist", formaterSvarfrist(svarfrist)),
                         )
                     ))
                     setString(
