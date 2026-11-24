@@ -19,7 +19,6 @@ class RegistrertFattJobbenBehovLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", "kandidat_v2.RegistrertFåttJobben")
-                it.forbidValue("@slutt_av_hendelseskjede", true)
                 it.requireKey("stillingsinfo.stillingsid")
                 it.forbid("fodselsnummer")
                 it.interestedIn("@behov") { behov ->

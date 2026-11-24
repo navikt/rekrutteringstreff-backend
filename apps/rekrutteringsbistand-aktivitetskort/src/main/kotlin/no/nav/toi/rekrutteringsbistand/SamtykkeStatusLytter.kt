@@ -153,7 +153,7 @@ private object SamtykkeTrukketHendelse : SamtykkeStatusHendelse {
         IdentType.valueOf(packet["trukketAvIdentType"].asString()).tilEndretAvType()
 
     override fun etiketter(packet: JsonMessage) =
-        listOf(AktivitetskortEtikett("samtykke til deling av CV er trukket", Sentiment.NEGATIVE))
+        emptyList<AktivitetskortEtikett>()
 }
 
 private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {

@@ -468,7 +468,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 ) siste_aktivitetskort
                 WHERE (siste_aktivitetskort.aktivitets_status IS DISTINCT FROM ?
                    OR siste_aktivitetskort.endret_av IS DISTINCT FROM ?
-                   OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?)
+                   OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?
+                   ${if (etiketter != null) "OR siste_aktivitetskort.etiketter::jsonb IS DISTINCT FROM ?::jsonb" else ""})
                 """.trimIndent() + if (forventetSisteAktivitetsstatus != null) {
                     " AND siste_aktivitetskort.aktivitets_status = ANY(?)"
                 } else {
@@ -494,6 +495,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 setString(indexOffset++, aktivitetsStatus.name)
                 setString(indexOffset++, endretAv)
                 setString(indexOffset++, endretAvType.name)
+                if (etiketter != null) {
+                    setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(etiketter))
+                }
                 if (forventetSisteAktivitetsstatus != null) {
                     setArray(
                         indexOffset++,
@@ -641,7 +645,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 LenkeType.FELLES,
             )
         ),
-        etiketter = listOf(AktivitetskortEtikett("Venter på svar fra deg", Sentiment.NEUTRAL)),
+        etiketter = listOf(AktivitetskortEtikett("Venter svar fra deg", Sentiment.NEUTRAL)),
         detaljer = listOf(AktivitetskortDetalj("Svarfrist", formaterSvarfrist(svarfrist))),
     )
 

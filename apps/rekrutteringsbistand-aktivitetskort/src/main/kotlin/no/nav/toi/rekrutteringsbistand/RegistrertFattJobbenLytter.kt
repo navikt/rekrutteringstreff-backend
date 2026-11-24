@@ -25,7 +25,6 @@ class RegistrertFattJobbenLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", "kandidat_v2.RegistrertFåttJobben")
-                it.forbidValue("@slutt_av_hendelseskjede", true)
                 it.requireKey("stillingsinfo.stillingsid", "fodselsnummer")
             }
             validate {
@@ -62,9 +61,6 @@ class RegistrertFattJobbenLytter(
                 detaljer = emptyList(),
             )
         }
-
-        packet["@slutt_av_hendelseskjede"] = true
-        context.publish(stillingsId.toString(), packet.toJson())
     }
 
     override fun onError(

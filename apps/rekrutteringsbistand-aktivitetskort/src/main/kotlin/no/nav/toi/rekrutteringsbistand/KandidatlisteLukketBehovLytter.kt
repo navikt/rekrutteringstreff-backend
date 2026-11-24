@@ -19,7 +19,6 @@ class KandidatlisteLukketBehovLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", "kandidat_v2.LukketKandidatliste")
-                it.forbidValue("@slutt_av_hendelseskjede", true)
                 it.requireKey("stillingsinfo.stillingsid")
                 it.forbid("fodselsnummerliste")
                 it.interestedIn("@behov") { behov ->

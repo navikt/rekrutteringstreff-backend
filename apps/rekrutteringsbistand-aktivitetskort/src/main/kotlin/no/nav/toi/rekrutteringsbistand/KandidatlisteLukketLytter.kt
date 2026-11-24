@@ -21,7 +21,6 @@ class KandidatlisteLukketLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", "kandidat_v2.LukketKandidatliste")
-                it.forbidValue("@slutt_av_hendelseskjede", true)
                 it.requireKey("stillingsinfo.stillingsid", "fodselsnummerliste")
             }
             validate {
@@ -65,9 +64,6 @@ class KandidatlisteLukketLytter(
         if (!noenFikkJobben) {
             log.info("Kandidatliste lukket uten treff: stillingsId=$stillingsId")
         }
-
-        packet["@slutt_av_hendelseskjede"] = true
-        context.publish(stillingsId.toString(), packet.toJson())
     }
 
     override fun onError(

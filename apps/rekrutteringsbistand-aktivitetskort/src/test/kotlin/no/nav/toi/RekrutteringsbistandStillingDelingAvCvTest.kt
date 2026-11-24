@@ -12,6 +12,7 @@ import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
 import org.apache.kafka.clients.producer.MockProducer
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -109,6 +110,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asString().toUUID())
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
+            assertEtikett(this[0], "Venter svar fra deg", "NEUTRAL")
             assertThat(this[0].aktivitetsType).isEqualTo(DeleCvMedArbeidsgiverType.dbType)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
@@ -272,6 +274,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(hendelse.aktivitetsStatus).isEqualTo(AktivitetsStatus.AVBRUTT.name)
             assertThat(hendelse.opprettetAv).isEqualTo(navIdent)
             assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
+            assertThat(hendelse.etiketter).isEqualTo("[]")
         }
     }
 
@@ -291,6 +294,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.SYSTEM.name)
             assertThat(hendelse.stillingId).isEqualTo(stillingId)
             assertThat(hendelse.fnr).isEqualTo(fnr)
+            assertThat(hendelse.etiketter).isEqualTo("[]")
         }
     }
 
@@ -317,7 +321,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         assertThat(behov["aktørId"].asString()).isEqualTo("1234567890123")
         assertThat(behov.path("fnr").isMissingNode).isTrue()
         assertThat(behov.path("fodselsnummer").isMissingNode).isTrue()
-        assertThat(behov.path("@slutt_av_hendelseskjede").isMissingNode).isTrue()
         assertThat(rapid.inspektør.key(0)).isEqualTo(stillingId.toString())
 
         val løsning = (behov as ObjectNode).deepCopy().put("fodselsnummer", fnr).toString()
@@ -330,10 +333,9 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(hendelse.aktivitetsStatus).isEqualTo(AktivitetsStatus.FULLFORT.name)
             assertThat(hendelse.opprettetAv).isEqualTo(navIdent)
             assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
+            assertEtikett(hendelse, "Fått jobben 🎉", "NEUTRAL")
         }
-        assertThat(rapid.inspektør.size).isEqualTo(1)
-        assertThat(rapid.inspektør.message(0)["@event_name"].asString()).isEqualTo("kandidat_v2.RegistrertFåttJobben")
-        assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
+        assertThat(rapid.inspektør.size).isZero()
 
         rapid.sendTestMessage(løsning)
         assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(3)
@@ -355,7 +357,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val melding = rapid.inspektør.message(0)
         assertThat(melding["@behov"].toList().map { it.asString() }).containsExactly("fodselsnummer", "annetBehov")
         assertThat(melding["stillingsId"].asString()).isEqualTo(stillingId.toString())
-        assertThat(melding.path("@slutt_av_hendelseskjede").isMissingNode).isTrue()
         assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
     }
 
@@ -462,7 +463,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         assertThat(behov["@behov"].toList().map { it.asString() }).containsExactly("fodselsnummerliste", "annetBehov")
         assertThat(behov["aktørIder"].toList().map { it.asString() }).containsExactly(aktørIdJa, aktørIdNei)
         assertThat(behov["aktørIderFikkJobben"].toList().map { it.asString() }).containsExactly(aktørIdFikkJobben)
-        assertThat(behov.path("@slutt_av_hendelseskjede").isMissingNode).isTrue()
         assertThat(rapid.inspektør.key(0)).isEqualTo(stillingId.toString())
 
         val løsning = (behov as ObjectNode).deepCopy().apply {
@@ -483,6 +483,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         assertThat(jaKandidatHendelser.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.FULLFORT.name)
         assertThat(jaKandidatHendelser.last().opprettetAv).isEqualTo(navIdent)
         assertThat(jaKandidatHendelser.last().opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
+        assertEtikett(jaKandidatHendelser.last(), "Ikke fått jobben", "NEUTRAL")
 
         // Kandidat med NEI skal ikke oppdateres pa nytt ved lukking av liste.
         assertThat(neiKandidatHendelser).hasSize(2)
@@ -492,8 +493,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             .filter { it.fnr == kandidatSomFikkJobben }
         assertThat(fikkJobbenHendelser).hasSize(2)
         assertThat(fikkJobbenHendelser.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
-        assertThat(rapid.inspektør.size).isEqualTo(1)
-        assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
+        assertThat(rapid.inspektør.size).isZero()
 
         rapid.sendTestMessage(løsning)
         assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(7)
@@ -573,7 +573,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
-    fun `lukket kandidatliste skal ignorere ferdige og andre hendelser`() {
+    fun `lukket kandidatliste skal ignorere andre hendelser`() {
         val melding = jacksonObjectMapper().readTree(
             lukketKandidatlisteMelding(
                 stillingId = UUID.randomUUID(),
@@ -583,21 +583,14 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             )
         ) as ObjectNode
 
-        rapid.sendTestMessage(melding.deepCopy().put("@slutt_av_hendelseskjede", true).toString())
         rapid.sendTestMessage(melding.deepCopy().put("@event_name", "annenHendelse").toString())
-        rapid.sendTestMessage(
-            melding.deepCopy().apply {
-                put("@slutt_av_hendelseskjede", true)
-                putObject("fodselsnummerliste").put("1000000000001", "01010012345")
-            }.toString()
-        )
 
         assertThat(rapid.inspektør.size).isZero()
         assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
     }
 
     @Test
-    fun `lukket kandidatliste uten kandidater skal ikke oppdatere databasen men markere hendelseskjeden som ferdig`() {
+    fun `lukket kandidatliste uten kandidater skal ikke oppdatere databasen eller publisere videre`() {
         val stillingId = UUID.randomUUID()
         rapid.sendTestMessage(
             lukketKandidatlisteMelding(
@@ -610,9 +603,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         )
 
         assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
-        assertThat(rapid.inspektør.size).isEqualTo(1)
-        assertThat(rapid.inspektør.message(0)["@event_name"].asString()).isEqualTo("kandidat_v2.LukketKandidatliste")
-        assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
+        assertThat(rapid.inspektør.size).isZero()
     }
 
     @Test
@@ -753,8 +744,122 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(hendelse.aktivitetsStatus).isEqualTo(forventetAktivitetsStatus.name)
             assertThat(hendelse.opprettetAv).isEqualTo(besvartAvIdent)
             assertThat(hendelse.opprettetAvType).isEqualTo(forventetEndretAvType.name)
+            if (samtykkeGitt) {
+                assertEtikett(hendelse, "Venter på å bli kontaktet", "POSITIVE")
+            } else {
+                assertThat(hendelse.etiketter).isEqualTo("[]")
+            }
         }
     }
+
+    @Test
+    fun `CV-delt skal publisere eget behov og oppdatere etiketten idempotent med samme status og veileder`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        val navIdent = "Z123456"
+        opprettDeltStilling(fnr, stillingId)
+        rapid.sendTestMessage(
+            samtykkeBesvartMelding(fnr, stillingId, true, navIdent, IdentType.NAV_IDENT)
+        )
+        val melding = cvDeltMelding(stillingId, behov = listOf("annetBehov"))
+
+        rapid.sendTestMessage(melding)
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        val behov = rapid.inspektør.message(0) as ObjectNode
+        assertThat(behov["@behov"].toList().map { it.asString() })
+            .containsExactly("fodselsnummerliste", "annetBehov")
+        assertThat(behov["aktørIder"].toList().map { it.asString() }).containsExactly("1000000000001")
+        assertThat(behov["@event_name"].asString()).isEqualTo("kandidat_v2.DelCvMedArbeidsgiver")
+        assertThat(rapid.inspektør.key(0)).isEqualTo(stillingId.toString())
+        val løsning = behov.deepCopy().apply {
+            putObject("fodselsnummerliste").put("1000000000001", fnr)
+        }.toString()
+        rapid.reset()
+
+        rapid.sendTestMessage(løsning)
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(3)
+        rapid.sendTestMessage(løsning)
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(3)
+        assertThat(hendelser.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.GJENNOMFORES.name)
+        assertEtikett(hendelser.last(), "CV er delt med arbeidsgiver", "NEUTRAL")
+        assertThat(rapid.inspektør.size).isZero()
+    }
+
+    @Test
+    fun `CV-delt skal bare oppdatere riktig kandidat og stilling med samtykke`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        val annenStilling = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, AktivitetsStatus.GJENNOMFORES)
+        opprettDeltStilling("02020012345", stillingId, AktivitetsStatus.GJENNOMFORES)
+        opprettDeltStilling(fnr, annenStilling, AktivitetsStatus.GJENNOMFORES)
+        val før = testRepository.hentAlleRekrutteringsbistandStillinger()
+
+        rapid.sendTestMessage(
+            cvDeltMelding(
+                stillingId,
+                kandidater = listOf("1000000000001", "1000000000003"),
+                fodselsnummerliste = mapOf("1000000000001" to fnr, "1000000000003" to "03030012345"),
+            )
+        )
+
+        val nye = testRepository.hentAlleRekrutteringsbistandStillinger().filter { it.id !in før.map { it.id } }
+        assertThat(nye).hasSize(1)
+        assertThat(nye.single().fnr).isEqualTo(fnr)
+        assertThat(nye.single().stillingId).isEqualTo(stillingId)
+        assertEtikett(nye.single(), "CV er delt med arbeidsgiver", "NEUTRAL")
+    }
+
+    @Test
+    fun `CV-delt skal ikke endre forslag eller avbrutte eller fullførte kort`() {
+        val fnr = "01010012345"
+        listOf(AktivitetsStatus.FORSLAG, AktivitetsStatus.AVBRUTT, AktivitetsStatus.FULLFORT).forEach { status ->
+            val stillingId = UUID.randomUUID()
+            opprettDeltStilling(fnr, stillingId, status)
+            val før = testRepository.hentAlleRekrutteringsbistandStillinger().map { it.messageId }
+
+            rapid.sendTestMessage(cvDeltMelding(stillingId, fodselsnummerliste = mapOf("1000000000001" to fnr)))
+
+            assertThat(testRepository.hentAlleRekrutteringsbistandStillinger().map { it.messageId }).isEqualTo(før)
+        }
+    }
+
+    @Test
+    fun `CV-delt skal ikke publisere fødselsnummerbehov når det allerede er etterspurt`() {
+        val stillingId = UUID.randomUUID()
+        rapid.sendTestMessage(cvDeltMelding(stillingId, behov = listOf("fodselsnummerliste")))
+        assertThat(rapid.inspektør.size).isZero()
+    }
+
+    private fun assertEtikett(kort: RekrutteringsbistandStilling, tekst: String, sentiment: String) {
+        val etiketter = jacksonObjectMapper().readTree(kort.etiketter)
+        assertThat(etiketter).hasSize(1)
+        assertThat(etiketter.single()["tekst"].asString()).isEqualTo(tekst)
+        assertThat(etiketter.single()["sentiment"].asString()).isEqualTo(sentiment)
+    }
+
+    private fun cvDeltMelding(
+        stillingId: UUID,
+        kandidater: List<String> = listOf("1000000000001"),
+        fodselsnummerliste: Map<String, String?>? = null,
+        behov: List<String>? = null,
+    ): String = jacksonObjectMapper().writeValueAsString(
+        buildMap<String, Any> {
+            put("@event_name", "kandidat_v2.DelCvMedArbeidsgiver")
+            put("@id", UUID.randomUUID().toString())
+            put("stillingsId", stillingId.toString())
+            put("stillingsinfo", mapOf("stillingsid" to stillingId.toString()))
+            put("utførtAvNavIdent", "Z123456")
+            put("tidspunkt", ZonedDateTime.now().toString())
+            put("kandidater", kandidater.associateWith { mapOf("kandidatnummer" to "test") })
+            fodselsnummerliste?.let { put("fodselsnummerliste", it) }
+            behov?.let { put("@behov", it) }
+        }
+    )
 
     private fun opprettDeltStilling(
         fnr: String,

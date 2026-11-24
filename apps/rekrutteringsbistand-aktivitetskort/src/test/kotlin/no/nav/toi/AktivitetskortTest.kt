@@ -170,7 +170,7 @@ class AktivitetskortTest {
             assertThat(ZonedDateTime.parse(this["aktivitetskort"]["endretTidspunkt"].asString())).isNotNull()
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
-            assertThat(this["aktivitetskort"]["etiketter"][0]["tekst"].asString()).isEqualTo("Venter på svar fra deg")
+            assertThat(this["aktivitetskort"]["etiketter"][0]["tekst"].asString()).isEqualTo("Venter svar fra deg")
             assertThat(this["aktivitetskort"]["etiketter"][0]["sentiment"].asString()).isEqualTo("NEUTRAL")
             assertThat(this["aktivitetskort"]["etiketter"][0].has("kode")).isFalse()
             assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
