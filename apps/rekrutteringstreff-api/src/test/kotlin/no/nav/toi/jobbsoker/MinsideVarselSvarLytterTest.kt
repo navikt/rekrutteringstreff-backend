@@ -63,6 +63,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-123",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}",
@@ -135,6 +136,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-456",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}"
@@ -189,6 +191,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-789",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}",
@@ -231,6 +234,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "annenHendelse",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-999",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}"
@@ -241,6 +245,45 @@ class MinsideVarselSvarLytterTest {
         val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
         assertThat(jobbsøker).isNotNull
         // Skal bare ha OPPRETTET-hendelse
+        assertThat(jobbsøker!!.hendelser).hasSize(1)
+        assertThat(jobbsøker.hendelser.first().hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
+    }
+
+    @Test
+    fun `skal ignorere melding med varseltype STILLING`() {
+        val rapid = TestRapid()
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
+
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val endretAvIdent = "Z123456"
+
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer = fødselsnummer,
+                    fornavn = Fornavn("Ola"),
+                    etternavn = Etternavn("Nordmann"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
+                    veilederNavn = VeilederNavn("Kari Veileder"),
+                    veilederNavIdent = VeilederNavIdent(endretAvIdent),
+                )
+            ), treffId, endretAvIdent
+        )
+
+        rapid.sendTestMessage(
+            """
+            {
+                "@event_name": "minsideVarselSvar",
+                "type": "STILLING",
+                "varselId": "varsel-stilling",
+                "avsenderReferanseId": "$treffId",
+                "fnr": "${fødselsnummer.asString}"
+            }
+            """.trimIndent()
+        )
+
+        val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
         assertThat(jobbsøker!!.hendelser).hasSize(1)
         assertThat(jobbsøker.hendelser.first().hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
     }
@@ -258,6 +301,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-111",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}"
@@ -296,6 +340,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-feil",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}",
@@ -345,6 +390,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-1",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}",
@@ -358,6 +404,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-1",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}",
@@ -402,6 +449,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-123",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}",
@@ -447,6 +495,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-endring",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}",
@@ -496,6 +545,7 @@ class MinsideVarselSvarLytterTest {
             """
             {
                 "@event_name": "minsideVarselSvar",
+                "type": "REKRUTTERINGSTREFF",
                 "varselId": "varsel-tom",
                 "avsenderReferanseId": "$treffId",
                 "fnr": "${fødselsnummer.asString}",

@@ -21,7 +21,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/venteliste-rekrutteringstreff
+      deploy_dev_branch: refs/heads/legg_til_type_minsidevarsler
     permissions:
       contents: read
       id-token: write
