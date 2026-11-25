@@ -30,7 +30,7 @@ class MinsideVarselSvarLytter(
                 it.forbid("aktørId")
             }
             validate {
-                it.requireKey("varselId", "avsenderReferanseId", "fnr")
+                it.requireKey("varselId", "avsenderReferanseId", "fnr", "type")
                 it.interestedIn("eksternStatus", "minsideStatus", "opprettet", "avsenderNavident", "eksternFeilmelding", "eksternKanal", "mal", "flettedata")
             }
         }.register(this)
@@ -44,7 +44,16 @@ class MinsideVarselSvarLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        log.info("Mottok minsideVarselSvar men skipper foreløpig")
+        val typeVerdi = packet["type"].asString()
+        val varselType = VarselType.entries.firstOrNull { it.name == typeVerdi }
+        if (varselType == null) {
+            log.warn("Mottok minsideVarselSvar med ukjent type: $typeVerdi, ignorerer")
+            return
+        }
+        if (varselType != VarselType.REKRUTTERINGSTREFF) {
+            return
+        }
+
         val avsenderReferanseId = packet["avsenderReferanseId"].asString()
         val fnr = packet["fnr"].asString()
 
@@ -100,4 +109,9 @@ class MinsideVarselSvarLytter(
         log.error("Alvorlig feil ved behandling av minsideVarselSvar", error)
         teamLog.error("Alvorlig feil ved behandling av minsideVarselSvar: ${error.problems.toExtendedReport()}", error)
     }
+}
+
+enum class VarselType {
+    STILLING,
+    REKRUTTERINGSTREFF
 }
