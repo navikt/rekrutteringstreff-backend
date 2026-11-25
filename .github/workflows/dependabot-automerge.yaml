@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   dependabot-automerge:
-    uses: navikt/toi-github-actions-workflows/.github/workflows/dependabot-automerge-gradle.yaml@v18
+    uses: navikt/toi-github-actions-workflows/.github/workflows/dependabot-automerge-gradle.yaml@v19
     with:
       java-version: '25'
       # Alle appene deployes, siden en oppdatering i buildSrc eller technical-libs kan treffe alle
