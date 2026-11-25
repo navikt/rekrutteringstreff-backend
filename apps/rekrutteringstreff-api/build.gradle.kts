@@ -1,7 +1,7 @@
 plugins {
     id("toi.rapids-and-rivers-med-ktor")
     kotlin("kapt")
-    id("io.github.ben-manes.versions") version "0.64.0"
+    id("io.github.ben-manes.versions") version "0.67.0"
 }
 
 application {
@@ -10,22 +10,22 @@ application {
 
 val javalinVersion = "7.2.4"
 val mockOAuth2ServerVersion = "6.1.3"
-val flywayVersion = "13.11.1"
+val flywayVersion = "13.13.0"
 val postgresVersion = "42.7.14"
 val hikariVersion = "7.1.0"
 val testContainerVersion = "2.0.5"
-val swaggerParserVersion = "2.1.48"
+val swaggerParserVersion = "2.1.49"
 val nimbusVersion = "10.10"
 val wiremockVersion = "3.13.2"
 val jacksonVersion = "3.2.4"
 // Jackson 2 kommer kun transitivt (auth0, javalin-openapi, kapt). Løftes til nyeste patch.
 val jackson2Version = "2.22.4"
 val resilience4jVersion = "2.4.0"
-val navCommonVersion = "4.2026.09.24_06.17-80dfc0eacb29"
-val openTelemetryVersion = "1.62.0" // Følg SDK-versjonen til Nais-agenten, se https://doc.nais.io/observability/reference/auto-config/
+val navCommonVersion = "4.2026.11.25_00.10-dc0fdbb558ad"
+val openTelemetryVersion = "1.68.0" // Følg SDK-versjonen til Nais-agenten, se https://doc.nais.io/observability/reference/auto-config/
 val opentelemetryLogbackMdcVersion = "2.28.1-alpha" // Følg agentversjonen til Nais
-val openTelemetryAnnotationsVersion = "2.28.1" // Følg agentversjonen til Nais
-val kotestVersion = "6.2.5"
+val openTelemetryAnnotationsVersion = "2.34.0" // Følg agentversjonen til Nais
+val kotestVersion = "6.2.7"
 
 dependencies {
     implementation(project(":technical-libs:logging"))
@@ -44,7 +44,7 @@ dependencies {
     implementation("io.javalin.community.openapi:javalin-swagger-plugin:$javalinVersion")
     implementation("io.javalin.community.openapi:openapi-specification:$javalinVersion")
     implementation("com.auth0:java-jwt:4.6.2")
-    implementation("com.auth0:jwks-rsa:0.24.1")
+    implementation("com.auth0:jwks-rsa:0.24.2")
     kapt("io.swagger.parser.v3:swagger-parser:$swaggerParserVersion")
     kapt(platform("com.fasterxml.jackson:jackson-bom:$jackson2Version"))
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
@@ -59,7 +59,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql:$testContainerVersion")
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
-    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("io.mockk:mockk:1.14.12")
     testImplementation("io.kotest:kotest-assertions-json-jvm:$kotestVersion")
 }
 
