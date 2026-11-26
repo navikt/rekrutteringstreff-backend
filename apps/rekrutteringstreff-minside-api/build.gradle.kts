@@ -13,13 +13,13 @@ repositories {
     maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
 }
 
-val javalinVersion = "7.2.4"
+val javalinVersion = "7.3.0"
 val mockOAuth2ServerVersion = "6.1.3"
-val flywayVersion = "13.11.1"
+val flywayVersion = "13.13.0"
 val postgresVersion = "42.7.5"
 val hikariVersion = "6.3.3"
 val testContainerVersion = "2.0.5"
-val swaggerParserVersion = "2.1.48"
+val swaggerParserVersion = "2.1.49"
 val nimbusVersion = "10.10"
 val wiremockVersion = "3.13.2"
 val jacksonVersion = "3.2.4"
@@ -41,7 +41,7 @@ dependencies {
     implementation("io.javalin.community.openapi:javalin-swagger-plugin:$javalinVersion")
     implementation("io.javalin.community.openapi:openapi-specification:$javalinVersion")
     implementation("com.auth0:java-jwt:4.6.2")
-    implementation("com.auth0:jwks-rsa:0.24.1")
+    implementation("com.auth0:jwks-rsa:0.24.2")
     kapt("io.swagger.parser.v3:swagger-parser:$swaggerParserVersion")
     kapt(platform("com.fasterxml.jackson:jackson-bom:$jackson2Version"))
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
