@@ -103,11 +103,11 @@ class RekrutteringstreffSvarOgStatusLytterTest {
     fun `Om personbruker har svart men aktivitetskort ikke er opprettet skal vi ignorere melding`() {
         rapid.sendTestMessage(
             rapidMelding(
-                fnr = "12345678910",
+                fnr = "00000000029",
                 rekrutteringstreffId = UUID.randomUUID(),
                 svar = true,
                 treffstatus = null,
-                endretAv = "12345678910",
+                endretAv = "00000000029",
                 endretAvPersonbruker = true
             )
         )
@@ -165,7 +165,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
     fun `Om treffstatus endres for bruker som ikke har svart men aktivitetskort ikke finnes skal vi ikke feile`() {
         rapid.sendTestMessage(
             rapidMelding(
-                fnr = "12345678910",
+                fnr = "00000000029",
                 rekrutteringstreffId = UUID.randomUUID(),
                 svar = null,
                 treffstatus = "avlyst",
@@ -229,7 +229,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         forventetEndretAvType: EndretAvType,
         endretAvPersonbruker: Boolean
     ) {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
@@ -295,7 +295,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         forventetEndretAvType: EndretAvType,
         endretAvPersonbruker: Boolean
     ) {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
@@ -360,7 +360,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         forventetEndretAvType: EndretAvType,
         endretAvPersonbruker: Boolean
     ) {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
@@ -426,7 +426,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         forventetEndretAvType: EndretAvType,
         endretAvPersonbruker: Boolean
     ) {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
         val endretAv = if (endretAvPersonbruker) fnr else "Z123456"

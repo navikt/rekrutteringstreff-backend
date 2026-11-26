@@ -90,7 +90,7 @@ class JobbsøkerInnloggetBorgerController(
             OpenApiResponse(status = "200", description = "Jobbsøker funnet", content = [OpenApiContent(from = JobbsøkerMedStatuserOutboundDto::class, example = """
             {
               "treffId": "c1b2c3d4-e5f6-7890-1234-567890abcdef",
-              "fødselsnummer": "12345678901",
+              "fødselsnummer": "00000000025",
               "fornavn": "Ola",
               "etternavn": "Nordmann",
               "kontor": {
@@ -124,7 +124,7 @@ class JobbsøkerInnloggetBorgerController(
                   "tidspunkt": "2023-05-16T11:00:00+02:00",
                   "hendelsestype": "SVART_JA_TIL_INVITASJON",
                   "opprettetAvAktørType": "JOBBSØKER",
-                  "aktørIdentifikasjon": "12345678901"
+                  "aktørIdentifikasjon": "00000000025"
                 }
               ]
             }

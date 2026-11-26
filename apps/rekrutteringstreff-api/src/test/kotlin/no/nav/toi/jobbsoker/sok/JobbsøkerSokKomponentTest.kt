@@ -139,8 +139,8 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `søk uten filtre returnerer paginert respons`() {
         val treffId = opprettTreffMedEier()
-        val js1 = jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
-        val js2 = jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
+        val js1 = jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
+        val js2 = jobbsøker("00000000036", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
         leggTilJobbsøkere(treffId, js1, js2)
 
         val response = httpPost(søkPath(treffId), søkBody())
@@ -150,16 +150,16 @@ class JobbsøkerSokKomponentTest {
         assertThat(dto.totalt).isEqualTo(2)
         assertThat(dto.side).isEqualTo(1)
         assertThat(dto.jobbsøkere).hasSize(2)
-        assertThat(dto.jobbsøkere.map { it.fødselsnummer }).containsExactlyInAnyOrder("11111111111", "22222222222")
+        assertThat(dto.jobbsøkere.map { it.fødselsnummer }).containsExactlyInAnyOrder("00000000022", "00000000036")
     }
 
     @Test
     fun `fritekst-søk filtrerer på navn`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann"),
-            jobbsøker("22222222222", "Kari", "Hansen"),
-            jobbsøker("33333333333", "Per", "Olsen"),
+            jobbsøker("00000000022", "Ola", "Nordmann"),
+            jobbsøker("00000000036", "Kari", "Hansen"),
+            jobbsøker("00000000042", "Per", "Olsen"),
         )
 
         val dto = søk(treffId, "fritekst" to "ola")
@@ -172,27 +172,27 @@ class JobbsøkerSokKomponentTest {
     fun `fritekst-søk gjør prefiks-match på fødselsnummer`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("10120098765", "Ola", "Nordmann"),
-            jobbsøker("10120012345", "Kari", "Hansen"),
-            jobbsøker("25060011111", "Per", "Olsen"),
+            jobbsøker("00000000011", "Ola", "Nordmann"),
+            jobbsøker("00000000010", "Kari", "Hansen"),
+            jobbsøker("00000000039", "Per", "Olsen"),
         )
 
-        val delvis = søk(treffId, "fritekst" to "101200")
+        val delvis = søk(treffId, "fritekst" to "0000000001")
         assertThat(delvis.totalt).isEqualTo(2)
         assertThat(delvis.jobbsøkere.map { it.fødselsnummer })
-            .containsExactlyInAnyOrder("10120098765", "10120012345")
+            .containsExactlyInAnyOrder("00000000011", "00000000010")
 
-        val fullt = søk(treffId, "fritekst" to "10120098765")
+        val fullt = søk(treffId, "fritekst" to "00000000011")
         assertThat(fullt.totalt).isEqualTo(1)
-        assertThat(fullt.jobbsøkere.single().fødselsnummer).isEqualTo("10120098765")
+        assertThat(fullt.jobbsøkere.single().fødselsnummer).isEqualTo("00000000011")
     }
 
     @Test
     fun `fritekst-søk filtrerer kun på navn`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "KontorAlpha"), VeilederNavn("Vera Veileder"), VeilederNavIdent("NAV001")),
-            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "KontorBeta"), VeilederNavn("Per Person"), VeilederNavIdent("NAV002")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "KontorAlpha"), VeilederNavn("Vera Veileder"), VeilederNavIdent("NAV001")),
+            jobbsøker("00000000036", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "KontorBeta"), VeilederNavn("Per Person"), VeilederNavIdent("NAV002")),
         )
 
         val kontorTreff = søk(treffId, "fritekst" to "alpha")
@@ -206,8 +206,8 @@ class JobbsøkerSokKomponentTest {
     fun `statusfilter returnerer kun jobbsøkere med gitt status`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann"),
-            jobbsøker("22222222222", "Kari", "Hansen"),
+            jobbsøker("00000000022", "Ola", "Nordmann"),
+            jobbsøker("00000000036", "Kari", "Hansen"),
         )
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
@@ -221,9 +221,9 @@ class JobbsøkerSokKomponentTest {
     fun `kombinerte filtre fungerer sammen`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "Nav Bergen")),
-            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000042", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
         )
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
@@ -237,7 +237,7 @@ class JobbsøkerSokKomponentTest {
     fun `paginering fungerer korrekt`() {
         val treffId = opprettTreffMedEier()
         val jobbsøkere = (1..5).map { i ->
-            jobbsøker("${i}1111111111".take(11), "Person$i", "Etternavn$i")
+            jobbsøker("%011d".format(100 + i), "Person$i", "Etternavn$i")
         }
         leggTilJobbsøkere(treffId, *jobbsøkere.toTypedArray())
 
@@ -257,7 +257,7 @@ class JobbsøkerSokKomponentTest {
     fun `ugyldig høy side clampes til siste gyldige side`() {
         val treffId = opprettTreffMedEier()
         val jobbsøkere = (1..5).map { i ->
-            jobbsøker("${i}2222222222".take(11), "Person$i", "Etternavn$i")
+            jobbsøker("%011d".format(110 + i), "Person$i", "Etternavn$i")
         }
         leggTilJobbsøkere(treffId, *jobbsøkere.toTypedArray())
 
@@ -275,7 +275,7 @@ class JobbsøkerSokKomponentTest {
         val personTreffIder = leggTilJobbsøkere(
             treffId,
             *((1..5).map { i ->
-                jobbsøker("${i}3333333333".take(11), "Person$i", "Etternavn$i")
+                jobbsøker("%011d".format(120 + i), "Person$i", "Etternavn$i")
             }).toTypedArray(),
         )
         db.settSynlighet(personTreffIder[3], false)
@@ -295,8 +295,9 @@ class JobbsøkerSokKomponentTest {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(
             treffId,
-            *((1..3).map { i ->
-                jobbsøker("${i}3333333333".take(11), "Person$i", "Etternavn$i")
+            *(listOf("00000000030", "00000000060", "00000000042").mapIndexed { indeks, fnr ->
+                val i = indeks + 1
+                jobbsøker(fnr, "Person$i", "Etternavn$i")
             }).toTypedArray(),
         )
         db.settSperret(personTreffIder[1], true)
@@ -310,7 +311,7 @@ class JobbsøkerSokKomponentTest {
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.antallSkjulte).isEqualTo(1)
         assertThat(dto.antallSlettede).isEqualTo(1)
-        assertThat(dto.jobbsøkere.map { it.fødselsnummer }).containsExactly("13333333333")
+        assertThat(dto.jobbsøkere.map { it.fødselsnummer }).containsExactly("00000000030")
     }
 
     @Test
@@ -319,7 +320,7 @@ class JobbsøkerSokKomponentTest {
         val personTreffIder = leggTilJobbsøkere(
             treffId,
             *((1..5).map { i ->
-                jobbsøker("${i}3333333333".take(11), "Person$i", "Etternavn$i")
+                jobbsøker("%011d".format(130 + i), "Person$i", "Etternavn$i")
             }).toTypedArray(),
         )
         db.settSynlighet(personTreffIder[1], false)
@@ -341,8 +342,8 @@ class JobbsøkerSokKomponentTest {
         val treffId = opprettTreffMedEier(kategori = RekrutteringstreffKategori.WORKOP)
         val personTreffIder = leggTilJobbsøkere(
             treffId,
-            jobbsøker("14444444444", "Synlig", "Person"),
-            jobbsøker("24444444444", "Usynlig", "Person"),
+            jobbsøker("00000000031", "Synlig", "Person"),
+            jobbsøker("00000000038", "Usynlig", "Person"),
         )
         db.settSynlighet(personTreffIder[1], false)
 
@@ -355,8 +356,8 @@ class JobbsøkerSokKomponentTest {
         val kontor = Kontor(kontornummer = "0315", kontornavn = "Fiktivt kontor")
         val personTreffIder = leggTilJobbsøkere(
             treffId,
-            jobbsøker("15555555555", "Synlig", "Person", kontor, alder = 25),
-            jobbsøker("25555555555", "Usynlig", "Person", kontor, alder = 25),
+            jobbsøker("00000000032", "Synlig", "Person", kontor, alder = 25),
+            jobbsøker("00000000040", "Usynlig", "Person", kontor, alder = 25),
         )
         db.settSynlighet(personTreffIder[1], false)
 
@@ -366,10 +367,10 @@ class JobbsøkerSokKomponentTest {
             assertThat(jobbsøker.propertyNames().asSequence().toList())
                 .containsExactlyInAnyOrder("personTreffId", "fornavn", "etternavn", "status", "fødselsnummer")
         }
-        assertThat(respons).doesNotContain("25555555555")
+        assertThat(respons).doesNotContain("00000000040")
 
         val side = gjennomføring(treffId)
-        assertThat(side.jobbsøkere.single { it.fornavn == "Synlig" }.fødselsnummer).isEqualTo("15555555555")
+        assertThat(side.jobbsøkere.single { it.fornavn == "Synlig" }.fødselsnummer).isEqualTo("00000000032")
         val usynlig = side.jobbsøkere.single { it.fornavn == "Usynlig" }
         assertThat(usynlig.personTreffId).isEqualTo(personTreffIder[1].somString)
         assertThat(usynlig.etternavn).isEqualTo("Person")
@@ -388,8 +389,8 @@ class JobbsøkerSokKomponentTest {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(
             treffId,
-            jobbsøker("14444444444", "Synlig", "Person"),
-            jobbsøker("24444444444", "Usynlig", "Person"),
+            jobbsøker("00000000031", "Synlig", "Person"),
+            jobbsøker("00000000038", "Usynlig", "Person"),
         )
         db.settSynlighet(personTreffIder[1], false)
 
@@ -401,9 +402,9 @@ class JobbsøkerSokKomponentTest {
         val treffId = opprettTreffMedEier(kategori = RekrutteringstreffKategori.WORKOP)
         val personTreffIder = leggTilJobbsøkere(
             treffId,
-            jobbsøker("16666666661", "Anne", "A"),
-            jobbsøker("16666666662", "Berit", "B"),
-            jobbsøker("16666666663", "Carl", "C"),
+            jobbsøker("00000000033", "Anne", "A"),
+            jobbsøker("00000000034", "Berit", "B"),
+            jobbsøker("00000000035", "Carl", "C"),
         )
         db.settJobbsøkerStatus(personTreffIder[0], JobbsøkerStatus.MØTT_OPP)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.FÅTT_JOBB)
@@ -432,9 +433,9 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på navn gir alfabetisk rekkefølge`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Charlie", "C"),
-            jobbsøker("22222222222", "Alice", "A"),
-            jobbsøker("33333333333", "Bob", "B"),
+            jobbsøker("00000000022", "Charlie", "C"),
+            jobbsøker("00000000036", "Alice", "A"),
+            jobbsøker("00000000042", "Bob", "B"),
         )
 
         val dto = søk(treffId, "sortering" to "navn")
@@ -446,9 +447,9 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på navn støtter synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Charlie", "C"),
-            jobbsøker("22222222222", "Alice", "A"),
-            jobbsøker("33333333333", "Bob", "B"),
+            jobbsøker("00000000022", "Charlie", "C"),
+            jobbsøker("00000000036", "Alice", "A"),
+            jobbsøker("00000000042", "Bob", "B"),
         )
 
         val dto = søk(treffId, "sortering" to "navn", "retning" to "desc")
@@ -460,9 +461,9 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på lagt til støtter stigende og synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Charlie", "C"),
-            jobbsøker("22222222222", "Alice", "A"),
-            jobbsøker("33333333333", "Bob", "B"),
+            jobbsøker("00000000022", "Charlie", "C"),
+            jobbsøker("00000000036", "Alice", "A"),
+            jobbsøker("00000000042", "Bob", "B"),
         )
 
         oppdaterLagtTilDato(personTreffIder[0], Instant.parse("2026-03-01T12:00:00Z"))
@@ -480,9 +481,9 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på lagt til bruker klokkeslett innenfor samme dato`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("44444444444", "Charlie", "C"),
-            jobbsøker("55555555555", "Alice", "A"),
-            jobbsøker("66666666666", "Bob", "B"),
+            jobbsøker("00000000045", "Charlie", "C"),
+            jobbsøker("00000000047", "Alice", "A"),
+            jobbsøker("00000000048", "Bob", "B"),
         )
 
         oppdaterLagtTilDato(personTreffIder[0], Instant.parse("2026-03-01T12:00:03Z"))
@@ -500,10 +501,10 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på status støtter stigende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("77777777771", "LagtTil", "A"),
-            jobbsøker("77777777772", "Invitert", "B"),
-            jobbsøker("77777777773", "SvartNei", "C"),
-            jobbsøker("77777777774", "SvartJa", "D"),
+            jobbsøker("00000000049", "LagtTil", "A"),
+            jobbsøker("00000000050", "Invitert", "B"),
+            jobbsøker("00000000051", "SvartNei", "C"),
+            jobbsøker("00000000052", "SvartJa", "D"),
         )
         db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2], personTreffIder[3]), treffId)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_NEI)
@@ -523,10 +524,10 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på status støtter synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("77777777781", "LagtTil", "A"),
-            jobbsøker("77777777782", "Invitert", "B"),
-            jobbsøker("77777777783", "SvartNei", "C"),
-            jobbsøker("77777777784", "SvartJa", "D"),
+            jobbsøker("00000000054", "LagtTil", "A"),
+            jobbsøker("00000000055", "Invitert", "B"),
+            jobbsøker("00000000056", "SvartNei", "C"),
+            jobbsøker("00000000057", "SvartJa", "D"),
         )
         db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2], personTreffIder[3]), treffId)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_NEI)
@@ -546,9 +547,9 @@ class JobbsøkerSokKomponentTest {
     fun `filtrering på over 30 returnerer kun jobbsøkere 30 år og eldre`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Alice", "A", alder = 30),
-            jobbsøker("22222222222", "Bob", "B", alder = 45),
-            jobbsøker("33333333333", "Charlie", "C", alder = 20),
+            jobbsøker("00000000022", "Alice", "A", alder = 30),
+            jobbsøker("00000000036", "Bob", "B", alder = 45),
+            jobbsøker("00000000042", "Charlie", "C", alder = 20),
             )
 
         val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.OVER_30))
@@ -560,9 +561,9 @@ class JobbsøkerSokKomponentTest {
     fun `filtrering på under 30 returnerer kun jobbsøkere yngre enn 30`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Alice", "A", alder = 30),
-            jobbsøker("22222222222", "Bob", "B", alder = 45),
-            jobbsøker("33333333333", "Charlie", "C", alder = 20),
+            jobbsøker("00000000022", "Alice", "A", alder = 30),
+            jobbsøker("00000000036", "Bob", "B", alder = 45),
+            jobbsøker("00000000042", "Charlie", "C", alder = 20),
             )
 
         val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.UNDER_30))
@@ -574,8 +575,8 @@ class JobbsøkerSokKomponentTest {
     fun `filtrering på alder ekskluderer ukjent alder`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Alice", "A", alder = 35),
-            jobbsøker("22222222222", "Bob", "B", alder = null),
+            jobbsøker("00000000022", "Alice", "A", alder = 35),
+            jobbsøker("00000000036", "Bob", "B", alder = null),
         )
 
         val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.OVER_30))
@@ -597,14 +598,14 @@ class JobbsøkerSokKomponentTest {
     fun `fritekst-søk med fødselsnummer returnerer treff`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "NAV Oslo")),
-            jobbsøker("22222222222", "Kari", "Hansen"),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "NAV Oslo")),
+            jobbsøker("00000000036", "Kari", "Hansen"),
         )
 
-        val dto = søk(treffId, "fritekst" to "11111111111")
+        val dto = søk(treffId, "fritekst" to "00000000022")
 
         assertThat(dto.totalt).isEqualTo(1)
-        assertThat(dto.jobbsøkere.first().fødselsnummer).isEqualTo("11111111111")
+        assertThat(dto.jobbsøkere.first().fødselsnummer).isEqualTo("00000000022")
         assertThat(dto.jobbsøkere.first().fornavn).isEqualTo("Ola")
     }
 
@@ -612,7 +613,7 @@ class JobbsøkerSokKomponentTest {
     fun `fritekst-søk med ukjent fødselsnummer returnerer tomt resultat`() {
         val treffId = opprettTreffMedEier()
 
-        val dto = søk(treffId, "fritekst" to "99999999999")
+        val dto = søk(treffId, "fritekst" to "00000000059")
 
         assertThat(dto.totalt).isEqualTo(0)
         assertThat(dto.jobbsøkere).isEmpty()
@@ -631,8 +632,8 @@ class JobbsøkerSokKomponentTest {
     fun `slettede jobbsøkere ekskluderes fra søkeresultat`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aktiv", "Person"),
-            jobbsøker("22222222222", "Slettet", "Person"),
+            jobbsøker("00000000022", "Aktiv", "Person"),
+            jobbsøker("00000000036", "Slettet", "Person"),
         )
         db.settJobbsøkerStatus(personTreffIder[1], JobbsøkerStatus.SLETTET)
 
@@ -646,8 +647,8 @@ class JobbsøkerSokKomponentTest {
     fun `ikke-synlige jobbsøkere ekskluderes fra søkeresultat`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Synlig", "Person"),
-            jobbsøker("22222222222", "Skjult", "Person"),
+            jobbsøker("00000000022", "Synlig", "Person"),
+            jobbsøker("00000000036", "Skjult", "Person"),
         )
         db.settSynlighet(personTreffIder[1], false)
 
@@ -669,7 +670,7 @@ class JobbsøkerSokKomponentTest {
     fun `manglende side og antallPerSide bruker standard paginering`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann"),
+            jobbsøker("00000000022", "Ola", "Nordmann"),
         )
 
         val response = httpPost(søkPath(treffId), søkBody())
@@ -687,10 +688,10 @@ class JobbsøkerSokKomponentTest {
         ctx.eierRepository.leggTil(treff2, "A123456", "0315")
 
         leggTilJobbsøkere(treff1,
-            jobbsøker("11111111111", "Treff1Person", "A"),
+            jobbsøker("00000000022", "Treff1Person", "A"),
         )
         leggTilJobbsøkere(treff2,
-            jobbsøker("22222222222", "Treff2Person", "B"),
+            jobbsøker("00000000036", "Treff2Person", "B"),
         )
 
         val dto1 = søk(treff1)
@@ -706,7 +707,7 @@ class JobbsøkerSokKomponentTest {
     fun `søk fungerer med null-felter på eldre data`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Uten", "Data"),
+            jobbsøker("00000000022", "Uten", "Data"),
         )
 
         val dto = søk(treffId)
@@ -718,8 +719,8 @@ class JobbsøkerSokKomponentTest {
     fun `søk inkluderer minsideHendelser for jobbsøkere med MOTTATT_SVAR_FRA_MINSIDE`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Med", "Hendelse"),
-            jobbsøker("22222222222", "Uten", "Hendelse"),
+            jobbsøker("00000000022", "Med", "Hendelse"),
+            jobbsøker("00000000036", "Uten", "Hendelse"),
         )
 
         db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
@@ -740,7 +741,7 @@ class JobbsøkerSokKomponentTest {
     fun `søk inkluderer flere minsideHendelser per jobbsøker`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann"),
+            jobbsøker("00000000022", "Ola", "Nordmann"),
         )
 
         db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT"}""")
@@ -756,7 +757,7 @@ class JobbsøkerSokKomponentTest {
     fun `minsideHendelser inkluderer hendelseData som json`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann"),
+            jobbsøker("00000000022", "Ola", "Nordmann"),
         )
 
         val hendelseJson = """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT","minsideStatus":"OPPRETTET","eksternFeilmelding":null}"""
@@ -775,7 +776,7 @@ class JobbsøkerSokKomponentTest {
     fun `minsideHendelser returneres ikke for andre hendelsetyper`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann"),
+            jobbsøker("00000000022", "Ola", "Nordmann"),
         )
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
@@ -788,7 +789,7 @@ class JobbsøkerSokKomponentTest {
     fun `minsideHendelser isoleres per treff ved paginering`() {
         val treffId = opprettTreffMedEier()
         val jobbsøkere = (1..3).map { i ->
-            jobbsøker("${i}1111111111".take(11), "Person$i", "Etternavn$i")
+            jobbsøker("%011d".format(140 + i), "Person$i", "Etternavn$i")
         }
         val personTreffIder = leggTilJobbsøkere(treffId, *jobbsøkere.toTypedArray())
 
@@ -809,10 +810,10 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerStatus returnerer riktige tall for alle statuser`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "A"),
-            jobbsøker("22222222222", "Kari", "B"),
-            jobbsøker("33333333333", "Per", "C"),
-            jobbsøker("44444444444", "Lise", "D"),
+            jobbsøker("00000000022", "Ola", "A"),
+            jobbsøker("00000000036", "Kari", "B"),
+            jobbsøker("00000000042", "Per", "C"),
+            jobbsøker("00000000045", "Lise", "D"),
         )
         db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2]), treffId)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_JA)
@@ -829,9 +830,9 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerStatus er ufiltrert selv med statusfilter aktivt`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "A"),
-            jobbsøker("22222222222", "Kari", "B"),
-            jobbsøker("33333333333", "Per", "C"),
+            jobbsøker("00000000022", "Ola", "A"),
+            jobbsøker("00000000036", "Kari", "B"),
+            jobbsøker("00000000042", "Per", "C"),
         )
         db.inviterJobbsøkere(listOf(personTreffIder[1]), treffId)
 
@@ -846,9 +847,9 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerStatus ekskluderer skjulte og slettede jobbsøkere`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Synlig", "A"),
-            jobbsøker("22222222222", "Skjult", "B"),
-            jobbsøker("33333333333", "Slettet", "C"),
+            jobbsøker("00000000022", "Synlig", "A"),
+            jobbsøker("00000000036", "Skjult", "B"),
+            jobbsøker("00000000042", "Slettet", "C"),
         )
         db.settSynlighet(personTreffIder[1], false)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
@@ -863,9 +864,9 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerStatus filtreres av fritekst men ikke av statusfilter`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann"),
-            jobbsøker("22222222222", "Kari", "Hansen"),
-            jobbsøker("33333333333", "Ola", "Hansen"),
+            jobbsøker("00000000022", "Ola", "Nordmann"),
+            jobbsøker("00000000036", "Kari", "Hansen"),
+            jobbsøker("00000000042", "Ola", "Hansen"),
         )
         db.inviterJobbsøkere(listOf(personTreffIder[2]), treffId)
 
@@ -880,10 +881,10 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerAldersgruppe teller uavhengig av valgt aldersgruppe`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Alice", "A", alder = 20),
-            jobbsøker("22222222222", "Bob", "B", alder = 30),
-            jobbsøker("33333333333", "Charlie", "C", alder = 45),
-            jobbsøker("44444444444", "Dana", "D", alder = null),
+            jobbsøker("00000000022", "Alice", "A", alder = 20),
+            jobbsøker("00000000036", "Bob", "B", alder = 30),
+            jobbsøker("00000000042", "Charlie", "C", alder = 45),
+            jobbsøker("00000000045", "Dana", "D", alder = null),
         )
 
         val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.UNDER_30))
@@ -896,7 +897,7 @@ class JobbsøkerSokKomponentTest {
     fun `jobbsøkersøk returnerer null lagtTilAvNavn for eldre opprettet-hendelser uten navn`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(
-            listOf(jobbsøker("11111111111", "Ola", "Nordmann")),
+            listOf(jobbsøker("00000000022", "Ola", "Nordmann")),
             treffId,
             opprettetAv = "Z123456",
         )
@@ -912,9 +913,9 @@ class JobbsøkerSokKomponentTest {
     fun `kontorfilter returnerer kun jobbsøkere fra valgt kontor`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
-            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000042", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
         )
 
         val dto = søk(treffId, "kontornummer" to listOf("1000"))
@@ -927,9 +928,9 @@ class JobbsøkerSokKomponentTest {
     fun `kontorfilter med flere kontornummer returnerer unionen`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
-            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000042", "Per", "Olsen", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
         )
 
         val dto = søk(treffId, "kontornummer" to listOf("1000", "3000"))
@@ -942,8 +943,8 @@ class JobbsøkerSokKomponentTest {
     fun `kontorfilter ekskluderer jobbsøkere uten kontor`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Kari", "Hansen"),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Kari", "Hansen"),
         )
 
         val ufiltrert = søk(treffId)
@@ -958,7 +959,7 @@ class JobbsøkerSokKomponentTest {
     fun `ukjent kontornummer gir 400`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
         )
 
         val response = httpPost(søkPath(treffId), søkBody("kontornummer" to listOf("9999")))
@@ -970,7 +971,7 @@ class JobbsøkerSokKomponentTest {
     fun `kontornummer som tilhører eier er gyldig selv uten jobbsøkere`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
         )
 
         val dto = søk(treffId, "kontornummer" to listOf("0315"))
@@ -983,7 +984,7 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerKontor inkluderer eierkontor uten jobbsøkere med null`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
         )
 
         val dto = søk(treffId)
@@ -996,7 +997,7 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerKontor inkluderer kontor som ingen eier tilhører`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "9999", kontornavn = "Ukjent kontor")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "9999", kontornavn = "Ukjent kontor")),
         )
 
         val dto = søk(treffId)
@@ -1021,8 +1022,8 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerKontor teller ikke jobbsøkere uten kontor`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Kari", "Hansen"),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Kari", "Hansen"),
         )
 
         val dto = søk(treffId)
@@ -1036,9 +1037,9 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerKontor er ufiltrert selv med kontorfilter aktivt`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
-            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000042", "Per", "Olsen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
         )
 
         val dto = søk(treffId, "kontornummer" to listOf("1000"))
@@ -1052,8 +1053,8 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerKontor filtreres av fritekst men beholder alle nøkler`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000022", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Kari", "Hansen", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
         )
 
         val dto = søk(treffId, "fritekst" to "ola")
@@ -1068,9 +1069,9 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerKontor ekskluderer skjulte og slettede jobbsøkere`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Synlig", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Skjult", "B", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
-            jobbsøker("33333333333", "Slettet", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
+            jobbsøker("00000000022", "Synlig", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Skjult", "B", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000042", "Slettet", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
         )
         db.settSynlighet(personTreffIder[1], false)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
@@ -1085,9 +1086,9 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på kontor støtter stigende og synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Charlie", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
-            jobbsøker("22222222222", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("33333333333", "Bob", "B", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000022", "Charlie", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
+            jobbsøker("00000000036", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000042", "Bob", "B", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
         )
 
         val stigende = søk(treffId, "sortering" to "kontor", "retning" to "asc")
@@ -1101,9 +1102,9 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på kontor plasserer jobbsøkere uten kontor sist i begge retninger`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Bob", "B"),
-            jobbsøker("33333333333", "Charlie", "C", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
+            jobbsøker("00000000022", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Bob", "B"),
+            jobbsøker("00000000042", "Charlie", "C", Kontor(kontornummer = "2000", kontornavn = "Nav Bergen")),
         )
 
         val stigende = søk(treffId, "sortering" to "kontor", "retning" to "asc")
@@ -1117,9 +1118,9 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på kontor bruker navn som sekundærsortering`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "Zakariassen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("22222222222", "Kari", "Andersen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
-            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000022", "Ola", "Zakariassen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000036", "Kari", "Andersen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000042", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
         )
 
         val dto = søk(treffId, "sortering" to "kontor", "retning" to "asc")
@@ -1131,8 +1132,8 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på kontor bruker stigende som standardretning`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Charlie", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
-            jobbsøker("22222222222", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("00000000022", "Charlie", "C", Kontor(kontornummer = "3000", kontornavn = "Nav Tromsø")),
+            jobbsøker("00000000036", "Alice", "A", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
         )
 
         val dto = søk(treffId, "sortering" to "kontor")
@@ -1144,9 +1145,9 @@ class JobbsøkerSokKomponentTest {
     fun `aktuellForTreffStatus-filter returnerer kun jobbsøkere med gitt verdi`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "A"),
-            jobbsøker("22222222222", "Kari", "B"),
-            jobbsøker("33333333333", "Per", "C"),
+            jobbsøker("00000000022", "Ola", "A"),
+            jobbsøker("00000000036", "Kari", "B"),
+            jobbsøker("00000000042", "Per", "C"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
         db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.IKKE_AKTUELL)
@@ -1162,8 +1163,8 @@ class JobbsøkerSokKomponentTest {
     fun `venteliste kan filtreres og telles som intern status`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "A"),
-            jobbsøker("22222222222", "Kari", "B"),
+            jobbsøker("00000000022", "Ola", "A"),
+            jobbsøker("00000000036", "Kari", "B"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.VENTELISTE)
 
@@ -1181,9 +1182,9 @@ class JobbsøkerSokKomponentTest {
     fun `aktuellForTreffStatus-filter med flere verdier returnerer unionen og ekskluderer ikke satt`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "A"),
-            jobbsøker("22222222222", "Kari", "B"),
-            jobbsøker("33333333333", "Per", "C"),
+            jobbsøker("00000000022", "Ola", "A"),
+            jobbsøker("00000000036", "Kari", "B"),
+            jobbsøker("00000000042", "Per", "C"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
         db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.KONTAKTET)
@@ -1197,8 +1198,8 @@ class JobbsøkerSokKomponentTest {
     fun `aktuellForTreffStatus-filter kombineres med statusfilter`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "A"),
-            jobbsøker("22222222222", "Kari", "B"),
+            jobbsøker("00000000022", "Ola", "A"),
+            jobbsøker("00000000036", "Kari", "B"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
         db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.AKTUELL)
@@ -1212,8 +1213,8 @@ class JobbsøkerSokKomponentTest {
     fun `søketreff inneholder aktuellForTreffStatus med VURDERES som standard`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "A"),
-            jobbsøker("22222222222", "Kari", "B"),
+            jobbsøker("00000000022", "Ola", "A"),
+            jobbsøker("00000000036", "Kari", "B"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
 
@@ -1227,10 +1228,10 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerAktuellForTreffStatus teller uavhengig av eget filter, men respekterer andre filtre`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Ola", "A"),
-            jobbsøker("22222222222", "Ola", "B"),
-            jobbsøker("33333333333", "Kari", "C"),
-            jobbsøker("44444444444", "Ola", "D"),
+            jobbsøker("00000000022", "Ola", "A"),
+            jobbsøker("00000000036", "Ola", "B"),
+            jobbsøker("00000000042", "Kari", "C"),
+            jobbsøker("00000000045", "Ola", "D"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.AKTUELL)
         db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.VURDERES)
@@ -1247,9 +1248,9 @@ class JobbsøkerSokKomponentTest {
     fun `antallPerAktuellForTreffStatus ekskluderer skjulte og slettede jobbsøkere`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Synlig", "A"),
-            jobbsøker("22222222222", "Skjult", "B"),
-            jobbsøker("33333333333", "Slettet", "C"),
+            jobbsøker("00000000022", "Synlig", "A"),
+            jobbsøker("00000000036", "Skjult", "B"),
+            jobbsøker("00000000042", "Slettet", "C"),
         )
         ider.forEach { db.settAktuellForTreffStatus(it, AktuellForTreffStatus.AKTUELL) }
         db.settSynlighet(ider[1], false)
@@ -1264,11 +1265,11 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på aktuellForTreffStatus støtter stigende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("22222222222", "IkkeAktuell", "B"),
-            jobbsøker("33333333333", "Vurderes", "C"),
-            jobbsøker("44444444444", "Kontaktet", "D"),
-            jobbsøker("55555555555", "Aktuell", "E"),
-            jobbsøker("66666666666", "Venteliste", "F"),
+            jobbsøker("00000000036", "IkkeAktuell", "B"),
+            jobbsøker("00000000042", "Vurderes", "C"),
+            jobbsøker("00000000045", "Kontaktet", "D"),
+            jobbsøker("00000000047", "Aktuell", "E"),
+            jobbsøker("00000000048", "Venteliste", "F"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.IKKE_AKTUELL)
         db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.KONTAKTET)
@@ -1290,10 +1291,10 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på aktuellForTreffStatus støtter synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "IkkeSatt", "A"),
-            jobbsøker("22222222222", "Aktuell", "B"),
-            jobbsøker("33333333333", "IkkeAktuell", "C"),
-            jobbsøker("44444444444", "Venteliste", "D"),
+            jobbsøker("00000000022", "IkkeSatt", "A"),
+            jobbsøker("00000000036", "Aktuell", "B"),
+            jobbsøker("00000000042", "IkkeAktuell", "C"),
+            jobbsøker("00000000045", "Venteliste", "D"),
         )
         db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.AKTUELL)
         db.settAktuellForTreffStatus(ider[2], AktuellForTreffStatus.IKKE_AKTUELL)
@@ -1313,8 +1314,8 @@ class JobbsøkerSokKomponentTest {
     fun `sortering på aktuellForTreffStatus bruker stigende som standardretning`() {
         val treffId = opprettTreffMedEier()
         val ider = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "IkkeAktuell", "A"),
-            jobbsøker("22222222222", "Aktuell", "B"),
+            jobbsøker("00000000022", "IkkeAktuell", "A"),
+            jobbsøker("00000000036", "Aktuell", "B"),
         )
         db.settAktuellForTreffStatus(ider[0], AktuellForTreffStatus.IKKE_AKTUELL)
         db.settAktuellForTreffStatus(ider[1], AktuellForTreffStatus.AKTUELL)

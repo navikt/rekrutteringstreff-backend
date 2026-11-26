@@ -79,7 +79,7 @@ class JobbsøkerController(
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
                 from = HentRekrutteringstreffForJobbsøkerRequest::class,
-                example = """{"fødselsnummer": "12345678901"}"""
+                example = """{"fødselsnummer": "00000000025"}"""
             )]
         ),
         responses = [
@@ -119,13 +119,13 @@ class JobbsøkerController(
                 from = Array<JobbsøkerDto>::class,
                 example = """[
               {
-                "fødselsnummer": "12345678901",
+                "fødselsnummer": "00000000025",
                 "fornavn": "Ola",
                 "etternavn": "Nordmann",
                 "lagtTilAvNavn": "Test Testesen"
               },
               {
-                "fødselsnummer": "10987654321",
+                "fødselsnummer": "00000000012",
                 "fornavn": "Kari",
                 "etternavn": "Nordmann",
                 "lagtTilAvNavn": "Test Testesen"
@@ -204,7 +204,7 @@ class JobbsøkerController(
                   "jobbsøkere": [
                     {
                       "personTreffId": "any-uuid",
-                      "fødselsnummer": "12345678901",
+                      "fødselsnummer": "00000000025",
                       "fornavn": "Ola",
                       "etternavn": "Nordmann",
                       "status": "LAGT_TIL",
@@ -284,14 +284,14 @@ class JobbsøkerController(
                   "jobbsøkere": [
                     {
                       "personTreffId": "any-uuid",
-                      "fødselsnummer": "12345678901",
+                      "fødselsnummer": "00000000025",
                       "fornavn": "Frida",
                       "etternavn": "Testberg",
                       "status": "LAGT_TIL"
                     },
                     {
                       "personTreffId": "any-uuid-2",
-                      "fødselsnummer": "10987654321",
+                      "fødselsnummer": "00000000012",
                       "fornavn": null,
                       "etternavn": null,
                       "status": "INVITERT"
@@ -349,14 +349,14 @@ class JobbsøkerController(
                   "jobbsøkere": [
                     {
                       "personTreffId": "any-uuid",
-                      "fødselsnummer": "12345678901",
+                      "fødselsnummer": "00000000025",
                       "fornavn": "Frida",
                       "etternavn": "Testberg",
                       "status": "LAGT_TIL"
                     },
                     {
                       "personTreffId": "any-uuid-2",
-                      "fødselsnummer": "10987654321",
+                      "fødselsnummer": "00000000012",
                       "fornavn": null,
                       "etternavn": null,
                       "status": "INVITERT"
@@ -416,14 +416,14 @@ class JobbsøkerController(
                       "jobbsøkere": [
                         {
                           "personTreffId": "any-uuid",
-                          "fødselsnummer": "12345678901",
+                          "fødselsnummer": "00000000025",
                           "fornavn": "Frida",
                           "etternavn": "Testberg",
                           "status": "LAGT_TIL"
                         },
                         {
                           "personTreffId": "any-uuid-2",
-                          "fødselsnummer": "10987654321",
+                          "fødselsnummer": "00000000012",
                           "fornavn": null,
                           "etternavn": null,
                           "status": "INVITERT"
@@ -530,7 +530,7 @@ class JobbsøkerController(
                     "hendelsestype": "OPPRETTET",
                     "opprettetAvAktørType": "ARRANGØR",
                     "aktørIdentifikasjon": "testperson",
-                    "fødselsnummer": "12345678901",
+                    "fødselsnummer": "00000000025",
                     "fornavn": "Ola",
                     "etternavn": "Nordmann",
                     "personTreffId": "any-uuid",
@@ -542,14 +542,14 @@ class JobbsøkerController(
                     "hendelsestype": "MOTTATT_SVAR_FRA_MINSIDE",
                     "opprettetAvAktørType": "SYSTEM",
                     "aktørIdentifikasjon": null,
-                    "fødselsnummer": "12345678901",
+                    "fødselsnummer": "00000000025",
                     "fornavn": "Ola",
                     "etternavn": "Nordmann",
                     "personTreffId": "any-uuid",
                     "hendelseData": {
                         "varselId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                         "avsenderReferanseId": "c1e80bbc-fe0e-4cfb-b291-23317fc48729",
-                        "fnr": "12345678901",
+                        "fnr": "00000000025",
                         "eksternStatus": "SENDT",
                         "minsideStatus": "AKTIV",
                         "opprettet": "2025-04-14T10:59:00+02:00",
@@ -566,7 +566,7 @@ class JobbsøkerController(
                     "hendelsestype": "TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON",
                     "opprettetAvAktørType": "ARRANGØR",
                     "aktørIdentifikasjon": "Z123456",
-                    "fødselsnummer": "12345678901",
+                    "fødselsnummer": "00000000025",
                     "fornavn": "Ola",
                     "etternavn": "Nordmann",
                     "personTreffId": "any-uuid",

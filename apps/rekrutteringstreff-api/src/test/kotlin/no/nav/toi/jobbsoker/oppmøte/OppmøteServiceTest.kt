@@ -30,7 +30,7 @@ class OppmøteServiceTest {
     private val db = TestDatabase()
     private val ctx = ApplicationContext(TestInfrastructureContext(dataSource = db.dataSource))
     private val navIdent = "Z999999"
-    private val fnr = "12345678901"
+    private val fnr = "00000000025"
 
     @BeforeAll
     fun migrer() {
@@ -144,9 +144,9 @@ class OppmøteServiceTest {
     @Test
     fun `statusen og hendelsene gir samme svar for alle jobbsøkere`() {
         val treffId = workOpTreff()
-        val møtt = jobbsøker(treffId, "11111111111")
-        val angret = jobbsøker(treffId, "22222222222")
-        jobbsøker(treffId, "33333333333")
+        val møtt = jobbsøker(treffId, "00000000022")
+        val angret = jobbsøker(treffId, "00000000036")
+        jobbsøker(treffId, "00000000042")
 
         møtt(treffId, møtt)
         møtt(treffId, angret)
@@ -158,8 +158,8 @@ class OppmøteServiceTest {
     @Test
     fun `jobbsøker uten oppmøteregistrering beholder statusen sin og er ikke fremmøtt`() {
         val treffId = workOpTreff()
-        val registrert = jobbsøker(treffId, "11111111111")
-        val urørt = jobbsøker(treffId, "22222222222")
+        val registrert = jobbsøker(treffId, "00000000022")
+        val urørt = jobbsøker(treffId, "00000000036")
 
         møtt(treffId, registrert)
 

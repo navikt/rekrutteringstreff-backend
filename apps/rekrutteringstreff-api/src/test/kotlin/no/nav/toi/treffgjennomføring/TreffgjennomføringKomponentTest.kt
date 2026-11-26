@@ -210,7 +210,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `svar etter oppmøte endrer svaret, mens status, visning og filtrering følger oppmøtet`() {
         val treff = workOpTreff()
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val person = jobbsøker(treff, fnr)
         ctx.jobbsøkerService.inviter(listOf(person), treff, eier)
         ctx.jobbsøkerService.svarPåVegneAvJobbsøker(person, treff, eier, true)
@@ -320,8 +320,8 @@ class TreffgjennomføringKomponentTest {
         erSynlig: Boolean,
     ) {
         val treff = treff(kategori, antallArbeidsgivere = 1)
-        val sperret = jobbsøker(treff, "11111111111")
-        val vanlig = jobbsøker(treff, "22222222222")
+        val sperret = jobbsøker(treff, "00000000022")
+        val vanlig = jobbsøker(treff, "00000000036")
         db.settSperret(sperret, true)
         db.settSynlighet(sperret, erSynlig)
 
@@ -344,8 +344,8 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `deltakernummer deles ut på WorkOp, gjenbrukes av samme person og aldri av andre`() {
         val treff = workOpTreff()
-        val første = jobbsøker(treff, "11111111111")
-        val andre = jobbsøker(treff, "22222222222")
+        val første = jobbsøker(treff, "00000000022")
+        val andre = jobbsøker(treff, "00000000036")
 
         oppmøte(treff, første, møtt = true)
         assertThat(deltakernummer(treff)[første.somString]).isEqualTo(1)
@@ -362,7 +362,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `alle hendelser for treffet tar med detaljene for jobbsøkerhendelser`() {
         val treff = workOpTreff()
-        val person = jobbsøker(treff, "11111111111")
+        val person = jobbsøker(treff, "00000000022")
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
         interesse(treff, person, ag, interessert = true)
@@ -404,7 +404,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `alle hendelser for vanlige treff er uendret og har ingen detaljer`() {
         val treff = vanligTreff()
-        val person = jobbsøker(treff, "11111111111")
+        val person = jobbsøker(treff, "00000000022")
         oppmøte(treff, person, møtt = true)
 
         val respons = send(HttpRequest.newBuilder().GET(), "/api/rekrutteringstreff/${treff.somString}/allehendelser", eier, listOf(arbeidsgiverrettet))
@@ -428,8 +428,8 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `møteoppsett oppretter romfordeling og rotasjon første gang`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         oppmøte(treff, p1, møtt = true)
         oppmøte(treff, p2, møtt = true)
 
@@ -653,8 +653,8 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `fordel erstatter hele fordelingen`() {
         val treff = workOpTreff()
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         val ag = aktivArbeidsgiver(treff)
         listOf(p1, p2).forEach { oppmøte(treff, it, møtt = true) }
         listOf(p1, p2).forEach { interesse(treff, it, ag, interessert = true) }
@@ -671,8 +671,8 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `interesse registrert etter fordelingen speiles inn i eksisterende og ny fordeling`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         val (ag1, ag2) = aktiveArbeidsgivere(treff)
 
         listOf(p1, p2).forEach { oppmøte(treff, it, møtt = true) }
@@ -707,8 +707,8 @@ class TreffgjennomføringKomponentTest {
     fun `interesse for arbeidsgiver lagt til etter fordelingen speiles inn i fordelingen`() {
         // Som i testkjøringen: fem arbeidsgivere er fordelt før den sjette legges til.
         val treff = workOpTreff(antallArbeidsgivere = 5)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         listOf(p1, p2).forEach { oppmøte(treff, it, møtt = true) }
         møteoppsett(treff)
         aktiveArbeidsgivere(treff).forEach { interesse(treff, p1, it, interessert = true) }
@@ -725,8 +725,8 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `interesse for gjeninnlagt arbeidsgiver speiles inn i fordelingen`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         val (ag1, ag2) = aktiveArbeidsgivere(treff)
         listOf(p1, p2).forEach { oppmøte(treff, it, møtt = true) }
         interesse(treff, p1, ag1, interessert = true)
@@ -747,8 +747,8 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `vanlig treff får ingen intervjufordeling når interesse registreres etter vurderingen`() {
         val treff = vanligTreff()
-        val første = jobbsøker(treff, "11111111111")
-        val andre = jobbsøker(treff, "22222222222")
+        val første = jobbsøker(treff, "00000000022")
+        val andre = jobbsøker(treff, "00000000036")
         val ag = aktivArbeidsgiver(treff)
         listOf(første, andre).forEach { oppmøte(treff, it, møtt = true) }
         interesse(treff, første, ag, interessert = true)
@@ -899,8 +899,8 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `flytting til annet rom flytter personen og bevarer andre`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         oppmøte(treff, p1, møtt = true)
         oppmøte(treff, p2, møtt = true)
         møteoppsett(treff)
@@ -917,7 +917,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `flytting til samme rom er idempotent`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
+        val p1 = jobbsøker(treff, "00000000022")
         oppmøte(treff, p1, møtt = true)
         møteoppsett(treff)
 
@@ -933,9 +933,9 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `flytting avviser person fra et annet treff og manglende møteoppsett`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val person = jobbsøker(treff, "11111111111")
+        val person = jobbsøker(treff, "00000000022")
         val annetTreff = workOpTreff()
-        val annenPerson = jobbsøker(annetTreff, "22222222222")
+        val annenPerson = jobbsøker(annetTreff, "00000000036")
         oppmøte(treff, person, møtt = true)
         oppmøte(annetTreff, annenPerson, møtt = true)
 
@@ -949,7 +949,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `rom beholdes når siste oppmøte fjernes og ny fremmøtt kan flyttes`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val person = jobbsøker(treff, "11111111111")
+        val person = jobbsøker(treff, "00000000022")
         oppmøte(treff, person, møtt = true)
         møteoppsett(treff)
         oppmøte(treff, person, møtt = false)
@@ -958,7 +958,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(tommeRom).hasSize(2)
         assertThat(tommeRom.flatMap { it["jobbsøkere"].toList() }).isEmpty()
 
-        val nyPerson = jobbsøker(treff, "22222222222")
+        val nyPerson = jobbsøker(treff, "00000000036")
         oppmøte(treff, nyPerson, møtt = true)
         assertThat(flyttTilRom(treff, nyPerson, 2).statusCode()).isEqualTo(200)
         val rom = aggregat(treff)["rom"]
@@ -990,7 +990,7 @@ class TreffgjennomføringKomponentTest {
     fun `flytting avviser person som ikke er fremmøtt`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff)
-        val hjemme = jobbsøker(treff, "22222222222")
+        val hjemme = jobbsøker(treff, "00000000036")
         oppmøte(treff, person, møtt = true)
         møteoppsett(treff)
 
@@ -1001,14 +1001,14 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `flytting av nylig fremmøtt uten lagret romrad bevarer beregnet plassering for andre`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         oppmøte(treff, p1, møtt = true)
         oppmøte(treff, p2, møtt = true)
         møteoppsett(treff)
 
-        val p3 = jobbsøker(treff, "33333333333")
-        val p4 = jobbsøker(treff, "44444444444")
+        val p3 = jobbsøker(treff, "00000000042")
+        val p4 = jobbsøker(treff, "00000000045")
         oppmøte(treff, p3, møtt = true)
         oppmøte(treff, p4, møtt = true)
 
@@ -1029,9 +1029,9 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `fordelRomPåNytt fordeler alle fremmøtte jevnt på rom`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
-        val p3 = jobbsøker(treff, "33333333333")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
+        val p3 = jobbsøker(treff, "00000000042")
         oppmøte(treff, p1, møtt = true)
         oppmøte(treff, p2, møtt = true)
         oppmøte(treff, p3, møtt = true)
@@ -1056,9 +1056,9 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `intervjufordeling må inneholde nøyaktig de interesserte`() {
         val treff = workOpTreff()
-        val interessert = jobbsøker(treff, "11111111111")
-        val utenInteresse = jobbsøker(treff, "22222222222")
-        val ikkeMøtt = jobbsøker(treff, "33333333333")
+        val interessert = jobbsøker(treff, "00000000022")
+        val utenInteresse = jobbsøker(treff, "00000000036")
+        val ikkeMøtt = jobbsøker(treff, "00000000042")
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, interessert, møtt = true)
         oppmøte(treff, utenInteresse, møtt = true)
@@ -1102,7 +1102,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `arbeidsgiver lagt til etter møteoppsett får tomt rom som personer kan flyttes til og fordeles til`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
+        val p1 = jobbsøker(treff, "00000000022")
         oppmøte(treff, p1, møtt = true)
         møteoppsett(treff)
 
@@ -1129,7 +1129,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `sletting av arbeidsgiver med personer i rom avvises med ProblemDetails og 409`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
+        val p1 = jobbsøker(treff, "00000000022")
         oppmøte(treff, p1, møtt = true)
         møteoppsett(treff)
 
@@ -1162,7 +1162,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `sletting av arbeidsgiver med interesser avvises med 409`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
+        val p1 = jobbsøker(treff, "00000000022")
         oppmøte(treff, p1, møtt = true)
         møteoppsett(treff)
 
@@ -1185,7 +1185,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `sletting av arbeidsgiver med vurdering avvises med 409`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
+        val p1 = jobbsøker(treff, "00000000022")
         oppmøte(treff, p1, møtt = true)
         møteoppsett(treff)
 
@@ -1207,7 +1207,7 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `sletting av arbeidsgiver i tomt rom tillates selv med formidling og kompakterer møteplan`() {
         val treff = workOpTreff(antallArbeidsgivere = 3)
-        val p1 = jobbsøker(treff, "11111111111")
+        val p1 = jobbsøker(treff, "00000000022")
         oppmøte(treff, p1, møtt = true)
         møteoppsett(treff)
 
@@ -1240,12 +1240,12 @@ class TreffgjennomføringKomponentTest {
     @ValueSource(booleans = [false, true])
     fun `tillegg lagrer tomt rom uten å flytte sent fremmøtte`(medBehov: Boolean) {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         oppmøte(treff, p1, møtt = true)
         oppmøte(treff, p2, møtt = true)
         møteoppsett(treff)
-        val sen = jobbsøker(treff, "33333333333")
+        val sen = jobbsøker(treff, "00000000042")
         oppmøte(treff, sen, møtt = true)
         val romFør = lagredeRom(treff)
         assertThat(romFør[sen.somString]).isEqualTo(1)
@@ -1267,10 +1267,10 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `sent oppmøte lagres i rom og blokkerer sletting frem til oppmøtet fjernes`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val første = jobbsøker(treff, "11111111111")
+        val første = jobbsøker(treff, "00000000022")
         oppmøte(treff, første, møtt = true)
         møteoppsett(treff)
-        val sen = jobbsøker(treff, "22222222222")
+        val sen = jobbsøker(treff, "00000000036")
         oppmøte(treff, sen, møtt = true)
         val arbeidsgiver = ArbeidsgiverTreffId(lagretRotasjon(treff).entries.single { it.value == 2 }.key)
 
@@ -1287,10 +1287,10 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `eldre beregnet romplassering blokkerer sletting uten lagring ved avvisning`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val første = jobbsøker(treff, "11111111111")
+        val første = jobbsøker(treff, "00000000022")
         oppmøte(treff, første, møtt = true)
         møteoppsett(treff)
-        val sen = jobbsøker(treff, "22222222222")
+        val sen = jobbsøker(treff, "00000000036")
         oppmøte(treff, sen, møtt = true)
         fjernLagretRom(sen)
         val arbeidsgiver = ArbeidsgiverTreffId(lagretRotasjon(treff).entries.single { it.value == 2 }.key)
@@ -1305,11 +1305,11 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `eldre beregnede plasseringer bevares når arbeidsgiver legges til eller fjernes`() {
         val treff = workOpTreff(antallArbeidsgivere = 3)
-        val første = jobbsøker(treff, "11111111111")
+        val første = jobbsøker(treff, "00000000022")
         oppmøte(treff, første, møtt = true)
         møteoppsett(treff)
         flyttTilRom(treff, første, 3)
-        val sen = jobbsøker(treff, "22222222222")
+        val sen = jobbsøker(treff, "00000000036")
         oppmøte(treff, sen, møtt = true)
         fjernLagretRom(sen)
         val tomArbeidsgiver = ArbeidsgiverTreffId(lagretRotasjon(treff).entries.single { it.value == 2 }.key)
@@ -1572,10 +1572,10 @@ class TreffgjennomføringKomponentTest {
     @Test
     fun `person og arbeidsgiver fra et annet treff avvises uten endring i noen av treffene`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
-        val person = jobbsøker(treff, "11111111111")
+        val person = jobbsøker(treff, "00000000022")
         val ag = aktivArbeidsgiver(treff)
         val annet = workOpTreff(antallArbeidsgivere = 2)
-        val annenPerson = jobbsøker(annet, "22222222222")
+        val annenPerson = jobbsøker(annet, "00000000036")
         val annenAg = aktivArbeidsgiver(annet)
         listOf(treff to person, annet to annenPerson).forEach { (t, p) -> oppmøte(t, p, møtt = true) }
         listOf(treff, annet).forEach { møteoppsett(it) }
@@ -1646,8 +1646,8 @@ class TreffgjennomføringKomponentTest {
     fun `slettet jobbsøker kan ikke endres eller slettes på nytt via gamle id-er`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val ag = aktivArbeidsgiver(treff)
-        val fremmøtt = jobbsøker(treff, "11111111111")
-        val slettet = jobbsøker(treff, "22222222222")
+        val fremmøtt = jobbsøker(treff, "00000000022")
+        val slettet = jobbsøker(treff, "00000000036")
         oppmøte(treff, fremmøtt, møtt = true)
         møteoppsett(treff)
         interesse(treff, fremmøtt, ag, interessert = true)
@@ -1789,8 +1789,8 @@ class TreffgjennomføringKomponentTest {
     private fun fulltScenario(): Scenario {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val (ag1, ag2) = aktiveArbeidsgivere(treff)
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         listOf(p1, p2).forEach { assertThat(oppmøte(treff, it, møtt = true).statusCode()).isEqualTo(200) }
         assertThat(møteoppsett(treff).statusCode()).isEqualTo(200)
         listOf(p1, p2).forEach { assertThat(interesse(treff, it, ag1, interessert = true).statusCode()).isEqualTo(200) }
@@ -1875,7 +1875,7 @@ class TreffgjennomføringKomponentTest {
             treffId,
         )
 
-    private fun jobbsøker(treffId: TreffId, fnr: String = "12345678901"): PersonTreffId =
+    private fun jobbsøker(treffId: TreffId, fnr: String = "00000000025"): PersonTreffId =
         db.leggTilJobbsøkereMedHendelse(
             listOf(LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Testesen"))),
             treffId,

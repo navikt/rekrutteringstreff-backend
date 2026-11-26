@@ -158,7 +158,7 @@ class RekrutteringstreffServiceTest {
     fun `skal committe transaksjon når avlys fullføres uten feil`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
@@ -179,7 +179,7 @@ class RekrutteringstreffServiceTest {
     fun `skal committe transaksjon når fullfor fullføres uten feil`() {
         // Arrange - opprett treff med UTKAST status så vi kan publisere via service
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(status = RekrutteringstreffStatus.UTKAST)
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
@@ -202,7 +202,7 @@ class RekrutteringstreffServiceTest {
     fun `skal committe transaksjon når registrerEndring fullføres uten feil`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
@@ -243,7 +243,7 @@ class RekrutteringstreffServiceTest {
     @Test
     fun `skal lagre hendelse_data for hendelse TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON i registrerEndring når noen har svart ja`() {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
@@ -323,7 +323,7 @@ class RekrutteringstreffServiceTest {
     fun `skal ikke lagre jobbsøker-hendelser når ingen jobbsøkere har svart ja`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
@@ -344,7 +344,7 @@ class RekrutteringstreffServiceTest {
     fun `skal ikke varsle jobbsøker med INVITERT som siste hendelse om endring`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
@@ -366,7 +366,7 @@ class RekrutteringstreffServiceTest {
     fun `skal varsle jobbsøker med SVART_JA_TREFF_AVLYST som siste hendelse om endring`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
@@ -394,9 +394,9 @@ class RekrutteringstreffServiceTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val navIdent = "Z123456"
 
-        val fnr1 = Fødselsnummer("11111111111") // Skal varsles: INVITERT → SVART_JA
-        val fnr2 = Fødselsnummer("22222222222") // Skal IKKE varsles: INVITERT → SVART_JA → SVART_NEI
-        val fnr3 = Fødselsnummer("33333333333") // Skal varsles: INVITERT
+        val fnr1 = Fødselsnummer("00000000022") // Skal varsles: INVITERT → SVART_JA
+        val fnr2 = Fødselsnummer("00000000036") // Skal IKKE varsles: INVITERT → SVART_JA → SVART_NEI
+        val fnr3 = Fødselsnummer("00000000042") // Skal varsles: INVITERT
 
         // Jobbsøker 1: Invitert og svart ja
         leggTilOgInviterJobbsøker(treffId, fnr1, navIdent)
@@ -435,9 +435,9 @@ class RekrutteringstreffServiceTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val navIdent = "Z123456"
 
-        val fnr1 = Fødselsnummer("11111111111")
-        val fnr2 = Fødselsnummer("22222222222")
-        val fnr3 = Fødselsnummer("33333333333")
+        val fnr1 = Fødselsnummer("00000000022")
+        val fnr2 = Fødselsnummer("00000000036")
+        val fnr3 = Fødselsnummer("00000000042")
 
         // Jobbsøker 1: Invitert
         leggTilOgInviterJobbsøker(treffId, fnr1, navIdent)
@@ -474,7 +474,7 @@ class RekrutteringstreffServiceTest {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val navIdent = "Z123456"
-        val fnr = Fødselsnummer("11111111111")
+        val fnr = Fødselsnummer("00000000022")
 
         // Legg til og inviter jobbsøker
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
@@ -512,7 +512,7 @@ class RekrutteringstreffServiceTest {
     fun `skal ikke kunne slette treff som har jobbsøkere`() {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val navIdent = "Z123456"
-        val fnr = Fødselsnummer("11111111111")
+        val fnr = Fødselsnummer("00000000022")
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
 

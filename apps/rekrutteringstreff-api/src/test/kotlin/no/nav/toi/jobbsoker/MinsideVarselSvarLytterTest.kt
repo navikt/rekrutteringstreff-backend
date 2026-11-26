@@ -43,7 +43,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -115,7 +115,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -170,7 +170,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -213,7 +213,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -255,7 +255,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -294,7 +294,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         // Ikke legg til jobbsøker - send bare melding
         rapid.sendTestMessage(
@@ -320,7 +320,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -369,7 +369,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -429,7 +429,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -475,7 +475,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -525,7 +525,7 @@ class MinsideVarselSvarLytterTest {
         MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(

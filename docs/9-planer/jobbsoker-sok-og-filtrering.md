@@ -221,7 +221,7 @@ Content-Type: application/json
 POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
 Content-Type: application/json
 
-{ "fritekst": "12345678901", "side": 1, "antallPerSide": 25 }
+{ "fritekst": "00000000025", "side": 1, "antallPerSide": 25 }
 ```
 
 Fødselsnummer sendes i body via `fritekst`-feltet. Når verdien er 11 siffer, gjør backend eksakt match på `fodselsnummer`. Ellers gjøres prefix-match på `LOWER(fornavn)` og `LOWER(etternavn)`.
@@ -238,7 +238,7 @@ Fødselsnummer sendes i body via `fritekst`-feltet. Når verdien er 11 siffer, g
   "jobbsøkere": [
     {
       "personTreffId": "<uuid>",
-      "fodselsnummer": "12345678901",
+      "fodselsnummer": "00000000025",
       "fornavn": "Ola",
       "etternavn": "Nordmann",
       "navkontor": "Nav Grünerløkka",

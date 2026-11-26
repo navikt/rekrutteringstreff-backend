@@ -83,7 +83,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `forespurt samtykke skal opprette aktivitetskort i forslag`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         val tittel = "Test Stilling"
         val opprettetAv = "testuser"
@@ -121,7 +121,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `forespurt samtykke med samme kandidat og stilling skal ignoreres`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         val tittel = "Test Stilling"
         val opprettetAv = "testuser"
@@ -156,7 +156,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     fun `samtykke besvart med ja skal flytte aktivitetskort til gjennomføres`() {
         testSamtykkeBesvart(
             samtykkeGitt = true,
-            besvartAvIdent = "01010012345",
+            besvartAvIdent = "00000000006",
             besvartAvIdentType = IdentType.FNR,
             forventetAktivitetsStatus = AktivitetsStatus.GJENNOMFORES,
             forventetEndretAvType = EndretAvType.PERSONBRUKERIDENT,
@@ -167,7 +167,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     fun `samtykke besvart med nei skal flytte aktivitetskort til avbrutt`() {
         testSamtykkeBesvart(
             samtykkeGitt = false,
-            besvartAvIdent = "01010012345",
+            besvartAvIdent = "00000000006",
             besvartAvIdentType = IdentType.FNR,
             forventetAktivitetsStatus = AktivitetsStatus.AVBRUTT,
             forventetEndretAvType = EndretAvType.PERSONBRUKERIDENT,
@@ -176,7 +176,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `samme svar skal bare lagres én gang`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         repository.opprettDeltStilling(
             fnr = fnr,
@@ -206,7 +206,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `nytt svar skal lagres når aktivitetsstatus er endret`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         val navIdent = "Z123456"
         repository.opprettDeltStilling(
@@ -249,7 +249,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `samtykke trukket av veileder skal flytte aktivitetskort til avbrutt`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         val navIdent = "Z999999"
         opprettDeltStilling(fnr, stillingId)
@@ -280,7 +280,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `utløpt svarfrist skal flytte aktivitetskort til avbrutt`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId)
 
@@ -300,7 +300,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     @ParameterizedTest
     @EnumSource(AktivitetsStatus::class, names = ["GJENNOMFORES", "FORSLAG"])
     fun `utløpt samtykke skal flytte aktivitetskort til fullført`(fraStatus: AktivitetsStatus) {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId, fraStatus)
         val antallFør = testRepository.hentAlleRekrutteringsbistandStillinger().size
@@ -322,7 +322,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     @ParameterizedTest
     @EnumSource(AktivitetsStatus::class, names = ["GJENNOMFORES", "FORSLAG"], mode = EnumSource.Mode.EXCLUDE)
     fun `utløpt samtykke skal ikke endre aktivitetskort som ikke er i gjennomføres eller forslag`(fraStatus: AktivitetsStatus) {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId, fraStatus)
         val hendelserFør = testRepository.hentAlleRekrutteringsbistandStillinger()
@@ -336,7 +336,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `utløpt samtykke uten aktivitetskort skal ikke endre noe`() {
-        rapid.sendTestMessage(samtykkeUtløptMelding("01010012345", UUID.randomUUID()))
+        rapid.sendTestMessage(samtykkeUtløptMelding("00000000006", UUID.randomUUID()))
 
         assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
         assertThat(rapid.inspektør.size).isZero()
@@ -344,7 +344,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `utløpt samtykke uten aktørId skal feile og ikke endre aktivitetskort`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId)
         val utenAktørId = (jacksonObjectMapper().readTree(samtykkeUtløptMelding(fnr, stillingId)) as ObjectNode)
@@ -360,7 +360,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `registrert fått jobben skal flytte aktivitetskort til fullført når kandidat har svart ja`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         val navIdent = "Z123456"
 
@@ -425,7 +425,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `registrert fått jobben skal vente når fødselsnummerbehov allerede er lagt på`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId, AktivitetsStatus.GJENNOMFORES)
 
@@ -443,7 +443,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `registrert fått jobben skal ikke endre status når kandidat har svart nei`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         val navIdent = "Z123456"
 
@@ -478,7 +478,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `registrert fått jobben skal ikke endre status før kandidaten har svart ja`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId)
 
@@ -499,9 +499,9 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     fun `lukket kandidatliste skal fullføre bare kandidater som har svart ja`() {
         val stillingId = UUID.randomUUID()
         val navIdent = "Z999999"
-        val kandidatSomHarSvartJa = "01010012345"
-        val kandidatSomHarSvartNei = "02020012345"
-        val kandidatSomFikkJobben = "03030012345"
+        val kandidatSomHarSvartJa = "00000000006"
+        val kandidatSomHarSvartNei = "00000000008"
+        val kandidatSomFikkJobben = "00000000009"
         val aktørIdJa = "1000000000001"
         val aktørIdNei = "1000000000002"
         val aktørIdFikkJobben = "1000000000003"
@@ -566,12 +566,12 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     @Test
     fun `lukket kandidatliste skal fullføre flere kandidater samlet og være idempotent`() {
         val stillingId = UUID.randomUUID()
-        val fnr1 = "01010012345"
-        val fnr2 = "02020012345"
+        val fnr1 = "00000000006"
+        val fnr2 = "00000000008"
         val aktørId1 = "1000000000001"
         val aktørId2 = "1000000000002"
         val aktørIdUtenKort = "1000000000003"
-        val fødselsnumre = mapOf(aktørId1 to fnr1, aktørId2 to fnr2, aktørIdUtenKort to "03030012345")
+        val fødselsnumre = mapOf(aktørId1 to fnr1, aktørId2 to fnr2, aktørIdUtenKort to "00000000009")
 
         listOf(fnr1, fnr2).forEach { fnr ->
             opprettDeltStilling(fnr, stillingId, AktivitetsStatus.GJENNOMFORES)
@@ -616,7 +616,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `lukket kandidatliste skal vente når fødselsnummerliste allerede er etterspurt`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId, AktivitetsStatus.GJENNOMFORES)
 
@@ -652,7 +652,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         rapid.sendTestMessage(
             melding.deepCopy().apply {
                 put("@slutt_av_hendelseskjede", true)
-                putObject("fodselsnummerliste").put("1000000000001", "01010012345")
+                putObject("fodselsnummerliste").put("1000000000001", "00000000006")
             }.toString()
         )
 
@@ -681,7 +681,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `selvbetjent samtykke gitt skal opprette aktivitetskort i gjennomføres`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         val før = ZonedDateTime.now()
 
@@ -718,7 +718,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `selvbetjent samtykke gitt for samme kandidat og stilling skal ignoreres`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
 
         rapid.sendTestMessage(selvbetjentSamtykkeGittMelding(fnr = fnr, stillingId = stillingId))
@@ -732,7 +732,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `selvbetjent samtykke gitt skal flytte eksisterende aktivitetskort fra veileder til gjennomføres`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId)
 
@@ -759,7 +759,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
     @Test
     fun `selvbetjent samtykke gitt skal flytte avbrutt aktivitetskort til gjennomføres`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId, AktivitetsStatus.AVBRUTT)
 
@@ -778,7 +778,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     @Test
     fun `selvbetjent samtykke gitt med ugyldige felter skal ikke opprette aktivitetskort`() {
         val gyldig = jacksonObjectMapper().readTree(
-            selvbetjentSamtykkeGittMelding(fnr = "01010012345", stillingId = UUID.randomUUID())
+            selvbetjentSamtykkeGittMelding(fnr = "00000000006", stillingId = UUID.randomUUID())
         ) as ObjectNode
 
         rapid.sendTestMessage(gyldig.deepCopy().put("stillingsId", "ikke-en-uuid").toString())
@@ -797,7 +797,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         forventetAktivitetsStatus: AktivitetsStatus,
         forventetEndretAvType: EndretAvType,
     ) {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId)
 

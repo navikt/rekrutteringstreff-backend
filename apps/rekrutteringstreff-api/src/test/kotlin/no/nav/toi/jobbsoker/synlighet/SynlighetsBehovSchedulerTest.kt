@@ -44,7 +44,7 @@ class SynlighetsBehovSchedulerTest {
         val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid, LeaderElectionMock())
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
 
         // Legg til jobbsøker - synlighet_sist_oppdatert vil være NULL
@@ -71,7 +71,7 @@ class SynlighetsBehovSchedulerTest {
         val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid, LeaderElectionMock())
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
 
         // Legg til jobbsøker
@@ -97,8 +97,8 @@ class SynlighetsBehovSchedulerTest {
         val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid, LeaderElectionMock())
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr1 = "12345678901"
-        val fnr2 = "10987654321"
+        val fnr1 = "00000000025"
+        val fnr2 = "00000000012"
         val jobbsøkere = listOf(
             LeggTilJobbsøker(Fødselsnummer(fnr1), Fornavn("Test1"), Etternavn("Person1"), null, null, null),
             LeggTilJobbsøker(Fødselsnummer(fnr2), Fornavn("Test2"), Etternavn("Person2"), null, null, null)
@@ -121,8 +121,8 @@ class SynlighetsBehovSchedulerTest {
         val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid, LeaderElectionMock())
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnrMedSynlighet = "12345678901"
-        val fnrUtenSynlighet = "10987654321"
+        val fnrMedSynlighet = "00000000025"
+        val fnrUtenSynlighet = "00000000012"
         val jobbsøkere = listOf(
             LeggTilJobbsøker(Fødselsnummer(fnrMedSynlighet), Fornavn("Test1"), Etternavn("Person1"), null, null, null),
             LeggTilJobbsøker(Fødselsnummer(fnrUtenSynlighet), Fornavn("Test2"), Etternavn("Person2"), null, null, null)
@@ -160,7 +160,7 @@ class SynlighetsBehovSchedulerTest {
         val rapid = TestRapid()
         val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid, LeaderElectionMock())
 
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val treffId1 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff1")
         val treffId2 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff2")
 
@@ -184,7 +184,7 @@ class SynlighetsBehovSchedulerTest {
         val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid, LeaderElectionMock())
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
 
         jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker), treffId, "testperson")

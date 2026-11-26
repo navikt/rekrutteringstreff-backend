@@ -43,7 +43,7 @@ class AktivitetskortFeilLytterTest {
         AktivitetskortFeilLytter(rapid, jobbsøkerService)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(
@@ -99,7 +99,7 @@ class AktivitetskortFeilLytterTest {
         AktivitetskortFeilLytter(rapid, jobbsøkerService)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z123456"
 
         db.leggTilJobbsøkereMedHendelse(

@@ -251,7 +251,7 @@ Inneholder treffdetaljer for aktivitetskort. Ingen flettedata – fast SMS-tekst
 ```json
 {
   "@event_name": "rekrutteringstreffinvitasjon",
-  "fnr": "12345678910",
+  "fnr": "00000000029",
   "rekrutteringstreffId": "uuid",
   "hendelseId": "uuid",
   "tittel": "Jobbtreff hos bedrift AS",
@@ -271,7 +271,7 @@ Inneholder `flettedata` – hvilke felter som er endret og skal nevnes i SMS.
 ```json
 {
   "@event_name": "rekrutteringstreffoppdatering",
-  "fnr": "12345678910",
+  "fnr": "00000000029",
   "rekrutteringstreffId": "uuid",
   "hendelseId": "uuid",
   "flettedata": ["tidspunkt", "sted"]
@@ -285,12 +285,12 @@ Brukes til alle svar (ja/nei) og statusendringer (avlyst/fullført). Kandidatvar
 ```json
 {
   "@event_name": "rekrutteringstreffSvarOgStatus",
-  "fnr": "12345678910",
+  "fnr": "00000000029",
   "rekrutteringstreffId": "uuid",
   "hendelseId": "uuid",
   "svar": true,
   "treffstatus": "avlyst",
-  "endretAv": "12345678910",
+  "endretAv": "00000000029",
   "endretAvPersonbruker": false
 }
 ```
@@ -306,7 +306,7 @@ Returneres fra kandidatvarsel-api etter at MinSide har behandlet varselet. Inneh
   "@event_name": "minsideVarselSvar",
   "varselId": "uuid",
   "avsenderReferanseId": "rekrutteringstreffId",
-  "fnr": "12345678910",
+  "fnr": "00000000029",
   "eksternStatus": "SENDT",
   "minsideStatus": "OPPRETTET",
   "eksternKanal": "SMS",

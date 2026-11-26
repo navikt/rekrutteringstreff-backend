@@ -93,7 +93,7 @@ class KandidatsøkKlientTest {
 
     @Test
     fun `henter jobbsøkerinfo når kandidatsøk returnerer lowercase veilederident`(wireMock: WireMockRuntimeInfo) {
-        val fødselsnummer = Fødselsnummer("11111111111")
+        val fødselsnummer = Fødselsnummer("00000000022")
         val innkommendeToken = "innkommende-token"
 
         stubFor(
@@ -148,7 +148,7 @@ class KandidatsøkKlientTest {
 
     @Test
     fun `henting av jobbsøkerinfo kaster tilgangsavvist ved 403 fra kandidatsøk`(wireMock: WireMockRuntimeInfo) {
-        val fødselsnumre = listOf(Fødselsnummer("11111111111"))
+        val fødselsnumre = listOf(Fødselsnummer("00000000022"))
         val innkommendeToken = "innkommende-token"
 
         stubFor(

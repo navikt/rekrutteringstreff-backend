@@ -42,7 +42,7 @@ class SynlighetsBehovLytterTest {
         SynlighetsBehovLytter(rapid, jobbsøkerService)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
@@ -73,7 +73,7 @@ class SynlighetsBehovLytterTest {
         SynlighetsBehovLytter(rapid, jobbsøkerService)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
@@ -102,7 +102,7 @@ class SynlighetsBehovLytterTest {
         SynlighetsBehovLytter(rapid, jobbsøkerService)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
@@ -134,7 +134,7 @@ class SynlighetsBehovLytterTest {
         SynlighetsBehovLytter(rapid, jobbsøkerService)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
@@ -171,7 +171,7 @@ class SynlighetsBehovLytterTest {
                     "erSynlig": false,
                     "ferdigBeregnet": true
                 },
-                "fodselsnummer": "99999999999",
+                "fodselsnummer": "00000000059",
                 "@opprettet": "${Instant.now()}"
             }
             """.trimIndent()
@@ -191,7 +191,7 @@ class SynlighetsBehovLytterTest {
         SynlighetsBehovLytter(rapid, jobbsøkerService)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 

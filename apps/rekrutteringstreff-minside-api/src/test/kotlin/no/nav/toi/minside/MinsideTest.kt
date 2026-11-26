@@ -154,7 +154,7 @@ class MinsideTest {
             )),
             httpClient = httpClient
         )
-        private val jobbsøkerFnr = "12345678901"
+        private val jobbsøkerFnr = "00000000025"
         private val authServer = MockOAuth2Server()
         val arrangørOrgNr = "123456789"
         val arrangørOrgnavn = "Arrangørs organisasjonsnavn"
@@ -244,7 +244,7 @@ class MinsideTest {
 
     @Test
     fun `hent treff`() {
-        val ident = "12345678910"
+        val ident = "00000000029"
         val token = authServer.lagToken(authPort, pid = ident)
 
         val request = HttpRequest.newBuilder()
@@ -263,7 +263,7 @@ class MinsideTest {
 
     @Test
     fun `hent arbeidsgivere for treff`() {
-        val ident = "12345678910"
+        val ident = "00000000029"
         val token = authServer.lagToken(authPort, pid = ident)
 
         val request = HttpRequest.newBuilder()
@@ -283,7 +283,7 @@ class MinsideTest {
 
     @Test
     fun `arbeidsgivere er tom liste når kategori er WorkOp`() {
-        val token = authServer.lagToken(authPort, pid = "12345678910")
+        val token = authServer.lagToken(authPort, pid = "00000000029")
 
         val request = HttpRequest.newBuilder()
             .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${workOp.id}"))
@@ -301,7 +301,7 @@ class MinsideTest {
 
     @Test
     fun `arbeidsgiverendepunkt returnerer tom liste når kategori er WorkOp`() {
-        val token = authServer.lagToken(authPort, pid = "12345678910")
+        val token = authServer.lagToken(authPort, pid = "00000000029")
 
         val request = HttpRequest.newBuilder()
             .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${workOp.id}/arbeidsgiver"))
@@ -320,7 +320,7 @@ class MinsideTest {
 
     @Test
     fun `hent svarstatus for jobbsøker på ett treff`() {
-        val ident = "12345678910"
+        val ident = "00000000029"
         val token = authServer.lagToken(authPort, pid = ident)
 
         val request = HttpRequest.newBuilder()
@@ -456,7 +456,7 @@ object ubruktPortnrFra9000 {
 fun MockOAuth2Server.lagToken(
     authPort: Int,
     issuerId: String = "http://localhost:$authPort/default",
-    pid: String = "11111111111",
+    pid: String = "00000000022",
     claims: Map<String, Any> = mapOf("pid" to pid),
     expiry: Long = 3600,
     audience: String = minSideAudience
