@@ -12,11 +12,14 @@ import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
 import org.apache.kafka.clients.producer.MockProducer
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
@@ -292,6 +295,67 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(hendelse.stillingId).isEqualTo(stillingId)
             assertThat(hendelse.fnr).isEqualTo(fnr)
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(AktivitetsStatus::class, names = ["GJENNOMFORES", "FORSLAG"])
+    fun `utløpt samtykke skal flytte aktivitetskort til fullført`(fraStatus: AktivitetsStatus) {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, fraStatus)
+        val antallFør = testRepository.hentAlleRekrutteringsbistandStillinger().size
+
+        rapid.sendTestMessage(samtykkeUtløptMelding(fnr, stillingId))
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(antallFør + 1)
+        assertThat(hendelser.map { it.aktivitetskortId }.distinct()).hasSize(1)
+        hendelser.last().also { hendelse ->
+            assertThat(hendelse.aktivitetsStatus).isEqualTo(AktivitetsStatus.FULLFORT.name)
+            assertThat(hendelse.opprettetAv).isEqualTo(EndretAvType.SYSTEM.name)
+            assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.SYSTEM.name)
+            assertThat(hendelse.stillingId).isEqualTo(stillingId)
+            assertThat(hendelse.fnr).isEqualTo(fnr)
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(AktivitetsStatus::class, names = ["GJENNOMFORES", "FORSLAG"], mode = EnumSource.Mode.EXCLUDE)
+    fun `utløpt samtykke skal ikke endre aktivitetskort som ikke er i gjennomføres eller forslag`(fraStatus: AktivitetsStatus) {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, fraStatus)
+        val hendelserFør = testRepository.hentAlleRekrutteringsbistandStillinger()
+
+        rapid.sendTestMessage(samtykkeUtløptMelding(fnr, stillingId))
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(hendelserFør.size)
+        assertThat(hendelser.last().aktivitetsStatus).isEqualTo(fraStatus.name)
+    }
+
+    @Test
+    fun `utløpt samtykke uten aktivitetskort skal ikke endre noe`() {
+        rapid.sendTestMessage(samtykkeUtløptMelding("01010012345", UUID.randomUUID()))
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
+        assertThat(rapid.inspektør.size).isZero()
+    }
+
+    @Test
+    fun `utløpt samtykke uten aktørId skal feile og ikke endre aktivitetskort`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId)
+        val utenAktørId = (jacksonObjectMapper().readTree(samtykkeUtløptMelding(fnr, stillingId)) as ObjectNode)
+            .apply { remove("aktørId") }
+            .toString()
+
+        assertThatThrownBy { rapid.sendTestMessage(utenAktørId) }
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(1)
+        assertThat(hendelser.single().aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
     }
 
     @Test
@@ -949,6 +1013,29 @@ class RekrutteringsbistandStillingDelingAvCvTest {
               "antallStillinger": 1,
               "organisasjonsnummer": "936337651",
               "stillingensPubliseringstidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+            }
+        }
+    """.trimIndent()
+
+    private fun samtykkeUtløptMelding(
+        fnr: String,
+        stillingId: UUID,
+    ) = """
+        {
+            "@event_name": "samtykke-til-deling-av-cv-utlopt",
+            "stillingsId": "$stillingId",
+            "fnr": "$fnr",
+            "aktørId": "1234567890123",
+            "stillingsinfo": {
+              "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
+              "stillingsid": "$stillingId",
+              "eier": {
+                "navident": "Z012334",
+                "navn": "F_Z012334 E_Z012334",
+                "navKontorEnhetId": "0300"
+              },
+              "stillingskategori": "STILLING",
+              "rekrutteringstreffId": null
             }
         }
     """.trimIndent()

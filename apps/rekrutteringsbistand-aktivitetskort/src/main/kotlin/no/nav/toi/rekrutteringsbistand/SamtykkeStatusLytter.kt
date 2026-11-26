@@ -24,6 +24,7 @@ private sealed interface SamtykkeStatusHendelse {
     fun endretAv(packet: JsonMessage, fnr: String): String
     fun endretAvType(packet: JsonMessage): EndretAvType
     fun etiketter(packet: JsonMessage): List<AktivitetskortEtikett>
+    fun forventetSisteAktivitetsstatus(): List<AktivitetsStatus>? = null
 }
 
 class SamtykkeStatusLytter private constructor(
@@ -69,6 +70,7 @@ class SamtykkeStatusLytter private constructor(
             endretAvType = hendelse.endretAvType(packet),
             etiketter = hendelse.etiketter(packet),
             detaljer = emptyList(),
+            forventetSisteAktivitetsstatus = hendelse.forventetSisteAktivitetsstatus(),
         )
     }
 
@@ -88,6 +90,7 @@ class SamtykkeStatusLytter private constructor(
                 SamtykkeBesvartHendelse,
                 SamtykkeTrukketHendelse,
                 SamtykkeSvarfristUtløptHendelse,
+                SamtykkeUtløptHendelse
             )
                 .forEach { hendelse ->
                     SamtykkeStatusLytter(rapidsConnection, repository, hendelse)
@@ -173,6 +176,32 @@ private object SamtykkeSvarfristUtløptHendelse : SamtykkeStatusHendelse {
 
     override fun etiketter(packet: JsonMessage) =
         emptyList<AktivitetskortEtikett>()
+}
+
+private object SamtykkeUtløptHendelse : SamtykkeStatusHendelse {
+    override val eventName: String = "samtykke-til-deling-av-cv-utlopt"
+
+    override fun registrerValidering(river: River) {
+        river.validate {
+            it.requireKey(
+                "stillingsId",
+                "fnr",
+                "aktørId",
+            )
+        }
+    }
+
+    override fun aktivitetsStatus(packet: JsonMessage) = AktivitetsStatus.FULLFORT
+
+    override fun endretAv(packet: JsonMessage, fnr: String): String = EndretAvType.SYSTEM.name
+
+    override fun endretAvType(packet: JsonMessage) = EndretAvType.SYSTEM
+
+    override fun etiketter(packet: JsonMessage) = emptyList<AktivitetskortEtikett>()
+
+    // FORSLAG skal i praksis ikke forekomme, men tillates for å rydde opp i kort som aldri ble besvart.
+    override fun forventetSisteAktivitetsstatus() =
+        listOf(AktivitetsStatus.GJENNOMFORES, AktivitetsStatus.FORSLAG)
 }
 
 private fun JsonMessage.requireZonedDateTime(key: String) {
