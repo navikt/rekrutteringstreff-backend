@@ -47,9 +47,9 @@ class StatistikkRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
 
-        val ungIkkeStandard = jobbsøker(treffId, "11111111101", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
-        val eldreStandard = jobbsøker(treffId, "11111111102", alder = 50, innsatsgruppe = "STANDARD_INNSATS", kontornummer = "1000")
-        val annetKontor = jobbsøker(treffId, "11111111103", alder = 22, innsatsgruppe = "BATT", kontornummer = "2000")
+        val ungIkkeStandard = jobbsøker(treffId, "00000000013", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
+        val eldreStandard = jobbsøker(treffId, "00000000014", alder = 50, innsatsgruppe = "STANDARD_INNSATS", kontornummer = "1000")
+        val annetKontor = jobbsøker(treffId, "00000000015", alder = 22, innsatsgruppe = "BATT", kontornummer = "2000")
         db.leggTilJobbsøkere(listOf(ungIkkeStandard, eldreStandard, annetKontor))
 
         val iPerioden = ZonedDateTime.of(2026, 6, 15, 12, 0, 0, 0, OSLO)
@@ -69,9 +69,9 @@ class StatistikkRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
 
-        val før = jobbsøker(treffId, "11111111104", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
-        val etter = jobbsøker(treffId, "11111111105", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
-        val iPerioden = jobbsøker(treffId, "11111111106", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
+        val før = jobbsøker(treffId, "00000000016", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
+        val etter = jobbsøker(treffId, "00000000017", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
+        val iPerioden = jobbsøker(treffId, "00000000018", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
         db.leggTilJobbsøkere(listOf(før, etter, iPerioden))
 
         opprettSendtFormidling(treffId, før.personTreffId, arbeidsgiverTreffId, ZonedDateTime.of(2026, 5, 31, 23, 0, 0, 0, OSLO))
@@ -88,9 +88,9 @@ class StatistikkRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
 
-        val slettet = jobbsøker(treffId, "11111111107", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
-        val utenUtfall = jobbsøker(treffId, "11111111108", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
-        val gyldig = jobbsøker(treffId, "11111111109", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
+        val slettet = jobbsøker(treffId, "00000000019", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
+        val utenUtfall = jobbsøker(treffId, "00000000020", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
+        val gyldig = jobbsøker(treffId, "00000000021", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
         db.leggTilJobbsøkere(listOf(slettet, utenUtfall, gyldig))
 
         val iPerioden = ZonedDateTime.of(2026, 6, 15, 12, 0, 0, 0, OSLO)

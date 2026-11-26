@@ -61,7 +61,7 @@ class JobbsøkerstatusPermutasjonKomponentTest {
 
     private val db = TestDatabase()
     private val eier = "A100001"
-    private val fnr = "12345678901"
+    private val fnr = "00000000025"
     private val orgnrA = "999999991"
     private val orgnrB = "999999992"
 

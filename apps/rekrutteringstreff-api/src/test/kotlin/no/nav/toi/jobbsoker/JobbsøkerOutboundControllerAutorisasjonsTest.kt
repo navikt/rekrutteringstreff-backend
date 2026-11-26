@@ -67,7 +67,7 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
         stubFor(
             post("/api/arena-kandidatnr")
                 .withHeader("Authorization", matching("Bearer .*"))
-                .withRequestBody(equalToJson("""{"fodselsnummer":"12345678902"}"""))
+                .withRequestBody(equalToJson("""{"fodselsnummer":"00000000026"}"""))
                 .willReturn(
                     okJson("""{"arenaKandidatnr":"K654321"}""")
                 )
@@ -85,7 +85,7 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
         ctx.rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", RekrutteringstreffKategori.REKRUTTERINGSTREFF,"A213456", "Kontor", ZonedDateTime.now()))
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
         val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer = Fødselsnummer("12345678902"),
+            fødselsnummer = Fødselsnummer("00000000026"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),

@@ -75,7 +75,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `svar ja til invitasjon`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -105,7 +105,7 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(svarJaHendelse).isNotNull
         svarJaHendelse!!
         assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
-        assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("12345678901")
+        assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("00000000025")
         assertThat(svarJaHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
 
         val svarJaFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarJaHendelse.id)
@@ -120,7 +120,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `svar nei til invitasjon`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -150,7 +150,7 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(svarNeiHendelse).isNotNull
         svarNeiHendelse!!
         assertThat(svarNeiHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
-        assertThat(svarNeiHendelse.aktørIdentifikasjon).isEqualTo("12345678901")
+        assertThat(svarNeiHendelse.aktørIdentifikasjon).isEqualTo("00000000025")
         assertThat(svarNeiHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
 
         val svarNeiFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarNeiHendelse.id)
@@ -165,7 +165,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hentJobbsøkerInnloggetBorger returnerer jobbsøker med alle data`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("11111111111")
+        val fødselsnummer = Fødselsnummer("00000000022")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "testperson")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -203,7 +203,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hentJobbsøkerInnloggetBorger håndterer status påmeldt`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("11111111111")
+        val fødselsnummer = Fødselsnummer("00000000022")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -249,7 +249,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hentJobbsøkerInnloggetBorger håndterer status avmeldt`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("22222222222")
+        val fødselsnummer = Fødselsnummer("00000000036")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -273,7 +273,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hentJobbsøkerInnloggetBorger håndterer status kun invitert`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("33333333333")
+        val fødselsnummer = Fødselsnummer("00000000042")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -291,7 +291,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hentJobbsøkerInnloggetBorger håndterer status ikke invitert`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("44444444444")
+        val fødselsnummer = Fødselsnummer("00000000045")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
@@ -304,7 +304,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `jobbsøker som ikke er lagt til på treffet får 404`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("55555555555")
+        val fødselsnummer = Fødselsnummer("00000000047")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
         // Jobbsøker er IKKE lagt til på treffet i det hele tatt
@@ -317,7 +317,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hentJobbsøkerInnloggetBorger håndterer harSvart når bruker har svart ja`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("11111111111")
+        val fødselsnummer = Fødselsnummer("00000000022")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -342,7 +342,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hentJobbsøkerInnloggetBorger håndterer harSvart når bruker har svart nei`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("22222222222")
+        val fødselsnummer = Fødselsnummer("00000000036")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -367,7 +367,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hentJobbsøkerInnloggetBorger håndterer harSvart når bruker ikke har svart`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("33333333333")
+        val fødselsnummer = Fødselsnummer("00000000042")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -391,7 +391,7 @@ class JobbsøkerInnloggetBorgerTest {
         nyStatus: JobbsøkerStatus,
     ) {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("44444444444")
+        val fødselsnummer = Fødselsnummer("00000000045")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -417,7 +417,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `svar etter oppmøte lagres uten å overskrive oppmøtet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("55555555555")
+        val fødselsnummer = Fødselsnummer("00000000047")
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "test")
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
@@ -506,7 +506,7 @@ class JobbsøkerInnloggetBorgerTest {
     fun `hentJobbsøkerInnloggetBorger returnerer 404 for ukjent jobbsøker`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         // Lager token for en jobbsøker som IKKE er lagt til på treffet
-        val ukjentFnr = Fødselsnummer("99999999999")
+        val ukjentFnr = Fødselsnummer("00000000059")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = ukjentFnr.asString)
 
         val (response, _) = hentJobbsøkerInnloggetBorger(treffId, token)
@@ -516,7 +516,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `kan endre svar fra ja til nei`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -557,7 +557,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `kan endre svar fra nei til ja`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -601,7 +601,7 @@ class JobbsøkerInnloggetBorgerTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(
             svarfrist = nowOslo().minusDays(1) // Svarfrist var i går
         )
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -627,7 +627,7 @@ class JobbsøkerInnloggetBorgerTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(
             svarfrist = nowOslo().minusDays(1) // Svarfrist var i går
         )
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -656,7 +656,7 @@ class JobbsøkerInnloggetBorgerTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(
             svarfrist = nowOslo().plusDays(3) // Svarfrist er om 3 dager
         )
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -679,7 +679,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `hent jobbsøker for ukjent treff-ID gir 404`() {
         val ukjentTreffId = UUID.randomUUID()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         val response = httpGet(
@@ -693,7 +693,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `svar ja til ukjent treff-ID gir feilkode`() {
         val ukjentTreffId = UUID.randomUUID()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
@@ -710,7 +710,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `svar nei til ukjent treff-ID gir feilkode`() {
         val ukjentTreffId = UUID.randomUUID()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
@@ -727,7 +727,7 @@ class JobbsøkerInnloggetBorgerTest {
     @Test
     fun `to raske svar ja kall registrerer kun én SVART_JA hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val token = infra.authServer.lagTokenBorger(infra.authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(

@@ -233,18 +233,18 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Egen", "Bruker", Kontor("1000", "Nav Test"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
+            jobbsøker("00000000022", "Egen", "Bruker", Kontor("1000", "Nav Test"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
         )
         stubOpprettStilling()
 
-        assertThat(opprettFormidlingKall(treffId, orgnr, "11111111111", veilederIdent).statusCode()).isEqualTo(201)
+        assertThat(opprettFormidlingKall(treffId, orgnr, "00000000022", veilederIdent).statusCode()).isEqualTo(201)
 
         val response = hentEgneFormidlinger(treffId, veilederIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).hasSize(1)
-        assertThat(linjer.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(linjer.single().fødselsnummer).isEqualTo("00000000022")
         assertThat(linjer.single().opprettetAvNavIdent).isEqualTo(veilederIdent)
     }
 
@@ -257,11 +257,11 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Samme", "Kontor", Kontor("0314", "Nav Test"), VeilederNavn("Min Veil"), VeilederNavIdent(veilederIdent)),
+            jobbsøker("00000000022", "Samme", "Kontor", Kontor("0314", "Nav Test"), VeilederNavn("Min Veil"), VeilederNavIdent(veilederIdent)),
         )
         stubOpprettStilling()
 
-        assertThat(opprettFormidlingKall(treffId, orgnr, "11111111111", annenVeileder).statusCode()).isEqualTo(201)
+        assertThat(opprettFormidlingKall(treffId, orgnr, "00000000022", annenVeileder).statusCode()).isEqualTo(201)
 
         val response = hentEgneFormidlinger(treffId, veilederIdent)
         assertThat(response.statusCode()).isEqualTo(200)
@@ -277,7 +277,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Annen", "Bruker", Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
+            jobbsøker("00000000022", "Annen", "Bruker", Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
@@ -300,20 +300,20 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Egen", "Formidling", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            jobbsøker("22222222222", "Annen", "Formidling", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
+            jobbsøker("00000000022", "Egen", "Formidling", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000036", "Annen", "Formidling", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
         )
         stubOpprettStilling()
 
-        assertThat(opprettFormidlingKall(treffId, orgnr, "11111111111", egenVeileder).statusCode()).isEqualTo(201)
-        assertThat(opprettFormidlingKall(treffId, orgnr, "22222222222", annenVeileder).statusCode()).isEqualTo(201)
+        assertThat(opprettFormidlingKall(treffId, orgnr, "00000000022", egenVeileder).statusCode()).isEqualTo(201)
+        assertThat(opprettFormidlingKall(treffId, orgnr, "00000000036", annenVeileder).statusCode()).isEqualTo(201)
 
         val response = hentEgneFormidlinger(treffId, egenVeileder)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).hasSize(1)
-        assertThat(linjer.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(linjer.single().fødselsnummer).isEqualTo("00000000022")
         assertThat(linjer.single().opprettetAvNavIdent).isEqualTo(egenVeileder)
     }
 
@@ -325,8 +325,8 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            jobbsøker("22222222222", "Bo", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000036", "Bo", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
@@ -340,7 +340,7 @@ class FormidlingerKomponentTest {
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).hasSize(2)
         assertThat(linjer.map { it.fødselsnummer })
-            .containsExactlyInAnyOrder("11111111111", "22222222222")
+            .containsExactlyInAnyOrder("00000000022", "00000000036")
     }
 
     @Test
@@ -351,8 +351,8 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Synlig", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            jobbsøker("22222222222", "Usynlig", "Bø", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
+            jobbsøker("00000000022", "Synlig", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000036", "Usynlig", "Bø", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Utvikler (dataspill)", janzzKonseptId = "19989")
@@ -369,7 +369,7 @@ class FormidlingerKomponentTest {
         assertThat(linjer).hasSize(2)
 
         val synlig = linjer.single { it.etternavn == "Aase" }
-        assertThat(synlig.fødselsnummer).isEqualTo("11111111111")
+        assertThat(synlig.fødselsnummer).isEqualTo("00000000022")
         assertThat(synlig.yrkestittel).isEqualTo("Utvikler (dataspill)")
 
         val usynlig = linjer.single { it.etternavn == "Bø" }
@@ -385,7 +385,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Kokk", janzzKonseptId = "12345")
@@ -415,7 +415,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Kokk", janzzKonseptId = "12345")
@@ -445,17 +445,17 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         stubOpprettStilling()
 
-        val response = opprettFormidlingKall(treffId, orgnr, "11111111111", eierIdent)
+        val response = opprettFormidlingKall(treffId, orgnr, "00000000022", eierIdent)
 
         assertThat(response.statusCode()).isEqualTo(201)
         val lagrede = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)
         assertThat(lagrede).hasSize(1)
         val lagret = lagrede.single()
-        assertThat(lagret.fødselsnummer).isEqualTo("11111111111")
+        assertThat(lagret.fødselsnummer).isEqualTo("00000000022")
         assertThat(lagret.yrkestittel).isEqualTo("Kokk")
 
         val (kontornummer, kontornavn) = db.hentFormidlingKontor(treffId)
@@ -470,11 +470,11 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
         leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         stubOpprettStilling()
 
-        assertThat(opprettFormidlingKall(treffId, orgnr, "11111111111", eierIdent).statusCode()).isEqualTo(201)
+        assertThat(opprettFormidlingKall(treffId, orgnr, "00000000022", eierIdent).statusCode()).isEqualTo(201)
 
         val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
         val hendelser = db.hentFormidlingHendelserForUuid(formidlingId)
@@ -492,11 +492,11 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.settSperret(personTreffIder[0], true)
 
-        val response = opprettFormidlingKall(treffId, orgnr, "11111111111", eierIdent)
+        val response = opprettFormidlingKall(treffId, orgnr, "00000000022", eierIdent)
 
         assertThat(response.statusCode()).isEqualTo(403)
         val problem = mapper.readTree(response.body())
@@ -513,12 +513,12 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Skjult", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Skjult", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.settSynlighet(personTreffIder[0], false)
         stubOpprettStilling()
 
-        val response = opprettFormidlingKall(treffId, orgnr, "11111111111", eierIdent)
+        val response = opprettFormidlingKall(treffId, orgnr, "00000000022", eierIdent)
 
         assertThat(response.statusCode()).isEqualTo(201)
         assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).hasSize(1)
@@ -531,7 +531,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = "0101")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
 
@@ -547,7 +547,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         val kandidatlisteId = UUID.randomUUID()
         db.opprettFormidling(
@@ -571,7 +571,7 @@ class FormidlingerKomponentTest {
         verify {
             kandidatKlient.endreUtfall(
                 kandidatlisteId = kandidatlisteId,
-                fødselsnummer = Fødselsnummer("11111111111"),
+                fødselsnummer = Fødselsnummer("00000000022"),
                 utfall = KandidatUtfall.PRESENTERT,
                 navKontorVeileder = "1234",
                 userToken = any(),
@@ -585,7 +585,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.opprettFormidling(
             treffId = treffId,
@@ -617,7 +617,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
         val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
@@ -637,7 +637,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier("A123456")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.opprettFormidling(
                 treffId = treffId,
@@ -664,7 +664,7 @@ class FormidlingerKomponentTest {
         val treffId = opprettTreffMedEier("A123456")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
         val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("00000000022", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
         val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id

@@ -151,8 +151,8 @@ class FormidlingRepositoryTest {
             "testperson"
         )
 
-        val fnrMedSendtUtfall = "11111111111"
-        val fnrUtenSendtUtfall = "22222222222"
+        val fnrMedSendtUtfall = "00000000022"
+        val fnrUtenSendtUtfall = "00000000036"
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(Fødselsnummer(fnrMedSendtUtfall), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
@@ -207,8 +207,8 @@ class FormidlingRepositoryTest {
         )
 
         // Opprett to jobbsøkere
-        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
-        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
+        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker1, jobbsøker2), treffId, "testperson")
 
         val formidlingId1 = db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, kandidatlisteId)
@@ -357,8 +357,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Frida"), Etternavn("Testberg"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("Z111111")),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Petter"), Etternavn("Eksempel"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("Z111111")),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Frida"), Etternavn("Testberg"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("Z111111")),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Petter"), Etternavn("Eksempel"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("Z111111")),
             ),
             treffId, "testperson",
         )
@@ -369,7 +369,7 @@ class FormidlingRepositoryTest {
         val linjer = repository.hentAlleForTreff(treffId)
 
         assertThat(linjer).hasSize(2)
-        val frida = linjer.single { it.fødselsnummer == "11111111111" }
+        val frida = linjer.single { it.fødselsnummer == "00000000022" }
         assertThat(frida.fornavn).isEqualTo("Frida")
         assertThat(frida.etternavn).isEqualTo("Testberg")
         assertThat(frida.orgnr).isEqualTo("123456789")
@@ -386,7 +386,7 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Frida"), Etternavn("Testberg"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Frida"), Etternavn("Testberg"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -421,8 +421,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Egen"), Etternavn("Formidling"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Annen"), Etternavn("Formidling"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Egen"), Etternavn("Formidling"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Annen"), Etternavn("Formidling"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -434,7 +434,7 @@ class FormidlingRepositoryTest {
         val egne = repository.hentEgneForTreff(treffId, "Z111111")
 
         assertThat(egne).hasSize(1)
-        assertThat(egne.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(egne.single().fødselsnummer).isEqualTo("00000000022")
         assertThat(egne.single().opprettetAvNavIdent).isEqualTo("Z111111")
     }
 
@@ -447,8 +447,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Eget"), Etternavn("Kontor"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Annet"), Etternavn("Kontor"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Eget"), Etternavn("Kontor"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Annet"), Etternavn("Kontor"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -460,7 +460,7 @@ class FormidlingRepositoryTest {
         val mittKontor = repository.hentForMittKontorForTreff(treffId, listOf("1000"))
 
         assertThat(mittKontor).hasSize(1)
-        assertThat(mittKontor.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(mittKontor.single().fødselsnummer).isEqualTo("00000000022")
     }
 
     @Test
@@ -471,7 +471,7 @@ class FormidlingRepositoryTest {
             treffId, "testperson",
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Eget"), Etternavn("Kontor"), null, null, null)),
+            listOf(LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Eget"), Etternavn("Kontor"), null, null, null)),
             treffId, "testperson",
         )
         db.dataSource.executeInTransaction { connection ->
@@ -490,8 +490,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Eldst"), Etternavn("Aase"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Nyest"), Etternavn("Bø"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Eldst"), Etternavn("Aase"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Nyest"), Etternavn("Bø"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -503,7 +503,7 @@ class FormidlingRepositoryTest {
         val linjer = repository.hentAlleForTreff(treffId)
 
         assertThat(linjer.map { it.fødselsnummer })
-            .containsExactly("22222222222", "11111111111")
+            .containsExactly("00000000036", "00000000022")
     }
 
     @Test
@@ -519,8 +519,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Hos"), Etternavn("Beta"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Hos"), Etternavn("Alfa"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Hos"), Etternavn("Beta"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Hos"), Etternavn("Alfa"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -542,8 +542,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Ås"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Berg"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Ås"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Berg"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -569,8 +569,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Hos"), Etternavn("Alfa"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Hos"), Etternavn("Beta"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Hos"), Etternavn("Alfa"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Hos"), Etternavn("Beta"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -600,9 +600,9 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Hos"), Etternavn("Alfa"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Hos"), Etternavn("Beta"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Hos"), Etternavn("Gamma"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Hos"), Etternavn("Alfa"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Hos"), Etternavn("Beta"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Hos"), Etternavn("Gamma"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -624,8 +624,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Eldst"), Etternavn("Aase"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Nyest"), Etternavn("Bø"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Eldst"), Etternavn("Aase"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Nyest"), Etternavn("Bø"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -641,7 +641,7 @@ class FormidlingRepositoryTest {
         )
 
         assertThat(linjer.map { it.fødselsnummer })
-            .containsExactly("11111111111", "22222222222")
+            .containsExactly("00000000022", "00000000036")
     }
 
     @Test
@@ -657,8 +657,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Hos"), Etternavn("Beta"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Hos"), Etternavn("Alfa"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Hos"), Etternavn("Beta"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Hos"), Etternavn("Alfa"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -684,7 +684,7 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -727,8 +727,8 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Aase"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Usynlig"), Etternavn("Bø"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig"), Etternavn("Aase"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Usynlig"), Etternavn("Bø"), null, null, null),
             ),
             treffId, "testperson",
         )
@@ -742,7 +742,7 @@ class FormidlingRepositoryTest {
         assertThat(linjer).hasSize(2)
 
         val synlig = linjer.single { it.etternavn == "Aase" }
-        assertThat(synlig.fødselsnummer).isEqualTo("11111111111")
+        assertThat(synlig.fødselsnummer).isEqualTo("00000000022")
 
         val usynlig = linjer.single { it.etternavn == "Bø" }
         assertThat(usynlig.fødselsnummer).isNull()
@@ -766,7 +766,7 @@ class FormidlingRepositoryTest {
         )
 
         val jobbsøker = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null

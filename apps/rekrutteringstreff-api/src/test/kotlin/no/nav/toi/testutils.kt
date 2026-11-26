@@ -42,7 +42,7 @@ val httpClient: HttpClient = HttpClient.newBuilder()
 fun MockOAuth2Server.lagTokenBorger(
     authPort: Int,
     issuerId: String = "http://localhost:$authPort/default",
-    pid: String = "11111111111",
+    pid: String = "00000000022",
     claims: Map<String, Any> = mapOf("pid" to pid),
     expiry: Long = 3600,
     audience: String = "rekrutteringstreff-audience"

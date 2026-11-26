@@ -44,7 +44,7 @@ class JobbsøkerRepositoryTest {
     fun leggTilJobbsøkerTest() {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val input = listOf(LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
@@ -56,7 +56,7 @@ class JobbsøkerRepositoryTest {
         assertThat(jobbsøkere).hasSize(1)
         val js = jobbsøkere.first()
         assertThatCode { UUID.fromString(js.personTreffId.toString()) }.doesNotThrowAnyException()
-        assertThat(js.fødselsnummer.asString).isEqualTo("12345678901")
+        assertThat(js.fødselsnummer.asString).isEqualTo("00000000025")
         assertThat(js.fornavn.asString).isEqualTo("Ola")
         assertThat(js.etternavn.asString).isEqualTo("Nordmann")
         assertThat(js.kontor?.kontornavn).isEqualTo("NAV Oslo")
@@ -75,7 +75,7 @@ class JobbsøkerRepositoryTest {
     fun leggTilJobbsøkerMedKunObligatoriskeFelterTest() {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val input = listOf(LeggTilJobbsøker(
-            Fødselsnummer("98765432109"),
+            Fødselsnummer("00000000058"),
             Fornavn("Knut"),
             Etternavn("Hansen"),
             null,
@@ -87,7 +87,7 @@ class JobbsøkerRepositoryTest {
         assertThat(jobbsøkere).hasSize(1)
         val js = jobbsøkere.first()
         assertThatCode { UUID.fromString(js.personTreffId.toString()) }.doesNotThrowAnyException()
-        assertThat(js.fødselsnummer.asString).isEqualTo("98765432109")
+        assertThat(js.fødselsnummer.asString).isEqualTo("00000000058")
         assertThat(js.fornavn.asString).isEqualTo("Knut")
         assertThat(js.etternavn.asString).isEqualTo("Hansen")
         assertThat(js.kontor).isNull()
@@ -110,7 +110,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 PersonTreffId(UUID.randomUUID()),
                 treffId1,
-                Fødselsnummer("11111111111"),
+                Fødselsnummer("00000000022"),
                 Fornavn("Fornavn1"),
                 Etternavn("Etternavn1"),
                 Kontor(kontornummer = "1000", kontornavn = "Oslo"),
@@ -123,7 +123,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 PersonTreffId(UUID.randomUUID()),
                 treffId2,
-                Fødselsnummer("22222222222"),
+                Fødselsnummer("00000000036"),
                 Fornavn("Fornavn2"),
                 Etternavn("Etternavn2"),
                 Kontor(kontornummer = "1000", kontornavn = "Oslo"),
@@ -134,7 +134,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 PersonTreffId(UUID.randomUUID()),
                 treffId2,
-                Fødselsnummer("33333333333"),
+                Fødselsnummer("00000000042"),
                 Fornavn("Fornavn3"),
                 Etternavn("Etternavn3"),
                 Kontor(kontornummer = "1000", kontornavn = "Bergen"),
@@ -162,8 +162,8 @@ class JobbsøkerRepositoryTest {
     @Test
     fun `hentJobbsøker henter riktig jobbsøker`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer1 = Fødselsnummer("11111111111")
-        val fødselsnummer2 = Fødselsnummer("22222222222")
+        val fødselsnummer1 = Fødselsnummer("00000000022")
+        val fødselsnummer2 = Fødselsnummer("00000000036")
 
         val leggTilJobbsøker1 = LeggTilJobbsøker(
             fødselsnummer1,
@@ -196,13 +196,13 @@ class JobbsøkerRepositoryTest {
         assertThat(jobbsøker.hendelser.first().hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
 
 
-        val ikkeEksisterendeJobbsøker = repository.hentJobbsøker(treffId, Fødselsnummer("99999999999"))
+        val ikkeEksisterendeJobbsøker = repository.hentJobbsøker(treffId, Fødselsnummer("00000000059"))
         assertThat(ikkeEksisterendeJobbsøker).isNull()
     }
 
     @Test
     fun `henter treff for jobbsøker med alle statuser unntatt slettet`() {
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val starttidspunkt = java.time.ZonedDateTime.parse("2026-10-10T09:00:00+02:00")
         val treff = db.opprettRekrutteringstreffMedAlleFelter(
             tittel = "Invitert treff",
@@ -324,7 +324,7 @@ class JobbsøkerRepositoryTest {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(
-                Fødselsnummer("12345678901"),
+                Fødselsnummer("00000000025"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
                 Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -332,7 +332,7 @@ class JobbsøkerRepositoryTest {
                 VeilederNavIdent("NAV123")
             ),
             LeggTilJobbsøker(
-                Fødselsnummer("12345678902"),
+                Fødselsnummer("00000000026"),
                 Fornavn("Ole"),
                 Etternavn("Nordmann"),
                 Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -352,7 +352,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
                 treffId = treffId,
-                fødselsnummer = Fødselsnummer("12345678901"),
+                fødselsnummer = Fødselsnummer("00000000025"),
                 fornavn = Fornavn("Ola"),
                 etternavn = Etternavn("Nordmann"),
                 kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -363,7 +363,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
                 treffId = treffId,
-                fødselsnummer = Fødselsnummer("12345678902"),
+                fødselsnummer = Fødselsnummer("00000000026"),
                 fornavn = Fornavn("Ole"),
                 etternavn = Etternavn("Nordmann"),
                 kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -374,7 +374,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
                 treffId = treffId,
-                fødselsnummer = Fødselsnummer("12345678903"),
+                fødselsnummer = Fødselsnummer("00000000027"),
                 fornavn = Fornavn("Dole"),
                 etternavn = Etternavn("Nordmann"),
                 kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -385,7 +385,7 @@ class JobbsøkerRepositoryTest {
              Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
                 treffId = treffId,
-                fødselsnummer = Fødselsnummer("12345678904"),
+                fødselsnummer = Fødselsnummer("00000000028"),
                 fornavn = Fornavn("Cole"),
                 etternavn = Etternavn("Nordmann"),
                 kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -407,7 +407,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
                 treffId = treffId,
-                fødselsnummer = Fødselsnummer("12345678901"),
+                fødselsnummer = Fødselsnummer("00000000025"),
                 fornavn = Fornavn("Ola"),
                 etternavn = Etternavn("Nordmann"),
                 kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -418,7 +418,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
                 treffId = treffId,
-                fødselsnummer = Fødselsnummer("12345678902"),
+                fødselsnummer = Fødselsnummer("00000000026"),
                 fornavn = Fornavn("Ole"),
                 etternavn = Etternavn("Nordmann"),
                 kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -429,7 +429,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
                 treffId = treffId,
-                fødselsnummer = Fødselsnummer("12345678903"),
+                fødselsnummer = Fødselsnummer("00000000027"),
                 fornavn = Fornavn("Dole"),
                 etternavn = Etternavn("Nordmann"),
                 kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -440,7 +440,7 @@ class JobbsøkerRepositoryTest {
             Jobbsøker(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
                 treffId = treffId,
-                fødselsnummer = Fødselsnummer("12345678904"),
+                fødselsnummer = Fødselsnummer("00000000028"),
                 fornavn = Fornavn("Cole"),
                 etternavn = Etternavn("Nordmann"),
                 kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
@@ -462,7 +462,7 @@ class JobbsøkerRepositoryTest {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreffHendelser")
 
         val input = listOf(LeggTilJobbsøker(
-            Fødselsnummer("11223344556"),
+            Fødselsnummer("00000000023"),
             Fornavn("Emil"),
             Etternavn("Hansen"),
             Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"),
@@ -476,7 +476,7 @@ class JobbsøkerRepositoryTest {
         assertThat(hendelser).hasSize(1)
 
         val hendelse = hendelser.first()
-        assertThat(hendelse.fødselsnummer.asString).isEqualTo("11223344556")
+        assertThat(hendelse.fødselsnummer.asString).isEqualTo("00000000023")
         assertThat(hendelse.fornavn.asString).isEqualTo("Emil")
         assertThat(hendelse.etternavn.asString).isEqualTo("Hansen")
         assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
@@ -493,7 +493,7 @@ class JobbsøkerRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
 
         val jobbsøker1 = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null
@@ -525,7 +525,7 @@ class JobbsøkerRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
 
         val jobbsøker1 = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null
@@ -554,13 +554,13 @@ class JobbsøkerRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
 
         val jobbsøker1 = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null
         )
         val jobbsøker2 = LeggTilJobbsøker(
-            Fødselsnummer("23456789012"),
+            Fødselsnummer("00000000037"),
             Fornavn("Kari"),
             Etternavn("Nordmann"),
             null, null, null
@@ -594,7 +594,7 @@ class JobbsøkerRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
 
         val jobbsøker = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null
@@ -616,7 +616,7 @@ class JobbsøkerRepositoryTest {
         val navIdent = "testperson"
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
         val opprinneligJobbsøker = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Gammelt"),
             Etternavn("Navn"),
             Kontor(kontornummer = "1000", kontornavn = "Nav Gammel"),
@@ -631,7 +631,7 @@ class JobbsøkerRepositoryTest {
         }
 
         val oppdatertJobbsøker = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Oppdatert"),
             Etternavn("Person"),
             Kontor(kontornummer = "1000", kontornavn = "Nav Oppdatert"),
@@ -666,8 +666,8 @@ class JobbsøkerRepositoryTest {
     fun `hentJobbsøkere skal filtrere ut ikke-synlige jobbsøkere`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
 
-        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
-        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "testperson")
 
@@ -675,22 +675,22 @@ class JobbsøkerRepositoryTest {
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(alleJobbsøkere).hasSize(2)
 
-        val ikkeSynligId = alleJobbsøkere.find { it.fødselsnummer.asString == "22222222222" }!!.personTreffId
+        val ikkeSynligId = alleJobbsøkere.find { it.fødselsnummer.asString == "00000000036" }!!.personTreffId
         db.settSynlighet(ikkeSynligId, false)
 
         // Hent igjen - skal nå bare returnere synlig jobbsøker
         val synligeJobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(synligeJobbsøkere).hasSize(1)
-        assertThat(synligeJobbsøkere.first().fødselsnummer.asString).isEqualTo("11111111111")
+        assertThat(synligeJobbsøkere.first().fødselsnummer.asString).isEqualTo("00000000022")
     }
 
     @Test
     fun `hentAntallJobbsøkere skal ikke telle ikke-synlige jobbsøkere`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
 
-        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("En"), Etternavn("Person"), null, null, null)
-        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("To"), Etternavn("Person"), null, null, null)
-        val jobbsøker3 = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Tre"), Etternavn("Person"), null, null, null)
+        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("En"), Etternavn("Person"), null, null, null)
+        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("To"), Etternavn("Person"), null, null, null)
+        val jobbsøker3 = LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Tre"), Etternavn("Person"), null, null, null)
 
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker1, jobbsøker2, jobbsøker3), treffId, "testperson")
 
@@ -708,8 +708,8 @@ class JobbsøkerRepositoryTest {
     fun `hentJobbsøkerHendelser skal filtrere ut hendelser for ikke-synlige jobbsøkere`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
 
-        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
-        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
 
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "testperson")
 
@@ -723,13 +723,13 @@ class JobbsøkerRepositoryTest {
         // Verifiser at bare hendelser for synlig jobbsøker returneres
         val synligeHendelser = repository.hentJobbsøkerHendelser(treffId)
         assertThat(synligeHendelser).hasSize(1)
-        assertThat(synligeHendelser.first().fødselsnummer.asString).isEqualTo("11111111111")
+        assertThat(synligeHendelser.first().fødselsnummer.asString).isEqualTo("00000000022")
     }
 
     @Test
     fun `hentJobbsøker skal returnere null for ikke-synlig jobbsøker`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
 
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
@@ -755,7 +755,7 @@ class JobbsøkerRepositoryTest {
     fun `ny jobbsøker får VURDERES som default aktuellForTreffStatus`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         db.leggTilJobbsøkereMedHendelse(
-            listOf(LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            listOf(LeggTilJobbsøker(Fødselsnummer("00000000025"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
             treffId, "testperson",
         )
 
@@ -766,7 +766,7 @@ class JobbsøkerRepositoryTest {
     @Test
     fun `hentJobbsøkere og hentJobbsøker leser aktuellForTreffStatus`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         db.leggTilJobbsøkere(listOf(testjobbsøker(treffId, fnr, AktuellForTreffStatus.KONTAKTET)))
 
         assertThat(repository.hentJobbsøkere(treffId).single().aktuellForTreffStatus)
@@ -793,7 +793,7 @@ class JobbsøkerRepositoryTest {
 
     private fun testjobbsøker(
         treffId: TreffId,
-        fnr: Fødselsnummer = Fødselsnummer("12345678901"),
+        fnr: Fødselsnummer = Fødselsnummer("00000000025"),
         aktuellForTreffStatus: AktuellForTreffStatus = AktuellForTreffStatus.VURDERES,
     ) = Jobbsøker(
         PersonTreffId(UUID.randomUUID()), treffId, fnr,

@@ -168,7 +168,7 @@ class FormidlingServiceTest {
         )
 
         jobbsøkerService.leggTilJobbsøkere(
-            listOf(LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            listOf(LeggTilJobbsøker(Fødselsnummer("00000000025"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
             treffId, "testperson"
         )
         val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
@@ -179,7 +179,7 @@ class FormidlingServiceTest {
 
         val opprettede = formidlingService.opprettFormidling(
             treffId = treffId,
-            opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+            opprettFormidling = opprettFormidlingDto(orgnr, "00000000025"),
             navIdent = "testperson",
             userToken = "test-token",
         )
@@ -239,7 +239,7 @@ class FormidlingServiceTest {
         )
 
         jobbsøkerService.leggTilJobbsøkere(
-            listOf(LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            listOf(LeggTilJobbsøker(Fødselsnummer("00000000025"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
             treffId, "testperson"
         )
         val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
@@ -248,7 +248,7 @@ class FormidlingServiceTest {
         assertThatThrownBy {
             formidlingService.opprettFormidling(
                 treffId = treffId,
-                opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+                opprettFormidling = opprettFormidlingDto(orgnr, "00000000025"),
                 navIdent = "testperson",
                 userToken = "test-token",
             )
@@ -268,7 +268,7 @@ class FormidlingServiceTest {
 
         val opprettede = formidlingService.opprettFormidling(
             treffId = treffId,
-            opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+            opprettFormidling = opprettFormidlingDto(orgnr, "00000000025"),
             navIdent = "testperson",
             userToken = "test-token",
         )
@@ -302,7 +302,7 @@ class FormidlingServiceTest {
 
         val opprettede = formidlingService.opprettFormidling(
             treffId = treffId,
-            opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+            opprettFormidling = opprettFormidlingDto(orgnr, "00000000025"),
             navIdent = "testperson",
             userToken = "test-token",
         )
@@ -326,7 +326,7 @@ class FormidlingServiceTest {
 
         val opprettede = formidlingService.opprettFormidling(
             treffId = treffId,
-            opprettFormidling = opprettFormidlingDto("123456789", "12345678901"),
+            opprettFormidling = opprettFormidlingDto("123456789", "00000000025"),
             navIdent = "testperson",
             userToken = "test-token",
         )
@@ -358,7 +358,7 @@ class FormidlingServiceTest {
         assertThatThrownBy {
             formidlingService.opprettFormidling(
                 treffId = treffId,
-                opprettFormidling = opprettFormidlingDto("123456789", "12345678901"),
+                opprettFormidling = opprettFormidlingDto("123456789", "00000000025"),
                 navIdent = "testperson",
                 userToken = "test-token",
             )
@@ -387,7 +387,7 @@ class FormidlingServiceTest {
             ).use { stmt ->
                 stmt.setObject(1, duplikat.somUuid)
                 stmt.setObject(2, treffId.somUuid)
-                stmt.setString(3, "12345678901")
+                stmt.setString(3, "00000000025")
                 stmt.executeUpdate()
             }
         }
@@ -396,7 +396,7 @@ class FormidlingServiceTest {
         assertThatThrownBy {
             formidlingService.opprettFormidling(
                 treffId = treffId,
-                opprettFormidling = opprettFormidlingDto("123456789", "12345678901"),
+                opprettFormidling = opprettFormidlingDto("123456789", "00000000025"),
                 navIdent = "testperson",
                 userToken = "test-token",
             )
@@ -437,7 +437,7 @@ class FormidlingServiceTest {
     fun `slett formidling via treffId og UUID tilbakestiller jobbsøkerstatus til statusen før FÅTT_JOBB`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
 
         // Realistisk flyt: jobbsøker inviteres og svarer ja før formidling opprettes
         jobbsøkerService.inviter(listOf(personTreffId), treffId, "testperson")
@@ -473,7 +473,7 @@ class FormidlingServiceTest {
     fun `slett formidling tilbakestiller jobbsøkerstatus til SVART_NEI når det var statusen før FÅTT_JOBB`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
 
         jobbsøkerService.inviter(listOf(personTreffId), treffId, "testperson")
         jobbsøkerService.svarNeiTilInvitasjon(fnr, treffId, "testperson")
@@ -514,7 +514,7 @@ class FormidlingServiceTest {
         )
 
         jobbsøkerService.leggTilJobbsøkere(
-            listOf(LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            listOf(LeggTilJobbsøker(Fødselsnummer("00000000025"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
             treffId, "eier"
         )
 
@@ -524,7 +524,7 @@ class FormidlingServiceTest {
 
         val opprettet = formidlingService.opprettFormidling(
             treffId = treffId,
-            opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+            opprettFormidling = opprettFormidlingDto(orgnr, "00000000025"),
             navIdent = "eier",
             userToken = "test-token",
         ).first()
@@ -577,8 +577,8 @@ class FormidlingServiceTest {
         )
 
         // Opprett to jobbsøkere
-        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
-        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
+        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
         jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2), treffId, "testperson")
 
         val personTreffIder = jobbsøkerService.hentJobbsøkere(treffId).map { it.personTreffId }
@@ -651,8 +651,8 @@ class FormidlingServiceTest {
             treffId, "testperson"
         )
 
-        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
-        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
+        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
         jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2), treffId, "testperson")
 
         val personTreffIder = jobbsøkerService.hentJobbsøkere(treffId).map { it.personTreffId }
@@ -692,7 +692,7 @@ class FormidlingServiceTest {
         )
 
         val jobbsøker = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
+            Fødselsnummer("00000000025"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null

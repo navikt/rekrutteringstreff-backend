@@ -36,7 +36,7 @@ class AktivitetskortRepositoryTest {
     @Test
     fun `hentUsendteHendelse returnerer INVITERT-hendelser som ikke er pollet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
@@ -61,7 +61,7 @@ class AktivitetskortRepositoryTest {
     @Test
     fun `hentUsendteHendelse returnerer ikke hendelser som allerede er pollet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
@@ -82,7 +82,7 @@ class AktivitetskortRepositoryTest {
     @Test
     fun `lagrePollingstatus lagrer pollingstatus for hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
@@ -103,7 +103,7 @@ class AktivitetskortRepositoryTest {
     @Test
     fun `lagrePollingstatus med Connection fungerer i transaksjon`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
@@ -125,7 +125,7 @@ class AktivitetskortRepositoryTest {
     @Test
     fun `hentUsendteHendelse filtrerer på riktig hendelsestype`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
@@ -150,11 +150,11 @@ class AktivitetskortRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         
         // Opprett synlig jobbsøker
-        val fnrSynlig = Fødselsnummer("12345678901")
+        val fnrSynlig = Fødselsnummer("00000000025")
         val jobbsøkerSynlig = LeggTilJobbsøker(fnrSynlig, Fornavn("Synlig"), Etternavn("Person"), null, null, null)
         
         // Opprett ikke-synlig jobbsøker
-        val fnrIkkeSynlig = Fødselsnummer("98765432109")
+        val fnrIkkeSynlig = Fødselsnummer("00000000058")
         val jobbsøkerIkkeSynlig = LeggTilJobbsøker(fnrIkkeSynlig, Fornavn("Skjult"), Etternavn("Person"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøkerSynlig, jobbsøkerIkkeSynlig), treffId, "testperson")

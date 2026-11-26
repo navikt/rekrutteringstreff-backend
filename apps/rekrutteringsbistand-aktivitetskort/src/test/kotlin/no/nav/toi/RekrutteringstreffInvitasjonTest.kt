@@ -79,7 +79,7 @@ class RekrutteringstreffInvitasjonTest {
 
     @Test
     fun `lesing av rekrutteringstreffinvitasjon fra rapid skal lagres i database`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
@@ -127,7 +127,7 @@ class RekrutteringstreffInvitasjonTest {
 
     @Test
     fun `lesing av rekrutteringstreffinvitasjon fra rapid skal lagres i database når tidsperioden er over flere dager`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
@@ -168,7 +168,7 @@ class RekrutteringstreffInvitasjonTest {
 
     @Test
     fun `lesing av rekrutteringsinvitasjon fra rapid med samme kandidat og stilling skal ignoreres`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val fraTid = ZonedDateTime.now().plusDays(1)
         val tilTid = fraTid.plusHours(2)
@@ -217,7 +217,7 @@ class RekrutteringstreffInvitasjonTest {
 
     @Test
     fun `lesing av rekrutteringstreffinvitasjon skal returnere aktivitetskortuuid på rapid`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val fraTid = ZonedDateTime.now().plusDays(1)
@@ -263,7 +263,7 @@ class RekrutteringstreffInvitasjonTest {
 
     @Test
     fun `lesing av workopinvitasjon fra rapid skal lagres med tilpasset beskrivelse i databasen`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test WorkOp"
         val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))

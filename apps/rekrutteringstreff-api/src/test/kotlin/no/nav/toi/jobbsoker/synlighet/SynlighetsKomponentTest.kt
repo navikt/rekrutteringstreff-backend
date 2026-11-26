@@ -118,8 +118,8 @@ class SynlighetsKomponentTest {
     fun `POST jobbsøkersøk filtrerer ut ikke-synlige jobbsøkere`() {
         val treffId = opprettTreffMedEier()
         
-        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
-        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
         
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
@@ -137,7 +137,7 @@ class SynlighetsKomponentTest {
     fun `jobbsøker som blir ikke-synlig via synlighetsmotor forsvinner fra API`() {
         val treffId = opprettTreffMedEier()
         
-        val fnr = Fødselsnummer("33333333333")
+        val fnr = Fødselsnummer("00000000042")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "A123456")
         
@@ -161,7 +161,7 @@ class SynlighetsKomponentTest {
     fun `jobbsøker som blir synlig igjen via synlighetsmotor dukker opp i API`() {
         val treffId = opprettTreffMedEier()
         
-        val fnr = Fødselsnummer("44444444444")
+        val fnr = Fødselsnummer("00000000045")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], false)
@@ -187,7 +187,7 @@ class SynlighetsKomponentTest {
         val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "Treff2")
         eierRepository.leggTil(treff2, "A123456", "0315")
         
-        val fnr = Fødselsnummer("55555555555")
+        val fnr = Fødselsnummer("00000000047")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
         
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff1, "A123456")
@@ -209,11 +209,11 @@ class SynlighetsKomponentTest {
     fun `POST jobbsøkersøk returnerer kun synlige jobbsøkere i totalt og liste`() {
         val treffId = opprettTreffMedEier()
         
-        val synlig1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null)
-        val synlig2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Synlig2"), Etternavn("Person"), null, null, null)
-        val skjult1 = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Skjult1"), Etternavn("Person"), null, null, null)
-        val skjult2 = LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Skjult2"), Etternavn("Person"), null, null, null)
-        val skjult3 = LeggTilJobbsøker(Fødselsnummer("55555555555"), Fornavn("Skjult3"), Etternavn("Person"), null, null, null)
+        val synlig1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null)
+        val synlig2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Synlig2"), Etternavn("Person"), null, null, null)
+        val skjult1 = LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Skjult1"), Etternavn("Person"), null, null, null)
+        val skjult2 = LeggTilJobbsøker(Fødselsnummer("00000000045"), Fornavn("Skjult2"), Etternavn("Person"), null, null, null)
+        val skjult3 = LeggTilJobbsøker(Fødselsnummer("00000000047"), Fornavn("Skjult3"), Etternavn("Person"), null, null, null)
         
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synlig1, synlig2, skjult1, skjult2, skjult3), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
@@ -237,9 +237,9 @@ class SynlighetsKomponentTest {
     fun `POST jobbsøkersøk ekskluderer slettede jobbsøkere fra totalt`() {
         val treffId = opprettTreffMedEier()
         
-        val synlig = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
-        val skjult = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Skjult"), Etternavn("Person"), null, null, null)
-        val skalSlettes = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Slettet"), Etternavn("Person"), null, null, null)
+        val synlig = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val skjult = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Skjult"), Etternavn("Person"), null, null, null)
+        val skalSlettes = LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Slettet"), Etternavn("Person"), null, null, null)
         
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synlig, skjult, skalSlettes), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
@@ -265,8 +265,8 @@ class SynlighetsKomponentTest {
         val treffId = opprettTreffMedEier()
         
         // Opprett to synlige jobbsøkere som skal slettes
-        val fnr1 = Fødselsnummer("11111111111")
-        val fnr2 = Fødselsnummer("22222222222")
+        val fnr1 = Fødselsnummer("00000000022")
+        val fnr2 = Fødselsnummer("00000000036")
         val slettet1 = LeggTilJobbsøker(fnr1, Fornavn("Slettet1"), Etternavn("Person"), null, null, null)
         val slettet2 = LeggTilJobbsøker(fnr2, Fornavn("Slettet2"), Etternavn("Person"), null, null, null)
         
@@ -296,7 +296,7 @@ class SynlighetsKomponentTest {
         val treffId = opprettTreffMedEier()
         
         // Opprett en skjult jobbsøker
-        val skjultJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Skjult"), Etternavn("Person"), null, null, null)
+        val skjultJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Skjult"), Etternavn("Person"), null, null, null)
         
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(skjultJobbsøker), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], false)
@@ -318,11 +318,11 @@ class SynlighetsKomponentTest {
     fun `POST jobbsøkersøk - kun synlige ikke-slettede returneres med korrekt totalt`() {
         val treffId = opprettTreffMedEier()
         
-        val synlig1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null)
-        val synlig2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Synlig2"), Etternavn("Person"), null, null, null)
-        val skjult = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Skjult"), Etternavn("Person"), null, null, null)
-        val slettet1 = LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Slettet1"), Etternavn("Person"), null, null, null)
-        val slettet2 = LeggTilJobbsøker(Fødselsnummer("55555555555"), Fornavn("Slettet2"), Etternavn("Person"), null, null, null)
+        val synlig1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null)
+        val synlig2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Synlig2"), Etternavn("Person"), null, null, null)
+        val skjult = LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Skjult"), Etternavn("Person"), null, null, null)
+        val slettet1 = LeggTilJobbsøker(Fødselsnummer("00000000045"), Fornavn("Slettet1"), Etternavn("Person"), null, null, null)
+        val slettet2 = LeggTilJobbsøker(Fødselsnummer("00000000047"), Fornavn("Slettet2"), Etternavn("Person"), null, null, null)
         
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synlig1, synlig2, skjult, slettet1, slettet2), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
@@ -362,8 +362,8 @@ class SynlighetsKomponentTest {
     fun `GET jobbsøker-hendelser filtrerer ut hendelser for ikke-synlige jobbsøkere`() {
         val treffId = opprettTreffMedEier()
         
-        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
-        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
         
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
@@ -381,8 +381,8 @@ class SynlighetsKomponentTest {
     fun `GET alle hendelser filtrerer ut jobbsøker-hendelser for ikke-synlige jobbsøkere på vanlige treff`() {
         val treffId = opprettTreffMedEier()
 
-        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
-        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
 
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
@@ -395,7 +395,7 @@ class SynlighetsKomponentTest {
         val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
         assertThat(jobbsøkerHendelser).hasSize(1)
         assertThat(jobbsøkerHendelser.first().subjektNavn).isEqualTo("Synlig Person")
-        assertThat(jobbsøkerHendelser.first().subjektId).isEqualTo("11111111111")
+        assertThat(jobbsøkerHendelser.first().subjektId).isEqualTo("00000000022")
         assertThat(hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }).isNotEmpty()
     }
 
@@ -403,8 +403,14 @@ class SynlighetsKomponentTest {
     fun `GET alle hendelser på WorkOp tar med usynlige, men ikke usynlige som er slettet, og viser sperrede uten navn`() {
         val treffId = opprettTreffMedEier(RekrutteringstreffKategori.WORKOP)
 
-        val jobbsøkere = listOf("Synlig", "Usynlig", "SlettetUsynlig", "Sperret", "SlettetSynlig").mapIndexed { i, navn ->
-            LeggTilJobbsøker(Fødselsnummer("${i + 1}".repeat(11)), Fornavn(navn), Etternavn("Person"), null, null, null)
+        val jobbsøkere = listOf(
+            "Synlig" to "00000000022",
+            "Usynlig" to "00000000036",
+            "SlettetUsynlig" to "00000000042",
+            "Sperret" to "00000000045",
+            "SlettetSynlig" to "00000000047",
+        ).map { (navn, fnr) ->
+            LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn(navn), Etternavn("Person"), null, null, null)
         }
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId, "A123456")
         jobbsøkere.take(4).forEach { db.svarJaTilInvitasjon(it.fødselsnummer, treffId, it.fødselsnummer.asString) }
@@ -424,18 +430,18 @@ class SynlighetsKomponentTest {
         val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
 
         assertThat(jobbsøkerHendelser.map { Triple(it.hendelsestype, it.subjektNavn, it.subjektId) }).containsExactlyInAnyOrder(
-            Triple("OPPRETTET", "Synlig Person", "11111111111"),
-            Triple("SVART_JA_TIL_INVITASJON", "Synlig Person", "11111111111"),
+            Triple("OPPRETTET", "Synlig Person", "00000000022"),
+            Triple("SVART_JA_TIL_INVITASJON", "Synlig Person", "00000000022"),
             Triple("OPPRETTET", "Usynlig Person", null),
             Triple("SVART_JA_TIL_INVITASJON", "Usynlig Person", null),
             Triple("OPPRETTET", null, null),
             Triple("SVART_JA_TIL_INVITASJON", null, null),
-            Triple("OPPRETTET", "SlettetSynlig Person", "55555555555"),
+            Triple("OPPRETTET", "SlettetSynlig Person", "00000000047"),
         )
         val svar = jobbsøkerHendelser.filter { it.hendelsestype == "SVART_JA_TIL_INVITASJON" }
-        assertThat(svar.single { it.subjektId == "11111111111" }.aktørIdentifikasjon).isEqualTo("11111111111")
+        assertThat(svar.single { it.subjektId == "00000000022" }.aktørIdentifikasjon).isEqualTo("00000000022")
         assertThat(svar.filter { it.subjektId == null }.map { it.aktørIdentifikasjon }).containsOnlyNulls()
-        listOf("22222222222", "33333333333", "44444444444").forEach {
+        listOf("00000000036", "00000000042", "00000000045").forEach {
             assertThat(response.body()).doesNotContain(it)
         }
         assertThat(hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }).isNotEmpty()
@@ -445,7 +451,7 @@ class SynlighetsKomponentTest {
     fun `GET alle hendelser på vanlige treff viser fortsatt synlige som er slettet, med fødselsnummer`() {
         val treffId = opprettTreffMedEier()
 
-        val jobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Slettet"), Etternavn("Person"), null, null, null)
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Slettet"), Etternavn("Person"), null, null, null)
         val personTreffId = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "A123456").single()
         db.svarJaTilInvitasjon(jobbsøker.fødselsnummer, treffId, jobbsøker.fødselsnummer.asString)
         db.settJobbsøkerStatus(personTreffId, JobbsøkerStatus.SLETTET)
@@ -456,8 +462,8 @@ class SynlighetsKomponentTest {
         val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
         val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
         assertThat(jobbsøkerHendelser.map { Triple(it.hendelsestype, it.subjektId, it.aktørIdentifikasjon) }).containsExactlyInAnyOrder(
-            Triple("OPPRETTET", "11111111111", "A123456"),
-            Triple("SVART_JA_TIL_INVITASJON", "11111111111", "11111111111"),
+            Triple("OPPRETTET", "00000000022", "A123456"),
+            Triple("SVART_JA_TIL_INVITASJON", "00000000022", "00000000022"),
         )
     }
 }

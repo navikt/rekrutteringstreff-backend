@@ -105,9 +105,9 @@ class StatistikkKomponentTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
 
-        val ungIkkeStandard = jobbsøker(treffId, "11111111101", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
-        val eldreStandard = jobbsøker(treffId, "11111111102", alder = 50, innsatsgruppe = "STANDARD_INNSATS", kontornummer = "1000")
-        val annetKontor = jobbsøker(treffId, "11111111103", alder = 22, innsatsgruppe = "BATT", kontornummer = "2000")
+        val ungIkkeStandard = jobbsøker(treffId, "00000000013", alder = 25, innsatsgruppe = "BATT", kontornummer = "1000")
+        val eldreStandard = jobbsøker(treffId, "00000000014", alder = 50, innsatsgruppe = "STANDARD_INNSATS", kontornummer = "1000")
+        val annetKontor = jobbsøker(treffId, "00000000015", alder = 22, innsatsgruppe = "BATT", kontornummer = "2000")
         db.leggTilJobbsøkere(listOf(ungIkkeStandard, eldreStandard, annetKontor))
 
         val iPerioden = ZonedDateTime.of(2026, 6, 15, 12, 0, 0, 0, OSLO)

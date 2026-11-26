@@ -169,8 +169,8 @@ class RekrutteringstreffRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
 
         // Legg til to jobbsøkere
-        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
-        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, navIdent)
 
         // Hent alle hendelser - skal inkludere rekrutteringstreff OPPRETTET + 2 jobbsøker OPPRETTET
@@ -194,7 +194,7 @@ class RekrutteringstreffRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
 
         // Legg til en jobbsøker og sett som ikke-synlig
-        val jobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Test"), Etternavn("Person"), null, null, null)
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Test"), Etternavn("Person"), null, null, null)
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, navIdent)
         db.settSynlighet(personTreffIder[0], false)
 

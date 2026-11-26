@@ -126,7 +126,7 @@ class JobbsøkerTest {
     @Test
     fun leggTilJobbsøkerTest() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
-        val fnr = Fødselsnummer("55555555555")
+        val fnr = Fødselsnummer("00000000047")
         val fornavn = Fornavn("Foooornavn")
         val etternavn = Etternavn("Eeeetternavn")
         val kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo")
@@ -204,10 +204,10 @@ class JobbsøkerTest {
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
         val treffId3 = db.opprettRekrutteringstreffIDatabase()
-        val fnr1 = Fødselsnummer("11111111111")
-        val fnr2 = Fødselsnummer("22222222222")
-        val fnr3 = Fødselsnummer("33333333333")
-        val fnr4 = Fødselsnummer("44444444444")
+        val fnr1 = Fødselsnummer("00000000022")
+        val fnr2 = Fødselsnummer("00000000036")
+        val fnr3 = Fødselsnummer("00000000042")
+        val fnr4 = Fødselsnummer("00000000045")
         val fornavn1 = Fornavn("Fornavn1")
         val fornavn2 = Fornavn("Fornavn2")
         val fornavn3 = Fornavn("Fornavn3")
@@ -262,7 +262,7 @@ class JobbsøkerTest {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
     [{
-      "fødselsnummer" : "77777777777",
+      "fødselsnummer" : "00000000053",
       "fornavn" : "Test",
       "etternavn" : "Bruker",
       "kontornavn" : "Oslo",
@@ -303,7 +303,7 @@ class JobbsøkerTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val input1 = LeggTilJobbsøker(
-            Fødselsnummer("11111111111"),
+            Fødselsnummer("00000000022"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
@@ -311,7 +311,7 @@ class JobbsøkerTest {
             VeilederNavIdent("NAV111")
         )
         val input2 = LeggTilJobbsøker(
-            Fødselsnummer("22222222222"),
+            Fødselsnummer("00000000036"),
             Fornavn("Kari"),
             Etternavn("Nordmann"),
             Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"),
@@ -346,7 +346,7 @@ class JobbsøkerTest {
             assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
             assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
             assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
-            assertThat(h.fødselsnummer).isIn("11111111111", "22222222222")
+            assertThat(h.fødselsnummer).isIn("00000000022", "00000000036")
             assertThat(h.fornavn).isIn("Ola", "Kari")
             assertThat(h.etternavn).isEqualTo("Nordmann")
             assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(8, ChronoUnit.SECONDS))
@@ -358,8 +358,8 @@ class JobbsøkerTest {
     fun invitererJobbsøkere() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr1 = Fødselsnummer("12312312312")
-        val fnr2 = Fødselsnummer("45645645645")
+        val fnr1 = Fødselsnummer("00000000024")
+        val fnr2 = Fødselsnummer("00000000046")
 
         db.leggTilJobbsøkere(
             listOf(
@@ -412,7 +412,7 @@ class JobbsøkerTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         ctx.eierRepository.leggTil(treffId, "A123456", "0315")
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         // Legg til jobbsøker
         val jobbsøker = Jobbsøker(
@@ -427,7 +427,7 @@ class JobbsøkerTest {
         db.leggTilJobbsøkere(listOf(jobbsøker))
 
         // Registrer hendelse med data via service
-        val hendelseDataJson = """{"fnr": "12345678901", "svar": "JA"}"""
+        val hendelseDataJson = """{"fnr": "00000000025", "svar": "JA"}"""
         service.registrerMinsideVarselSvar(fødselsnummer, treffId, "SYSTEM", hendelseDataJson)
 
         // Hent hendelser via hendelser-API
@@ -446,7 +446,7 @@ class JobbsøkerTest {
         assertThat(hendelse).isNotNull
         assertThat(hendelse!!.hendelseData).isNotNull
         val data = mapper.convertValue(hendelse.hendelseData, MinsideVarselSvarDataDto::class.java)
-        assertThat(data.fnr).isEqualTo("12345678901")
+        assertThat(data.fnr).isEqualTo("00000000025")
         assertThat(data.svar).isEqualTo("JA")
     }
 
@@ -455,7 +455,7 @@ class JobbsøkerTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         ctx.eierRepository.leggTil(treffId, "A123456", "0315")
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         val jobbsøker = Jobbsøker(
             PersonTreffId(UUID.randomUUID()),
@@ -492,7 +492,7 @@ class JobbsøkerTest {
     @Test
     fun `legg til samme jobbsøker to ganger gir idempotent respons - kun én jobbsøker opprettes`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
-        val fnr = Fødselsnummer("55555555555")
+        val fnr = Fødselsnummer("00000000047")
         val fornavn = Fornavn("Test")
         val etternavn = Etternavn("Person")
         val kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo")
@@ -546,7 +546,7 @@ class JobbsøkerTest {
     fun `svarPåVegneAvJobbsøker med svar true gir status SVART_JA`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12312312312")
+        val fnr = Fødselsnummer("00000000024")
 
         val jobbsøker = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, fnr,
@@ -576,7 +576,7 @@ class JobbsøkerTest {
     fun `svarPåVegneAvJobbsøker med svar false gir status SVART_NEI`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12312312312")
+        val fnr = Fødselsnummer("00000000024")
 
         val jobbsøker = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, fnr,
@@ -606,7 +606,7 @@ class JobbsøkerTest {
     fun `svarPåVegneAvJobbsøker med svar null gir status INVITERT`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12312312312")
+        val fnr = Fødselsnummer("00000000024")
 
         val jobbsøker = Jobbsøker(
             PersonTreffId(UUID.randomUUID()), treffId, fnr,
@@ -638,7 +638,7 @@ class JobbsøkerTest {
         val mittTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
         val annetTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "B654321")
         val fremmed = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), annetTreff, Fødselsnummer("12312312312"),
+            PersonTreffId(UUID.randomUUID()), annetTreff, Fødselsnummer("00000000024"),
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.LAGT_TIL
         )
@@ -663,12 +663,12 @@ class JobbsøkerTest {
         val mittTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
         val annetTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "B654321")
         val egen = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), mittTreff, Fødselsnummer("12312312312"),
+            PersonTreffId(UUID.randomUUID()), mittTreff, Fødselsnummer("00000000024"),
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.LAGT_TIL
         )
         val fremmed = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), annetTreff, Fødselsnummer("32132132132"),
+            PersonTreffId(UUID.randomUUID()), annetTreff, Fødselsnummer("00000000041"),
             Fornavn("Kari"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.LAGT_TIL
         )
@@ -696,7 +696,7 @@ class JobbsøkerTest {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val personTreffId = PersonTreffId(UUID.randomUUID())
         db.leggTilJobbsøkere(listOf(Jobbsøker(
-            personTreffId, treffId, Fødselsnummer("12312312312"),
+            personTreffId, treffId, Fødselsnummer("00000000024"),
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
             status,
         )))
@@ -794,7 +794,7 @@ class JobbsøkerTest {
         val annetTreff = db.opprettRekrutteringstreffIDatabase()
         val fremmedJobbsøker = PersonTreffId(UUID.randomUUID())
         db.leggTilJobbsøkere(listOf(Jobbsøker(
-            fremmedJobbsøker, annetTreff, Fødselsnummer("32132132132"),
+            fremmedJobbsøker, annetTreff, Fødselsnummer("00000000041"),
             Fornavn("Kari"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.LAGT_TIL,
         )))

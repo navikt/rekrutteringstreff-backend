@@ -66,7 +66,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
         scheduler.wrapJobbkjøring()
@@ -91,7 +91,7 @@ class JobbsøkerhendelserSchedulerTest {
             LeaderElectionMock(),
         )
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
         scheduler.wrapJobbkjøring()
@@ -113,7 +113,7 @@ class JobbsøkerhendelserSchedulerTest {
             LeaderElectionMock(),
         )
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
         scheduler.wrapJobbkjøring()
@@ -125,7 +125,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende ja-svar på rapid og markere dem som pollet`() {
-        val expectedFnr = Fødselsnummer("12345678901")
+        val expectedFnr = Fødselsnummer("00000000025")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -158,7 +158,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende nei-svar på rapid og markere dem som pollet`() {
-        val expectedFnr = Fødselsnummer("12345678901")
+        val expectedFnr = Fødselsnummer("00000000025")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -191,7 +191,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende ja-svar avgitt av eier på rapid og markere som pollet`() {
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val arrangørNavIdent = "Z999111"
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
@@ -226,7 +226,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende nei-svar avgitt av eier på rapid og markere som pollet`() {
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val arrangørNavIdent = "Z999222"
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
@@ -260,7 +260,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende fjernet svar avgitt av eier på rapid og markere som pollet`() {
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val arrangørNavIdent = "Z999333"
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
@@ -295,7 +295,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `avlyst treff - svart-ja via eier skal utløse minside-varsel (regresjonstest for bug der eier-svar manglet varsel)`() {
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val arrangørNavIdent = "Z999444"
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
@@ -331,7 +331,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal ikke sende samme svar to ganger`() {
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -365,7 +365,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()  // Send invitasjon først
@@ -414,7 +414,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -447,7 +447,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -489,7 +489,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -523,7 +523,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -563,7 +563,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -595,7 +595,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -637,7 +637,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -670,7 +670,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -703,7 +703,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -748,7 +748,7 @@ class JobbsøkerhendelserSchedulerTest {
 //        )
 //
 //        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-//        val fødselsnummer = Fødselsnummer("12345678901")
+//        val fødselsnummer = Fødselsnummer("00000000025")
 //
 //        opprettOgInviterJobbsøker(treffId, fødselsnummer)
 //        scheduler.wrapJobbkjøring()
@@ -787,7 +787,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -820,7 +820,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -854,7 +854,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()
@@ -876,7 +876,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende avlyst-status med hendelseId for jobbsøker som har svart ja`() {
-        val expectedFnr = Fødselsnummer("12345678901")
+        val expectedFnr = Fødselsnummer("00000000025")
         // Aktivitetsplanen godtar bare Nav-ident her, så meldingen bruker den som opprettet treffet.
         val opprettetAv = "Z999999"
         val arrangør = "Z888888"
@@ -915,7 +915,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende fullfort-status paa rapid og markere dem som pollet`() {
-        val expectedFnr = Fødselsnummer("12345678901")
+        val expectedFnr = Fødselsnummer("00000000025")
         // Aktivitetsplanen godtar bare Nav-ident her, så meldingen bruker den som opprettet treffet.
         val opprettetAv = "Z999999"
         val arrangør = "Z888888"
@@ -957,7 +957,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal ikke sende samme treffstatus to ganger`() {
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -992,7 +992,7 @@ class JobbsøkerhendelserSchedulerTest {
             LeaderElectionMock(),
         )
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
 
         // Opprett flere hendelser i database
         opprettOgInviterJobbsøker(treffId, fødselsnummer)  // Hendelse 1: INVITERT
@@ -1038,8 +1038,8 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende avbrutt-status for jobbsøker med kun INVITERT når treff fullføres`() {
-        val fnrSvartJa = Fødselsnummer("12345678901")
-        val fnrIkkeSvart = Fødselsnummer("12345678902")
+        val fnrSvartJa = Fødselsnummer("00000000025")
+        val fnrIkkeSvart = Fødselsnummer("00000000026")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -1101,8 +1101,8 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `avlyst treff - svart-ja får aktivitetskort-status OG minside-varsel, kun-invitert får kun aktivitetskort-status uten varsel`() {
-        val fnrSvartJa = Fødselsnummer("12345678901")
-        val fnrIkkeSvart = Fødselsnummer("12345678902")
+        val fnrSvartJa = Fødselsnummer("00000000025")
+        val fnrIkkeSvart = Fødselsnummer("00000000026")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -1155,7 +1155,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal ikke sende avbrutt-status for jobbsøker som har svart nei når treff fullføres`() {
-        val fnrSvartNei = Fødselsnummer("12345678901")
+        val fnrSvartNei = Fødselsnummer("00000000025")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -1188,7 +1188,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal sende fullført-status for jobbsøker som har svart nei og møtt opp når treff fullføres`() {
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -1216,9 +1216,9 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `skal håndtere flere jobbsøkere med kun INVITERT når treff fullføres`() {
-        val fnrSvartJa = Fødselsnummer("12345678901")
-        val fnrIkkeSvart1 = Fødselsnummer("12345678902")
-        val fnrIkkeSvart2 = Fødselsnummer("12345678903")
+        val fnrSvartJa = Fødselsnummer("00000000025")
+        val fnrIkkeSvart1 = Fødselsnummer("00000000026")
+        val fnrIkkeSvart2 = Fødselsnummer("00000000027")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
@@ -1267,7 +1267,7 @@ class JobbsøkerhendelserSchedulerTest {
 
     @Test
     fun `workop skal sende workop-spesifikke eventer på rapid`() {
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val rapid = TestRapid()
         val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,

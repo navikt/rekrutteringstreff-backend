@@ -75,7 +75,7 @@ class RekrutteringstreffOppdateringTest {
 
     @Test
     fun `lesing av rekrutteringstreffoppdatering fra rapid skal oppdatere eksisterende aktivitetskort`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val opprinneligTittel = "Original Tittel"
         val opprinneligFraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
@@ -151,7 +151,7 @@ class RekrutteringstreffOppdateringTest {
 
     @Test
     fun `lesing av workopoppdatering fra rapid skal oppdatere eksisterende WorkOp-kort`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val opprinneligFraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
 
@@ -207,7 +207,7 @@ class RekrutteringstreffOppdateringTest {
 
     @Test
     fun `lesing av rekrutteringstreffoppdatering fra rapid skal oppdatere aktivitetskort med flersdagers arrangement`() {
-        val fnr = "01010012345"
+        val fnr = "00000000006"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
