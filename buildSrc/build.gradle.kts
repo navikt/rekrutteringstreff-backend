@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
     implementation(kotlin("gradle-plugin"))
-    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20")
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
 }
 
 kotlin {
