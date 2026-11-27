@@ -432,6 +432,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         etiketter: List<AktivitetskortEtikett>? = null,
         handlinger: List<AktivitetskortHandling>? = null,
         detaljer: List<AktivitetskortDetalj>? = null,
+        kunHvisNyereEnn: ZonedDateTime? = null,
     ) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
@@ -468,9 +469,14 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 ) siste_aktivitetskort
                 WHERE (siste_aktivitetskort.aktivitets_status IS DISTINCT FROM ?
                    OR siste_aktivitetskort.endret_av IS DISTINCT FROM ?
-                   OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?)
+                   OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?
+                   ${if (detaljer == null) "" else "OR siste_aktivitetskort.detaljer::jsonb IS DISTINCT FROM ?::jsonb"})
                 """.trimIndent() + if (forventetSisteAktivitetsstatus != null) {
                     " AND siste_aktivitetskort.aktivitets_status = ANY(?)"
+                } else {
+                    ""
+                } + if (kunHvisNyereEnn != null) {
+                    " AND siste_aktivitetskort.endret_tidspunkt < ?"
                 } else {
                     ""
                 }
@@ -494,16 +500,22 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
                 setString(indexOffset++, aktivitetsStatus.name)
                 setString(indexOffset++, endretAv)
                 setString(indexOffset++, endretAvType.name)
+                if (detaljer != null) {
+                    setString(indexOffset++, jackson3ObjectMapper.writeValueAsString(detaljer))
+                }
                 if (forventetSisteAktivitetsstatus != null) {
                     setArray(
                         indexOffset++,
                         connection.createArrayOf("text", forventetSisteAktivitetsstatus.map { it.name }.toTypedArray())
                     )
                 }
+                if (kunHvisNyereEnn != null) {
+                    setObject(indexOffset++, kunHvisNyereEnn.toOffsetDateTime())
+                }
             }.executeUpdate()
         }.let { rowsUpdated ->
             if (rowsUpdated == 0) {
-                teamLog.warn("Aktivitetskort $aktivitetskortId har allerede aktivitetsstatus $aktivitetsStatus med samme endretAv og endretAvType")
+                teamLog.warn("Aktivitetskort $aktivitetskortId ble ikke oppdatert til $aktivitetsStatus: har allerede samme status og endretAv, har ikke forventet status, eller hendelsen er eldre enn siste endring")
             } else if (rowsUpdated != 1) {
                 teamLog.error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
             } else {
@@ -633,17 +645,48 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideRekruttering
         messageId = messageId,
         aktivitetsStatus = AktivitetsStatus.FORSLAG,
         endretAvType = EndretAvType.NAVIDENT,
-        handlinger = listOf(
-            AktivitetskortHandling(
-                DeleCvMedArbeidsgiverType.handlingTittel,
-                DeleCvMedArbeidsgiverType.handlingSubtekst,
-                "$minsideStillingUrl/$stillingId",
-                LenkeType.FELLES,
-            )
-        ),
-        etiketter = listOf(AktivitetskortEtikett("Venter på svar fra deg", Sentiment.NEUTRAL)),
-        detaljer = listOf(AktivitetskortDetalj("Svarfrist", formaterSvarfrist(svarfrist))),
+        handlinger = forespurtDeltStillingHandlinger(stillingId),
+        etiketter = forespurtDeltStillingEtiketter,
+        detaljer = forespurtDeltStillingDetaljer(svarfrist),
     )
+
+    fun flyttDeltStillingTilForslag(
+        aktivitetskortId: UUID,
+        stillingId: String,
+        endretAv: String,
+        svarfrist: ZonedDateTime,
+        forespurtTidspunkt: ZonedDateTime,
+    ) = oppdaterAktivitetsstatus(
+        aktivitetskortId = aktivitetskortId,
+        aktivitetsStatus = AktivitetsStatus.FORSLAG,
+        endretAv = endretAv,
+        endretAvType = EndretAvType.NAVIDENT,
+        forventetSisteAktivitetsstatus = listOf(
+            AktivitetsStatus.FORSLAG,
+            AktivitetsStatus.GJENNOMFORES,
+            AktivitetsStatus.FULLFORT,
+            AktivitetsStatus.AVBRUTT,
+        ),
+        etiketter = forespurtDeltStillingEtiketter,
+        handlinger = forespurtDeltStillingHandlinger(stillingId),
+        detaljer = forespurtDeltStillingDetaljer(svarfrist),
+        kunHvisNyereEnn = forespurtTidspunkt,
+    )
+
+    private fun forespurtDeltStillingHandlinger(stillingId: String) = listOf(
+        AktivitetskortHandling(
+            DeleCvMedArbeidsgiverType.handlingTittel,
+            DeleCvMedArbeidsgiverType.handlingSubtekst,
+            "$minsideStillingUrl/$stillingId",
+            LenkeType.FELLES,
+        )
+    )
+
+    private val forespurtDeltStillingEtiketter =
+        listOf(AktivitetskortEtikett("Venter på svar fra deg", Sentiment.NEUTRAL))
+
+    private fun forespurtDeltStillingDetaljer(svarfrist: ZonedDateTime) =
+        listOf(AktivitetskortDetalj("Svarfrist", formaterSvarfrist(svarfrist)))
 
     private fun opprettDeltStilling(
         fnr: String,

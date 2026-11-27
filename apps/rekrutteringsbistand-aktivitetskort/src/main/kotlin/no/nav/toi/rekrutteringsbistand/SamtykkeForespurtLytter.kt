@@ -52,19 +52,54 @@ class SamtykkeForespurtLytter(
         val stillingId = packet["stillingsId"].asString()
         val svarFrist = ZonedDateTime.parse(packet["svarfrist"].asString())
 
+        val forespurtAv = packet["forespurtAvIdent"].asString()
+
         val hendelseId = UUID.randomUUID()
-        repository.opprettDeltStilling(
+        val opprettetAktivitetskortId = repository.opprettDeltStilling(
             fnr = fnr,
             stillingId = stillingId,
             tittel = packet["stillingsTittel"].asString(),
-            opprettetAv = packet["forespurtAvIdent"].asString(),
+            opprettetAv = forespurtAv,
             messageId = hendelseId,
             svarfrist = svarFrist,
-        )?.let { aktivitetskortId ->
-            packet["aktivitetskortuuid"] = aktivitetskortId
+        )
+
+        if (opprettetAktivitetskortId != null) {
+            packet["aktivitetskortuuid"] = opprettetAktivitetskortId
             packet["hendelseId"] = hendelseId
             context.publish(fnr, packet.toJson())
+        } else {
+            flyttEksisterendeAktivitetskortTilForslag(
+                fnr = fnr,
+                stillingId = stillingId,
+                forespurtAv = forespurtAv,
+                svarfrist = svarFrist,
+                forespurtTidspunkt = ZonedDateTime.parse(packet["forespurtTidspunkt"].asString()),
+            )
         }
+    }
+
+    private fun flyttEksisterendeAktivitetskortTilForslag(
+        fnr: String,
+        stillingId: String,
+        forespurtAv: String,
+        svarfrist: ZonedDateTime,
+        forespurtTidspunkt: ZonedDateTime,
+    ) {
+        val aktivitetskortId = repository.hentAktivitetskortIdForDeltStilling(fnr, stillingId.toUUID())
+        if (aktivitetskortId == null) {
+            log.error("Fant ikke eksisterende aktivitetskort for delt stilling med id $stillingId (se secure log)")
+            teamlog(log).error("Fant ikke eksisterende aktivitetskort for delt stilling med id $stillingId for personbruker $fnr")
+            return
+        }
+
+        repository.flyttDeltStillingTilForslag(
+            aktivitetskortId = aktivitetskortId,
+            stillingId = stillingId,
+            endretAv = forespurtAv,
+            svarfrist = svarfrist,
+            forespurtTidspunkt = forespurtTidspunkt,
+        )
     }
 
     override fun onError(

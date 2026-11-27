@@ -120,36 +120,112 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
-    fun `forespurt samtykke med samme kandidat og stilling skal ignoreres`() {
+    fun `forespurt samtykke med samme kandidat, stilling og svarfrist skal ignoreres`() {
         val fnr = "00000000006"
         val stillingId = UUID.randomUUID()
-        val tittel = "Test Stilling"
-        val opprettetAv = "testuser"
-
-        rapid.sendTestMessage(
-            samtykkeForespurtMelding(
-                fnr = fnr,
-                stillingId = stillingId,
-                stillingsTittel = tittel,
-                forespurtAvIdent = opprettetAv,
-            )
+        val melding = samtykkeForespurtMelding(
+            fnr = fnr,
+            stillingId = stillingId,
+            stillingsTittel = "Test Stilling",
+            forespurtAvIdent = "testuser",
         )
+
+        rapid.sendTestMessage(melding)
         val expectedRekrutteringsbistandStillinger = testRepository.hentAlleRekrutteringsbistandStillinger()
         assertThat(expectedRekrutteringsbistandStillinger).hasSize(1)
-        rapid.sendTestMessage(
-            samtykkeForespurtMelding(
-                fnr = fnr,
-                stillingId = stillingId,
-                stillingsTittel = tittel,
-                forespurtAvIdent = opprettetAv,
-            )
-        )
+        rapid.sendTestMessage(melding)
 
         val actualRekrutteringsbistandStillinger = testRepository.hentAlleRekrutteringsbistandStillinger()
         assertThat(actualRekrutteringsbistandStillinger).hasSize(1)
         assertThat(actualRekrutteringsbistandStillinger.first()).usingRecursiveComparison().isEqualTo(expectedRekrutteringsbistandStillinger.first())
-        val inspektør = rapid.inspektør
-        assertThat(inspektør.size).isEqualTo(1)
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `ny forespørsel skal flytte avbrutt aktivitetskort til forslag med ny svarfrist`() {
+        val fnr = "00000000006"
+        val stillingId = UUID.randomUUID()
+        val navIdent = "Z999999"
+        opprettDeltStilling(fnr, stillingId, AktivitetsStatus.AVBRUTT)
+
+        rapid.sendTestMessage(
+            samtykkeForespurtMelding(
+                fnr = fnr,
+                stillingId = stillingId,
+                stillingsTittel = "Test Stilling",
+                forespurtAvIdent = navIdent,
+                svarfrist = ZonedDateTime.parse("2026-12-10T00:59:59.999+01:00[Europe/Oslo]"),
+                forespurtTidspunkt = ZonedDateTime.now().plusMinutes(1),
+            )
+        )
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(3)
+        assertThat(hendelser.map { it.aktivitetskortId }.distinct()).hasSize(1)
+        hendelser.last().apply {
+            assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
+            assertThat(opprettetAv).isEqualTo(navIdent)
+            assertThat(opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
+            assertThat(detaljer).isEqualToIgnoringWhitespace("[{\"label\":\"Svarfrist\",\"verdi\":\"09.\u00A0desember\u00A02026\"}]")
+            val etikett = jacksonObjectMapper().readTree(etiketter).single()
+            assertThat(etikett["tekst"].asString()).isEqualTo("Venter på svar fra deg")
+            val handling = jacksonObjectMapper().readTree(handlinger).single()
+            assertThat(handling["subtekst"].asString()).isEqualTo(DeleCvMedArbeidsgiverType.handlingSubtekst)
+        }
+        assertThat(rapid.inspektør.size).isZero()
+    }
+
+    @Test
+    fun `ny forespørsel på aktivitetskort i forslag skal oppdatere svarfristen`() {
+        val fnr = "00000000006"
+        val stillingId = UUID.randomUUID()
+        val navIdent = "Z123456"
+        val førsteSvarfrist = ZonedDateTime.parse("2026-11-27T00:59:59.999+01:00[Europe/Oslo]")
+        val nySvarfrist = ZonedDateTime.parse("2026-12-10T00:59:59.999+01:00[Europe/Oslo]")
+
+        rapid.sendTestMessage(samtykkeForespurtMelding(fnr, stillingId, "Test Stilling", navIdent, førsteSvarfrist))
+        rapid.sendTestMessage(samtykkeForespurtMelding(fnr, stillingId, "Test Stilling", navIdent, nySvarfrist, ZonedDateTime.now().plusMinutes(1)))
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser.map { it.aktivitetsStatus }).containsOnly(AktivitetsStatus.FORSLAG.name)
+        assertThat(hendelser.last().detaljer).contains("09.\u00A0desember\u00A02026")
+    }
+
+    @Test
+    fun `ny forespørsel skal flytte fullført aktivitetskort til forslag`() {
+        val fnr = "00000000006"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, AktivitetsStatus.FULLFORT)
+
+        rapid.sendTestMessage(
+            samtykkeForespurtMelding(fnr, stillingId, "Test Stilling", "Z999999", forespurtTidspunkt = ZonedDateTime.now().plusMinutes(1))
+        )
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(hendelser).hasSize(3)
+        assertThat(hendelser.map { it.aktivitetskortId }.distinct()).hasSize(1)
+        hendelser.last().apply {
+            assertThat(aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
+            assertThat(detaljer).contains("Svarfrist")
+        }
+    }
+
+    @Test
+    fun `forespørsel som er eldre enn siste endring på aktivitetskortet skal ignoreres`() {
+        val fnr = "00000000006"
+        val stillingId = UUID.randomUUID()
+        opprettDeltStilling(fnr, stillingId, AktivitetsStatus.AVBRUTT)
+        val før = testRepository.hentAlleRekrutteringsbistandStillinger()
+
+        rapid.sendTestMessage(
+            samtykkeForespurtMelding(fnr, stillingId, "Test Stilling", "Z999999", forespurtTidspunkt = ZonedDateTime.now().minusDays(1))
+        )
+
+        val etter = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(etter).hasSize(2)
+        assertThat(etter).usingRecursiveComparison().isEqualTo(før)
+        assertThat(etter.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.AVBRUTT.name)
     }
 
     @Test
@@ -849,6 +925,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         stillingsTittel: String,
         forespurtAvIdent: String,
         svarfrist: ZonedDateTime = ZonedDateTime.now().plusDays(7).truncatedTo(ChronoUnit.MILLIS),
+        forespurtTidspunkt: ZonedDateTime = ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS),
     ) = """
         {
             "@event_name": "samtykke-forespurt-om-deling-av-cv",
@@ -857,7 +934,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "stillingsTittel": "$stillingsTittel",
             "svarfrist": "$svarfrist",
             "forespurtAvIdent": "$forespurtAvIdent",
-            "forespurtTidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+            "forespurtTidspunkt": "$forespurtTidspunkt",
             "stillingsinfo": {
               "stillingsinfoid": "3a436047-7886-4b97-b2b3-a780554a9bcd",
               "stillingsid": "$stillingId",

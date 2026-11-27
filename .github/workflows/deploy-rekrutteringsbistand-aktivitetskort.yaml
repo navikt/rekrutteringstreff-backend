@@ -21,7 +21,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/legg_til_at_samtykkestatuslytter_lytter_paa_samtykke_utlopt
+      deploy_dev_branch: refs/heads/samtykke_cv_deling_skal_kunne_tilbake_til_forslag
     permissions:
       contents: read
       id-token: write
