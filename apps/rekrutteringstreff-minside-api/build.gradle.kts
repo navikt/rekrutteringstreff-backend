@@ -14,10 +14,10 @@ repositories {
 }
 
 val javalinVersion = "7.3.0"
-val mockOAuth2ServerVersion = "6.1.3"
+val mockOAuth2ServerVersion = "7.0.2"
 val flywayVersion = "13.13.0"
 val postgresVersion = "42.7.5"
-val hikariVersion = "6.3.3"
+val hikariVersion = "7.1.0"
 val testContainerVersion = "2.0.5"
 val swaggerParserVersion = "2.1.49"
 val nimbusVersion = "10.10"

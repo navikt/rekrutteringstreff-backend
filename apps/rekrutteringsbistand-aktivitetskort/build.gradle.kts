@@ -9,7 +9,7 @@ application {
 
 val flywayVersion = "13.13.0"
 val postgresVersion = "42.7.14"
-val hikariVersion = "6.2.1"
+val hikariVersion = "7.1.0"
 val testContainerVersion = "2.0.5"
 val javalinVersion = "7.3.0"
 val micrometerVersion = "1.18.0"
