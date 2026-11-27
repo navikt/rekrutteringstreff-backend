@@ -109,9 +109,9 @@ class JobbsøkerFormidlingKomponentTest {
         val eierIdent = "A123456"
         val treffId = opprettTreffMedEier(eierIdent)
 
-        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, VeilederNavIdent("V100001"))
-        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, VeilederNavIdent("V100002"))
-        val js3 = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), null, null, null)
+        val js1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, VeilederNavIdent("V100001"))
+        val js2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Hansen"), null, null, VeilederNavIdent("V100002"))
+        val js3 = LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Per"), Etternavn("Olsen"), null, null, null)
         val ider = db.leggTilJobbsøkereMedHendelse(listOf(js1, js2, js3), treffId)
 
         db.settSynlighet(ider[1], false)
@@ -125,7 +125,7 @@ class JobbsøkerFormidlingKomponentTest {
         assertThat(resultat.side).isEqualTo(1)
         assertThat(resultat.jobbsøkere).hasSize(2)
         assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
-            .containsExactlyInAnyOrder("11111111111", "22222222222")
+            .containsExactlyInAnyOrder("00000000022", "00000000036")
     }
 
     @Test
@@ -133,9 +133,9 @@ class JobbsøkerFormidlingKomponentTest {
         val eierIdent = "A123456"
         val treffId = opprettTreffMedEier(eierIdent)
 
-        val synlig = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
-        val usynlig = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
-        val sperret = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), null, null, null)
+        val synlig = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val usynlig = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
+        val sperret = LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Per"), Etternavn("Olsen"), null, null, null)
         val ider = db.leggTilJobbsøkereMedHendelse(listOf(synlig, usynlig, sperret), treffId)
 
         db.settSynlighet(ider[1], false)
@@ -147,7 +147,7 @@ class JobbsøkerFormidlingKomponentTest {
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
         assertThat(resultat.totalt).isEqualTo(2)
         assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
-            .containsExactlyInAnyOrder("11111111111", "22222222222")
+            .containsExactlyInAnyOrder("00000000022", "00000000036")
     }
 
     @Test
@@ -156,10 +156,10 @@ class JobbsøkerFormidlingKomponentTest {
         val veilederIdent = "V200002"
         val treffId = opprettTreffMedEier(eierIdent)
 
-        val mineJs = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, VeilederNavIdent(veilederIdent))
-        val mineJsSkjult = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Eva"), Etternavn("Berg"), null, null, VeilederNavIdent(veilederIdent))
-        val annenJs = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Kari"), Etternavn("Hansen"), null, null, VeilederNavIdent("V200099"))
-        val ingenVeileder = LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Per"), Etternavn("Olsen"), null, null, null)
+        val mineJs = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, VeilederNavIdent(veilederIdent))
+        val mineJsSkjult = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Eva"), Etternavn("Berg"), null, null, VeilederNavIdent(veilederIdent))
+        val annenJs = LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Kari"), Etternavn("Hansen"), null, null, VeilederNavIdent("V200099"))
+        val ingenVeileder = LeggTilJobbsøker(Fødselsnummer("00000000045"), Fornavn("Per"), Etternavn("Olsen"), null, null, null)
         val ider = db.leggTilJobbsøkereMedHendelse(listOf(mineJs, mineJsSkjult, annenJs, ingenVeileder), treffId)
         db.settSynlighet(ider[1], false)
 
@@ -174,7 +174,7 @@ class JobbsøkerFormidlingKomponentTest {
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
         assertThat(resultat.totalt).isEqualTo(2)
         assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
-            .containsExactlyInAnyOrder("11111111111", "22222222222")
+            .containsExactlyInAnyOrder("00000000022", "00000000036")
     }
 
     @Test
@@ -186,7 +186,7 @@ class JobbsøkerFormidlingKomponentTest {
         val personTreffId = db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
-                    Fødselsnummer("11111111111"),
+                    Fødselsnummer("00000000022"),
                     Fornavn("Ola"),
                     Etternavn("Nordmann"),
                     null,
@@ -215,7 +215,7 @@ class JobbsøkerFormidlingKomponentTest {
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
         assertThat(resultat.totalt).isEqualTo(1)
-        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("00000000022")
     }
 
     @Test
@@ -223,8 +223,8 @@ class JobbsøkerFormidlingKomponentTest {
         val eierIdent = "A123456"
         val treffId = opprettTreffMedEier(eierIdent)
 
-        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
-        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Slettet"), Etternavn("Person"), null, null, null)
+        val js1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val js2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Slettet"), Etternavn("Person"), null, null, null)
         val ider = db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
         db.settJobbsøkerStatus(ider[1], JobbsøkerStatus.SLETTET)
 
@@ -232,7 +232,7 @@ class JobbsøkerFormidlingKomponentTest {
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
 
         assertThat(resultat.totalt).isEqualTo(1)
-        assertThat(resultat.jobbsøkere.first().fødselsnummer).isEqualTo("11111111111")
+        assertThat(resultat.jobbsøkere.first().fødselsnummer).isEqualTo("00000000022")
     }
 
     @Test
@@ -245,8 +245,8 @@ class JobbsøkerFormidlingKomponentTest {
             treffId,
         )
 
-        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
-        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
+        val js1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val js2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
         val ider = db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
 
         db.opprettFormidling(treffId, ider[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
@@ -258,8 +258,8 @@ class JobbsøkerFormidlingKomponentTest {
         assertThat(resultat.totalt).isEqualTo(2)
         assertThat(resultat.jobbsøkere).hasSize(2)
 
-        val ola = resultat.jobbsøkere.find { it.fødselsnummer == "11111111111" }!!
-        val kari = resultat.jobbsøkere.find { it.fødselsnummer == "22222222222" }!!
+        val ola = resultat.jobbsøkere.find { it.fødselsnummer == "00000000022" }!!
+        val kari = resultat.jobbsøkere.find { it.fødselsnummer == "00000000036" }!!
 
         assertThat(ola.alleredeFormidlet).isTrue()
         assertThat(kari.alleredeFormidlet).isFalse()
@@ -283,8 +283,8 @@ class JobbsøkerFormidlingKomponentTest {
             treffId,
         )
 
-        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
-        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
+        val js1 = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val js2 = LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
         val ider = db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
 
         db.opprettFormidling(treffId, ider[0], arbeidsgiverATreffId, UUID.randomUUID(), UUID.randomUUID())
@@ -294,7 +294,7 @@ class JobbsøkerFormidlingKomponentTest {
         assertThat(responseA.statusCode()).isEqualTo(200)
         val resultatA = mapper.readValue<JobbsøkerFormidlingRespons>(responseA.body())
         assertThat(resultatA.totalt).isEqualTo(2)
-        val olaA = resultatA.jobbsøkere.find { it.fødselsnummer == "11111111111" }!!
+        val olaA = resultatA.jobbsøkere.find { it.fødselsnummer == "00000000022" }!!
         assertThat(olaA.alleredeFormidlet).isTrue()
 
         // Søker med orgnrB: Ola bør ha alleredeFormidlet = false siden Ola ikke er formidlet til orgnrB
@@ -302,7 +302,7 @@ class JobbsøkerFormidlingKomponentTest {
         assertThat(responseB.statusCode()).isEqualTo(200)
         val resultatB = mapper.readValue<JobbsøkerFormidlingRespons>(responseB.body())
         assertThat(resultatB.totalt).isEqualTo(2)
-        val olaB = resultatB.jobbsøkere.find { it.fødselsnummer == "11111111111" }!!
+        val olaB = resultatB.jobbsøkere.find { it.fødselsnummer == "00000000022" }!!
         assertThat(olaB.alleredeFormidlet).isFalse()
     }
 
@@ -316,7 +316,7 @@ class JobbsøkerFormidlingKomponentTest {
             treffId,
         )
 
-        val js = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val js = LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         val personTreffId = db.leggTilJobbsøkereMedHendelse(listOf(js), treffId).single()
 
         val formidlingId = db.opprettFormidling(treffId, personTreffId, arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
@@ -332,7 +332,7 @@ class JobbsøkerFormidlingKomponentTest {
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
         assertThat(resultat.totalt).isEqualTo(1)
-        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("00000000022")
     }
 
     @Test
@@ -381,8 +381,8 @@ class JobbsøkerFormidlingKomponentTest {
 
         db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aase"), Etternavn("Testesen"), null, null, VeilederNavIdent("V999998")),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Bo"), Etternavn("Testesen"), null, null, VeilederNavIdent("V999997")),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Aase"), Etternavn("Testesen"), null, null, VeilederNavIdent("V999998")),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Bo"), Etternavn("Testesen"), null, null, VeilederNavIdent("V999997")),
             ),
             treffId,
         )
@@ -398,7 +398,7 @@ class JobbsøkerFormidlingKomponentTest {
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
         assertThat(resultat.totalt).isEqualTo(2)
         assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
-            .containsExactlyInAnyOrder("11111111111", "22222222222")
+            .containsExactlyInAnyOrder("00000000022", "00000000036")
     }
 
     @Test
@@ -446,7 +446,7 @@ class JobbsøkerFormidlingKomponentTest {
         db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
-                    fødselsnummer = Fødselsnummer("11111111111"),
+                    fødselsnummer = Fødselsnummer("00000000022"),
                     fornavn = Fornavn("Aase"),
                     etternavn = Etternavn("Testesen"),
                     veilederNavIdent = VeilederNavIdent("V999998"),
@@ -485,7 +485,7 @@ class JobbsøkerFormidlingKomponentTest {
         db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
-                    fødselsnummer = Fødselsnummer("11111111111"),
+                    fødselsnummer = Fødselsnummer("00000000022"),
                     fornavn = Fornavn("Aase"),
                     etternavn = Etternavn("Testesen"),
                     veilederNavIdent = VeilederNavIdent("V999998"),
@@ -512,7 +512,7 @@ class JobbsøkerFormidlingKomponentTest {
 
         val jobbsøkere = (1..7).map { i ->
             LeggTilJobbsøker(
-                Fødselsnummer("1111111111$i".take(11).padEnd(11, '0')),
+                Fødselsnummer("%011d".format(90 + i)),
                 Fornavn("Fornavn$i"),
                 Etternavn("Etternavn$i"),
                 null, null, null,
@@ -546,9 +546,9 @@ class JobbsøkerFormidlingKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000042"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
             ),
             treffId,
         )
@@ -566,17 +566,17 @@ class JobbsøkerFormidlingKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
             ),
             treffId,
         )
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(
-            httpPost(formidlingAllePath(treffId), formidlingBody("fritekst" to "22222222222"), eierIdent).body()
+            httpPost(formidlingAllePath(treffId), formidlingBody("fritekst" to "00000000036"), eierIdent).body()
         )
         assertThat(resultat.totalt).isEqualTo(1)
-        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("22222222222")
+        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("00000000036")
     }
 
     @Test
@@ -585,19 +585,19 @@ class JobbsøkerFormidlingKomponentTest {
         val treffId = opprettTreffMedEier(eierIdent)
         db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("10120098765"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("10120012345"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("25060011111"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000011"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000010"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000039"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
             ),
             treffId,
         )
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(
-            httpPost(formidlingAllePath(treffId), formidlingBody("fritekst" to "101200"), eierIdent).body()
+            httpPost(formidlingAllePath(treffId), formidlingBody("fritekst" to "0000000001"), eierIdent).body()
         )
         assertThat(resultat.totalt).isEqualTo(2)
         assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
-            .containsExactlyInAnyOrder("10120098765", "10120012345")
+            .containsExactlyInAnyOrder("00000000011", "00000000010")
     }
 
     @Test
@@ -642,36 +642,36 @@ class JobbsøkerFormidlingKomponentTest {
 
         val treffUtenMatch = opprettTreffMedEier(eierIdent)
         db.leggTilJobbsøkereMedHendelse(
-            listOf(jobbsøker("11111111111", annenVeilederIdent, annetKontor)),
+            listOf(jobbsøker("00000000022", annenVeilederIdent, annetKontor)),
             treffUtenMatch,
         )
         assertThat(hentEgneFødselsnumre(treffUtenMatch)).isEmpty()
 
         val treffMedIdentmatch = opprettTreffMedEier(eierIdent)
         db.leggTilJobbsøkereMedHendelse(
-            listOf(jobbsøker("22222222222", veilederIdent, annetKontor)),
+            listOf(jobbsøker("00000000036", veilederIdent, annetKontor)),
             treffMedIdentmatch,
         )
-        assertThat(hentEgneFødselsnumre(treffMedIdentmatch)).containsExactly("22222222222")
+        assertThat(hentEgneFødselsnumre(treffMedIdentmatch)).containsExactly("00000000036")
 
         val treffMedKontormatch = opprettTreffMedEier(eierIdent)
         db.leggTilJobbsøkereMedHendelse(
-            listOf(jobbsøker("33333333333", annenVeilederIdent, veiledersKontor)),
+            listOf(jobbsøker("00000000042", annenVeilederIdent, veiledersKontor)),
             treffMedKontormatch,
         )
-        assertThat(hentEgneFødselsnumre(treffMedKontormatch)).containsExactly("33333333333")
+        assertThat(hentEgneFødselsnumre(treffMedKontormatch)).containsExactly("00000000042")
 
         val treffMedIdentOgKontormatch = opprettTreffMedEier(eierIdent)
         db.leggTilJobbsøkereMedHendelse(
             listOf(
-                jobbsøker("44444444444", annenVeilederIdent, veiledersKontor),
-                jobbsøker("55555555555", veilederIdent, annetKontor),
-                jobbsøker("66666666666", annenVeilederIdent, annetKontor),
+                jobbsøker("00000000045", annenVeilederIdent, veiledersKontor),
+                jobbsøker("00000000047", veilederIdent, annetKontor),
+                jobbsøker("00000000048", annenVeilederIdent, annetKontor),
             ),
             treffMedIdentOgKontormatch,
         )
         assertThat(hentEgneFødselsnumre(treffMedIdentOgKontormatch))
-            .containsExactlyInAnyOrder("44444444444", "55555555555")
+            .containsExactlyInAnyOrder("00000000045", "00000000047")
     }
 
     @Test
@@ -694,21 +694,21 @@ class JobbsøkerFormidlingKomponentTest {
         )
 
         val sammeKontor = LeggTilJobbsøker(
-            fødselsnummer = Fødselsnummer("11111111111"),
+            fødselsnummer = Fødselsnummer("00000000022"),
             fornavn = Fornavn("Aase"),
             etternavn = Etternavn("Testesen"),
             veilederNavIdent = VeilederNavIdent("V999998"),
             kontor = Kontor(kontornummer = felleskontor, kontornavn = null),
         )
         val annetKontor = LeggTilJobbsøker(
-            fødselsnummer = Fødselsnummer("22222222222"),
+            fødselsnummer = Fødselsnummer("00000000036"),
             fornavn = Fornavn("Bo"),
             etternavn = Etternavn("Testesen"),
             veilederNavIdent = VeilederNavIdent("V999997"),
             kontor = Kontor(kontornummer = "9999", kontornavn = null),
         )
         val utenKontor = LeggTilJobbsøker(
-            Fødselsnummer("33333333333"),
+            Fødselsnummer("00000000042"),
             Fornavn("Ce"),
             Etternavn("Testesen"),
             null,
@@ -727,7 +727,7 @@ class JobbsøkerFormidlingKomponentTest {
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
         assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
-            .containsExactly("11111111111")
+            .containsExactly("00000000022")
     }
 
     @Test
@@ -738,8 +738,8 @@ class JobbsøkerFormidlingKomponentTest {
 
         db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aase"), Etternavn("Testesen"), null, null, null),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Bo"), Etternavn("Testesen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000022"), Fornavn("Aase"), Etternavn("Testesen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("00000000036"), Fornavn("Bo"), Etternavn("Testesen"), null, null, null),
             ),
             treffId,
         )
@@ -811,11 +811,11 @@ class JobbsøkerFormidlingKomponentTest {
         db.leggTilJobbsøkereMedHendelse(
             listOf(
                 // Samme kontor som innlogget bruker, men annen veileder — skal med
-                jobbsøker("11111111111", "ANNENVEILEDER", veiledersKontor),
+                jobbsøker("00000000022", "ANNENVEILEDER", veiledersKontor),
                 // Innlogget bruker selv registrert som veileder, men annet kontor — skal IKKE med
-                jobbsøker("22222222222", innloggetIdent, annetKontor),
+                jobbsøker("00000000036", innloggetIdent, annetKontor),
                 // Verken kontor- eller veiledermatch — skal IKKE med
-                jobbsøker("33333333333", "ANNENVEILEDER", annetKontor),
+                jobbsøker("00000000042", "ANNENVEILEDER", annetKontor),
             ),
             treffId,
         )
@@ -829,7 +829,7 @@ class JobbsøkerFormidlingKomponentTest {
         assertThat(response.statusCode()).isEqualTo(200)
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
-        assertThat(resultat.jobbsøkere.map { it.fødselsnummer }).containsExactly("11111111111")
+        assertThat(resultat.jobbsøkere.map { it.fødselsnummer }).containsExactly("00000000022")
     }
 
     @Test
@@ -848,7 +848,7 @@ class JobbsøkerFormidlingKomponentTest {
         )
 
         db.leggTilJobbsøkereMedHendelse(
-            listOf("11111111111" to eierkontor, "22222222222" to "KONTOR-B").map { (fnr, kontor) ->
+            listOf("00000000022" to eierkontor, "00000000036" to "KONTOR-B").map { (fnr, kontor) ->
                 LeggTilJobbsøker(
                     fødselsnummer = Fødselsnummer(fnr),
                     fornavn = Fornavn("Filter"),
@@ -870,7 +870,7 @@ class JobbsøkerFormidlingKomponentTest {
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
         assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
-            .containsExactlyInAnyOrder("11111111111", "22222222222")
+            .containsExactlyInAnyOrder("00000000022", "00000000036")
     }
 
     @Test

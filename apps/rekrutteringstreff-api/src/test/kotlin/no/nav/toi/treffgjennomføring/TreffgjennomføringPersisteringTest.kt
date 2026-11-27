@@ -129,8 +129,8 @@ class TreffgjennomføringPersisteringTest {
     @Test
     fun `deltakernummer gjenbrukes aldri, men beholdes for samme person`() {
         val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
-        val første = jobbsøker(treff, "11111111111")
-        val andre = jobbsøker(treff, "22222222222")
+        val første = jobbsøker(treff, "00000000022")
+        val andre = jobbsøker(treff, "00000000036")
 
         val nummerFørste = db.dataSource.connection.use { conn ->
             val treffDbId = treffDbId(treff)
@@ -153,8 +153,8 @@ class TreffgjennomføringPersisteringTest {
         val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
         arbeidsgiver(treff, "999999991")
         arbeidsgiver(treff, "999999992")
-        val p1 = jobbsøker(treff, "11111111111")
-        val p2 = jobbsøker(treff, "22222222222")
+        val p1 = jobbsøker(treff, "00000000022")
+        val p2 = jobbsøker(treff, "00000000036")
         listOf(p1, p2).forEach { registrerOppmøte(it) }
 
         db.dataSource.connection.use { conn ->
@@ -174,7 +174,7 @@ class TreffgjennomføringPersisteringTest {
     @Test
     fun `jobbsøkersøket beriker bare personene på den returnerte siden`() {
         val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
-        val personer = (1..5).map { jobbsøker(treff, "1111111111$it", etternavn = "Person$it") }
+        val personer = (1..5).map { jobbsøker(treff, "%011d".format(80 + it), etternavn = "Person$it") }
         personer.forEach { registrerOppmøte(it) }
 
         val side = sokRepository.sok(treff, JobbsøkerSøkRequest(side = 1, antallPerSide = 2))
@@ -224,7 +224,7 @@ class TreffgjennomføringPersisteringTest {
 
     private fun jobbsøker(
         treff: TreffId,
-        fnr: String = "12345678901",
+        fnr: String = "00000000025",
         etternavn: String = "Testesen",
     ): PersonTreffId = db.leggTilJobbsøkereMedHendelse(
         listOf(LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn(etternavn))),

@@ -112,7 +112,7 @@ class KiTest {
 
     @Test
     fun filtrerer_personsensitiv_info_for_OpenAI_og_logger_original_og_filtrert__og_returnerer_lagret_promptmeta() {
-        val fodselsnummer = "12345678901"
+        val fodselsnummer = "00000000025"
         val originalTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer $fodselsnummer."
         val forventetFiltrertTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer ."
         val begrunnelseFraOpenAi =

@@ -65,7 +65,7 @@ class AktivitetskortTest {
     @Test
     fun `bestill rekrutteringstreff-aktivitetskort`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
-        val expectedFnr = "12345678910"
+        val expectedFnr = "00000000029"
         val expectedRekrutteringstreffId = UUID.randomUUID()
         val expectedTittel = "Test Rekrutteringstreff"
         val expectedBeskrivelse = RekrutteringstreffType.beskrivelse
@@ -126,7 +126,7 @@ class AktivitetskortTest {
     @Test
     fun `bestill aktivitetskort for delt stilling`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
-        val expectedFnr = "12345678910"
+        val expectedFnr = "00000000029"
         val expectedStillingId = UUID.randomUUID()
         val expectedTittel = "Teststilling"
         val expectedOpprettetAv = "testuser"
@@ -187,7 +187,7 @@ class AktivitetskortTest {
     fun `workop skal gi type WORKOP og tilpassede tekster paa aktivitetskortet`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         repository.opprettRekrutteringstreffInvitasjon(
-            fnr = "12345678910",
+            fnr = "00000000029",
             rekrutteringstreffId = UUID.randomUUID(),
             tittel = "Test WorkOp",
             startDato = LocalDate.now().plusDays(1),
@@ -218,7 +218,7 @@ class AktivitetskortTest {
     @Test
     fun `tittel med spesialtegn skal gi gyldig json og bevares uendret`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
-        val expectedFnr = "12345678910"
+        val expectedFnr = "00000000029"
         val expectedRekrutteringstreffId = UUID.randomUUID()
         val expectedTittel = "Jobbtreff og mulighet for jobb deltid\\fulltid\\sommer \"kvelder\"\nog\u00A0helger"
         val expectedAktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
@@ -249,7 +249,7 @@ class AktivitetskortTest {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
 
         repository.opprettRekrutteringstreffInvitasjon(
-            fnr = "12345678910",
+            fnr = "00000000029",
             rekrutteringstreffId = UUID.randomUUID(),
             tittel = "Test Rekrutteringstreff",
             startDato = LocalDate.now().plusDays(1),
@@ -465,7 +465,7 @@ class AktivitetskortTest {
     fun `feilkø-hendelse for delt stilling skal føre til melding på rapid`() {
         val stillingId = UUID.randomUUID()
         repository.opprettDeltStilling(
-            fnr = "12345678910",
+            fnr = "00000000029",
             stillingId = stillingId.toString(),
             tittel = "Teststilling",
             opprettetAv = "testuser",
@@ -603,7 +603,7 @@ class AktivitetskortTest {
 
 private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
     opprettRekrutteringstreffInvitasjon(
-        fnr = "12345678910",
+        fnr = "00000000029",
         rekrutteringstreffId = UUID.randomUUID(),
         tittel = "Test Rekrutteringstreff",
         startDato = LocalDate.now().plusDays(1),

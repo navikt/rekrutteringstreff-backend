@@ -67,10 +67,10 @@ class InvitasjonFeilhåndteringTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         
-        val fnrUsynlig = Fødselsnummer("12345678901")
+        val fnrUsynlig = Fødselsnummer("00000000025")
         val personTreffIdUsynlig = PersonTreffId(UUID.randomUUID())
         
-        val fnrSynlig = Fødselsnummer("12345678902")
+        val fnrSynlig = Fødselsnummer("00000000026")
         val personTreffIdSynlig = PersonTreffId(UUID.randomUUID())
 
         db.leggTilJobbsøkere(
@@ -128,7 +128,7 @@ class InvitasjonFeilhåndteringTest {
     fun `re-invitasjon av allerede invitert jobbsøker håndteres idempotent`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val personTreffId = PersonTreffId(UUID.randomUUID())
 
         db.leggTilJobbsøkere(

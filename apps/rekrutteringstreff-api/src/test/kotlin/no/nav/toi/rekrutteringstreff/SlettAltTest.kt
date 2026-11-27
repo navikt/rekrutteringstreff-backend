@@ -41,7 +41,7 @@ class SlettAltTest {
     fun `slettAlt tømmer tabeller som ikke sto i den gamle hardkodede lista`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         db.leggTilJobbsøkereMedHendelse(
-            listOf(LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"))),
+            listOf(LeggTilJobbsøker(Fødselsnummer("00000000025"), Fornavn("Ola"), Etternavn("Nordmann"))),
             treffId,
         )
         leggTilRomtildeling()
@@ -58,7 +58,7 @@ class SlettAltTest {
     fun `slettAlt tømmer alle tabeller i skjemaet unntatt flyway_schema_history`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         db.leggTilJobbsøkereMedHendelse(
-            listOf(LeggTilJobbsøker(Fødselsnummer("10987654321"), Fornavn("Kari"), Etternavn("Hansen"))),
+            listOf(LeggTilJobbsøker(Fødselsnummer("00000000012"), Fornavn("Kari"), Etternavn("Hansen"))),
             treffId,
         )
 

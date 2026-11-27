@@ -632,9 +632,9 @@ Test at tall med 4 siffer eller mer fjernes før tekst sendes til Azure OpenAI. 
 | #      | Test                                                | Eksempeltekst                     | Forventet i KI-logg                          | ✅❌ | Notat |
 | ------ | --------------------------------------------------- | --------------------------------- | -------------------------------------------- | ---- | ----- |
 | 11.9.1 | Skriv tekst med 4-sifret tall                       | `Ring meg på 1234 for mer info`   | "sendtTekst" inneholder ikke "1234"          |      |       |
-| 11.9.2 | Skriv tekst med fødselsnummer (11 siffer)           | `Kandidat 12345678901 er aktuell` | "sendtTekst" inneholder ikke fødselsnummeret |      |       |
+| 11.9.2 | Skriv tekst med fødselsnummer (11 siffer)           | `Kandidat 00000000025 er aktuell` | "sendtTekst" inneholder ikke fødselsnummeret |      |       |
 | 11.9.3 | Skriv tekst med telefonnummer (8 siffer)            | `Ta kontakt på 98765432`          | "sendtTekst" inneholder ikke telefonnummeret |      |       |
-| 11.9.4 | Skriv tekst med D-nummer                            | `Jobbsøker med D-nr 41234567890`  | "sendtTekst" inneholder ikke D-nummeret      |      |       |
+| 11.9.4 | Skriv tekst med D-nummer                            | `Jobbsøker med D-nr 40000000001`  | "sendtTekst" inneholder ikke D-nummeret      |      |       |
 | 11.9.5 | Skriv tekst med kontonummer                         | `Utbetaling til 1234.56.78901`    | "sendtTekst" inneholder ikke kontonummeret   |      |       |
 | 11.9.6 | Skriv tekst med organisasjonsnummer                 | `Arbeidsgiver org.nr 912345678`   | "sendtTekst" inneholder ikke org.nummeret    |      |       |
 | 11.9.7 | Skriv tekst med 3-sifret tall (skal IKKE filtreres) | `Treffet varer i 120 minutter`    | "sendtTekst" inneholder fortsatt "120"       |      |       |

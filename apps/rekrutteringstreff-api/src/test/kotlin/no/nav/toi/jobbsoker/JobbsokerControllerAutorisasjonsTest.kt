@@ -101,7 +101,7 @@ class JobbsokerControllerAutorisasjonsTest {
         gyldigRekrutteringstreff = ctx.rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel",
             RekrutteringstreffKategori.REKRUTTERINGSTREFF,"A213456", "Kontor", ZonedDateTime.now()))
         val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer = Fødselsnummer("12345678902"),
+            fødselsnummer = Fødselsnummer("00000000026"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
@@ -131,7 +131,7 @@ class JobbsokerControllerAutorisasjonsTest {
                 """ 
                 [
                     {
-                        "fødselsnummer": "12345678901",
+                        "fødselsnummer": "00000000025",
                         "fornavn": "Ola",
                         "etternavn": "Nordmann",
                         "kontornavn": "NAV Oslo",
@@ -152,7 +152,7 @@ class JobbsokerControllerAutorisasjonsTest {
             {
                 HttpRequest.newBuilder()
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString("""{"fødselsnummer":"12345678902"}"""))
+                    .POST(HttpRequest.BodyPublishers.ofString("""{"fødselsnummer":"00000000026"}"""))
             }
         ),
         hentJobbsøkerMedHendelser({ "http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker/hendelser"}, {

@@ -16,7 +16,7 @@ class PersondataFilterTest {
 
     @Test
     fun `skal fjerne tall med 3 eller flere sifre uten separator`() {
-        val input = "Fødselsnummer: 12345678901."
+        val input = "Fødselsnummer: 00000000025."
         val expected = "Fødselsnummer: ."
         assertThat(PersondataFilter.filtrerUtPersonsensitiveData(input)).isEqualTo(expected)
     }

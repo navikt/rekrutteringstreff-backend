@@ -681,7 +681,7 @@ class RekrutteringstreffSokKomponenttest {
             conn.prepareStatement("INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id) VALUES (?, ?, ?)").use { s ->
                 repeat(7) {
                     s.setLong(1, internId)
-                    s.setString(2, "1234560000$it")
+                    s.setString(2, "%011d".format(70 + it))
                     s.setObject(3, UUID.randomUUID())
                     s.addBatch()
                 }
@@ -716,19 +716,19 @@ class RekrutteringstreffSokKomponenttest {
         val treffId = opprettTreffMedEier(tittel = "Tomt treff")
 
         val jobbsøkerInvitert = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678901"),
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("00000000025"),
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.INVITERT,
         )
 
         val jobbsøkerSlettet = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("00000000026"),
             Fornavn("Ola 2"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.SLETTET,
         )
 
         val jobbsøkerSvartJaIkkeSynlig = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("00000000026"),
             Fornavn("Ola 3"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.SVART_JA,
         )
@@ -763,19 +763,19 @@ class RekrutteringstreffSokKomponenttest {
         val treffId = opprettTreffMedEier(tittel = "Tomt treff")
 
         val jobbsøkerInvitert = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678901"),
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("00000000025"),
             Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.INVITERT,
         )
 
         val jobbsøkerSvartJa = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("00000000026"),
             Fornavn("Ola 2"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.SVART_JA,
         )
 
         val jobbsøkerSvartJaIkkeSynlig = Jobbsøker(
-            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("00000000026"),
             Fornavn("Ola 3"), Etternavn("Nordmann"), null, null, null,
             JobbsøkerStatus.SVART_JA,
         )

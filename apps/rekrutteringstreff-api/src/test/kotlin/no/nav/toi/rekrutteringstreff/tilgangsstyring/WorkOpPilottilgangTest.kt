@@ -17,7 +17,7 @@ class WorkOpPilottilgangTest {
         override fun extractNavIdent() = "A000001"
         override fun extractKontorId() = kontor
         override fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle) {}
-        override fun extractPid() = "11111111111"
+        override fun extractPid() = "00000000022"
         override fun innkommendeToken() = "token"
         override fun erUtvikler() = erUtvikler
         override val erBorger = erBorger

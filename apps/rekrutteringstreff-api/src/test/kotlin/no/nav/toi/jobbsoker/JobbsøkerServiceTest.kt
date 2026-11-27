@@ -52,7 +52,7 @@ class JobbsøkerServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(
-                Fødselsnummer("12345678901"),
+                Fødselsnummer("00000000025"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
                 Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
@@ -60,7 +60,7 @@ class JobbsøkerServiceTest {
                 VeilederNavIdent("V123")
             ),
             LeggTilJobbsøker(
-                Fødselsnummer("10987654321"),
+                Fødselsnummer("00000000012"),
                 Fornavn("Kari"),
                 Etternavn("Nordmann"),
                 null,
@@ -88,7 +88,7 @@ class JobbsøkerServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(
-                Fødselsnummer("12345678901"),
+                Fødselsnummer("00000000025"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
                 Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
@@ -96,7 +96,7 @@ class JobbsøkerServiceTest {
                 VeilederNavIdent("V123")
             ),
             LeggTilJobbsøker(
-                Fødselsnummer("10987654321"),
+                Fødselsnummer("00000000012"),
                 Fornavn("Kari"),
                 Etternavn("Nordmann"),
                 null,
@@ -111,7 +111,7 @@ class JobbsøkerServiceTest {
         assertThat(hentedeJobbsøkere).hasSize(2)
         val flereJobbsøkere = listOf(
             LeggTilJobbsøker(
-                Fødselsnummer("12345678902"),
+                Fødselsnummer("00000000026"),
                 Fornavn("Geir"),
                 Etternavn("Nordmann"),
                 Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
@@ -119,7 +119,7 @@ class JobbsøkerServiceTest {
                 VeilederNavIdent("V123")
             ),
             LeggTilJobbsøker(
-                Fødselsnummer("10987654321"),
+                Fødselsnummer("00000000012"),
                 Fornavn("Kari"),
                 Etternavn("Nordmann"),
                 null,
@@ -155,7 +155,7 @@ class JobbsøkerServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(
-                Fødselsnummer("12345678901"),
+                Fødselsnummer("00000000025"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
                 null,
@@ -185,7 +185,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `svarJaTilInvitasjon skal opprette hendelse og oppdatere status i samme transaksjon`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         )
@@ -209,7 +209,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `svarNeiTilInvitasjon skal opprette hendelse og oppdatere status i samme transaksjon`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         )
@@ -233,7 +233,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `markerSlettet skal returnere OK og opprette SLETTET-hendelse når jobbsøker har status LAGT_TIL`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         )
@@ -258,7 +258,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `markerSlettet skal returnere IKKE_TILLATT når jobbsøker har status INVITERT`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         )
@@ -284,8 +284,8 @@ class JobbsøkerServiceTest {
     fun `hentJobbsøkerHendelser skal returnere hendelser for alle jobbsøkere på treff`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val jobbsøkere = listOf(
-            LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("10987654321"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
+            LeggTilJobbsøker(Fødselsnummer("00000000025"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("00000000012"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
         )
         jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
 
@@ -300,8 +300,8 @@ class JobbsøkerServiceTest {
     @Test
     fun `den som har svart ja får SVART_JA_TREFF_AVLYST når treffet avlyses`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr1 = Fødselsnummer("12345678901")
-        val fnr2 = Fødselsnummer("10987654321")
+        val fnr1 = Fødselsnummer("00000000025")
+        val fnr2 = Fødselsnummer("00000000012")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr1, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
             LeggTilJobbsøker(fnr2, Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
@@ -327,7 +327,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `det siste svaret gjelder når jobbsøkeren eller eieren endrer svaret`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         jobbsøkerService.leggTilJobbsøkere(
             listOf(LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Testesen"), null, null, null)), treffId, "testperson"
         )
@@ -356,8 +356,8 @@ class JobbsøkerServiceTest {
     @Test
     fun `den som er invitert men ikke har svart får IKKE_SVART_TREFF_FULLFØRT når treffet fullføres`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr1 = Fødselsnummer("12345678901")
-        val fnr2 = Fødselsnummer("10987654321")
+        val fnr1 = Fødselsnummer("00000000025")
+        val fnr2 = Fødselsnummer("00000000012")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr1, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
             LeggTilJobbsøker(fnr2, Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
@@ -383,7 +383,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `skalVarslesOmEndringer skal returnere false for jobbsøker med INVITERT som siste relevante hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         )
@@ -400,7 +400,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `skalVarslesOmEndringer skal returnere true for jobbsøker som har svart ja`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         )
@@ -418,7 +418,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `skalVarslesOmEndringer skal returnere false for jobbsøker som har svart nei`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         )
@@ -440,7 +440,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `skalVarslesOmEndringer skal returnere false for jobbsøker som kun er lagt til men ikke invitert`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         )
@@ -455,7 +455,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `inviter skal opprette INVITERT-hendelse for jobbsøkere`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Invitasjon")
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer,
             Fornavn("Test"),
@@ -487,7 +487,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `svarJaTilInvitasjon skal opprette SVART_JA-hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Ja")
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer,
             Fornavn("Test"),
@@ -517,7 +517,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `svarNeiTilInvitasjon skal opprette SVART_NEI-hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Nei")
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer,
             Fornavn("Test"),
@@ -547,7 +547,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `registrerAktivitetskortOpprettelseFeilet skal opprette feil-hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Feil")
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val endretAvIdent = "Z987654"
 
         val leggTilJobbsøker = LeggTilJobbsøker(
@@ -578,7 +578,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `registrerMinsideVarselSvar skal opprette hendelse med hendelseData`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for MinsideVarsel")
-        val fødselsnummer = Fødselsnummer("12345678901")
+        val fødselsnummer = Fødselsnummer("00000000025")
         val opprettetAv = "system"
         val hendelseData = """{"action": "DONE", "varselId": "abc123"}"""
 
@@ -616,7 +616,7 @@ class JobbsøkerServiceTest {
         val treff1 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff 1")
         val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff 2")
 
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff1, "testperson")
@@ -638,7 +638,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `oppdaterSynlighetFraNeed oppdaterer kun hvis synlighet ikke er satt fra før`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
 
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
@@ -662,7 +662,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `oppdaterSynlighetFraEvent ignorerer eldre meldinger`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = "12345678901"
+        val fnr = "00000000025"
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
@@ -684,7 +684,7 @@ class JobbsøkerServiceTest {
     fun `leggTilJobbsøkere legger til jobbsøker uten evaluert synlighet - scheduleren vil trigge need`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val jobbsøkere = listOf(
-            LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Test"), Etternavn("Person"), null, null, null)
+            LeggTilJobbsøker(Fødselsnummer("00000000025"), Fornavn("Test"), Etternavn("Person"), null, null, null)
         )
 
         jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
@@ -692,13 +692,13 @@ class JobbsøkerServiceTest {
         // Jobbsøkeren skal være lagt til med synlighet_sist_oppdatert = NULL
         // SynlighetsBehovScheduler vil fange opp og trigge need-melding
         val fødselsnumreUtenSynlighet = jobbsøkerService.hentFødselsnumreUtenEvaluertSynlighet()
-        assertThat(fødselsnumreUtenSynlighet).contains("12345678901")
+        assertThat(fødselsnumreUtenSynlighet).contains("00000000025")
     }
 
     @Test
     fun `leggTilJobbsøkere tillater å legge til jobbsøker som tidligere ble slettet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkerData = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         
         // Legg til jobbsøker første gang
@@ -724,7 +724,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `legg tilbake slettet jobbsøker oppretter ikke en ny rad og jobbsøker vises i listen`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkerData = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
         
         // Legg til og slett jobbsøker
@@ -748,7 +748,7 @@ class JobbsøkerServiceTest {
     @Test
     fun `leggTilJobbsøkere gjenoppretter slettet jobbsøker kun én gang ved duplikat i samme kall`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val fnr = Fødselsnummer("12345678901")
+        val fnr = Fødselsnummer("00000000025")
         val jobbsøkerData = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
 
         jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøkerData), treffId, "testperson")

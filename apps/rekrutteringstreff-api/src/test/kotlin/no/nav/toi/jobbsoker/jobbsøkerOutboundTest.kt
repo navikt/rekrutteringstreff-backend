@@ -68,7 +68,7 @@ class JobbsøkerOutboundTest {
     @Test
     fun `GET kandidatnummer returnerer forventet kandidatnummer`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678910")
+        val fnr = Fødselsnummer("00000000029")
         val forventetKandidatnummer = "K123456"
 
         ctx.eierRepository.leggTil(treffId, "A000001", "0315")

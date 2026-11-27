@@ -630,7 +630,7 @@ class RekrutteringstreffTest {
                 Jobbsøker(
                     personTreffId = PersonTreffId(UUID.randomUUID()),
                     treffId = treff.id,
-                    fødselsnummer = Fødselsnummer("01010112345"),
+                    fødselsnummer = Fødselsnummer("00000000007"),
                     fornavn = Fornavn("Kari"),
                     etternavn = Etternavn("Nordmann"),
                     kontor = null,
@@ -775,7 +775,7 @@ class RekrutteringstreffTest {
                 Jobbsøker(
                     personTreffId = PersonTreffId(UUID.randomUUID()),
                     treffId = treff,
-                    fødselsnummer = Fødselsnummer("11111111111"),
+                    fødselsnummer = Fødselsnummer("00000000022"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("N"),
                     kontor = null,
@@ -826,7 +826,7 @@ class RekrutteringstreffTest {
 
         // Verifiser subjektId og subjektNavn for jobbsøker-hendelser
         val jobbsøkerHendelse = list.find { it.ressurs == HendelseRessurs.JOBBSØKER }
-        assertThat(jobbsøkerHendelse?.subjektId).isEqualTo("11111111111")
+        assertThat(jobbsøkerHendelse?.subjektId).isEqualTo("00000000022")
         assertThat(jobbsøkerHendelse?.subjektNavn).isEqualTo("Ola N")
 
         // Verifiser subjektId og subjektNavn for arbeidsgiver-hendelser
@@ -853,7 +853,7 @@ class RekrutteringstreffTest {
                 Jobbsøker(
                     personTreffId = personTreffId,
                     treffId = treff,
-                    fødselsnummer = Fødselsnummer("11111111111"),
+                    fødselsnummer = Fødselsnummer("00000000022"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     kontor = null,
@@ -901,7 +901,7 @@ class RekrutteringstreffTest {
         val formidlingHendelse = list.find { it.ressurs == HendelseRessurs.FORMIDLING }
         assertThat(formidlingHendelse).isNotNull
         assertThat(formidlingHendelse?.hendelsestype).isEqualTo(FormidlingHendelsestype.OPPRETTET.name)
-        assertThat(formidlingHendelse?.subjektId).isEqualTo("11111111111")
+        assertThat(formidlingHendelse?.subjektId).isEqualTo("00000000022")
         assertThat(formidlingHendelse?.subjektNavn).isEqualTo("Ola Nordmann")
         assertThat(list).isSortedAccordingTo(compareByDescending<FellesHendelseOutboundDto> { it.tidspunkt })
     }
@@ -999,7 +999,7 @@ class RekrutteringstreffTest {
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("12345678901"),
+            fødselsnummer = Fødselsnummer("00000000025"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1010,7 +1010,7 @@ class RekrutteringstreffTest {
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("23456789012"),
+            fødselsnummer = Fødselsnummer("00000000037"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1021,7 +1021,7 @@ class RekrutteringstreffTest {
         val jobbsøker3 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("34567890123"),
+            fødselsnummer = Fødselsnummer("00000000043"),
             fornavn = Fornavn("Per"),
             etternavn = Etternavn("Hansen"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1081,7 +1081,7 @@ class RekrutteringstreffTest {
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("12345678901"),
+            fødselsnummer = Fødselsnummer("00000000025"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1092,7 +1092,7 @@ class RekrutteringstreffTest {
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("23456789012"),
+            fødselsnummer = Fødselsnummer("00000000037"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1147,7 +1147,7 @@ class RekrutteringstreffTest {
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("12345678901"),
+            fødselsnummer = Fødselsnummer("00000000025"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1215,7 +1215,7 @@ class RekrutteringstreffTest {
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("12345678901"),
+            fødselsnummer = Fødselsnummer("00000000025"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1226,7 +1226,7 @@ class RekrutteringstreffTest {
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("23456789012"),
+            fødselsnummer = Fødselsnummer("00000000037"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1290,7 +1290,7 @@ class RekrutteringstreffTest {
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("12345678901"),
+            fødselsnummer = Fødselsnummer("00000000025"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1301,7 +1301,7 @@ class RekrutteringstreffTest {
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("23456789012"),
+            fødselsnummer = Fødselsnummer("00000000037"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1367,7 +1367,7 @@ class RekrutteringstreffTest {
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("12345678901"),
+            fødselsnummer = Fødselsnummer("00000000025"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1378,7 +1378,7 @@ class RekrutteringstreffTest {
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("23456789012"),
+            fødselsnummer = Fødselsnummer("00000000037"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1389,7 +1389,7 @@ class RekrutteringstreffTest {
         val jobbsøker3 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("34567890123"),
+            fødselsnummer = Fødselsnummer("00000000043"),
             fornavn = Fornavn("Per"),
             etternavn = Etternavn("Hansen"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
@@ -1464,7 +1464,7 @@ class RekrutteringstreffTest {
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
-            fødselsnummer = Fødselsnummer("12345678901"),
+            fødselsnummer = Fødselsnummer("00000000025"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             kontor = Kontor(kontornummer = "0318", kontornavn = null),
