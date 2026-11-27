@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 jobs:
   call-oppdater-docker-baseimage:
-    uses: navikt/toi-github-actions-workflows/.github/workflows/oppdater-docker-baseimage.yaml@v16
+    uses: navikt/toi-github-actions-workflows/.github/workflows/oppdater-docker-baseimage.yaml@v19
     with:
       app-navn: rekrutteringstreff-api
       deploy-workflow-filnavn: deploy-rekrutteringstreff-api.yaml
